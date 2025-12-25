@@ -20,6 +20,7 @@ interface StockContextType {
         referenceDocNo?: string;
     }) => void;
     confirmTransaction: (txId: number) => void;
+    deleteTransaction: (txId: number) => void;
     processBatchMaintenance: (data: {
         items: { palletId: PalletId; qty: number }[];
         fixedQty: number;
@@ -160,6 +161,17 @@ export const StockProvider: React.FC<StockProviderProps> = ({ children }) => {
         firebaseService.updateTransactionAndStock(updatedTx, nextStock);
 
     }, [stock, transactions]);
+
+    const deleteTransaction = useCallback((txId: number) => {
+        const tx = transactions.find(t => t.id === txId);
+        if (!tx) return;
+
+        // Status 'CANCELLED' might not be in TransactionType definition, 
+        // effectively handling it as a string or updating type definitions would be best.
+        // For now, assuming standard update handles arbitrary status strings for display.
+        const updatedTx = { ...tx, status: 'CANCELLED' as const };
+        firebaseService.updateTransactionAndStock(updatedTx, stock);
+    }, [transactions, stock]);
 
     const addMovementBatch = useCallback((data: {
         type: TransactionType;
@@ -311,6 +323,7 @@ export const StockProvider: React.FC<StockProviderProps> = ({ children }) => {
                 addTransaction,
                 addMovementBatch,
                 confirmTransaction,
+                deleteTransaction,
                 processBatchMaintenance,
                 getStockForBranch,
             }}

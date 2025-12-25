@@ -56,8 +56,8 @@ const MovementTab: React.FC<MovementTabProps> = ({ selectedBranch, transactions 
                 pGroups[docNo].push(tx);
             }
 
-            // History Logic (Everything visible to this branch, either source or dest)
-            if (tx.source === selectedBranch || tx.dest === selectedBranch) {
+            // History Logic (Everything visible to this branch, either source or dest, excluding CANCELLED)
+            if (tx.status !== 'CANCELLED' && (tx.source === selectedBranch || tx.dest === selectedBranch)) {
                 if (!hGroups[docNo]) hGroups[docNo] = [];
                 hGroups[docNo].push(tx);
             }

@@ -8,9 +8,11 @@ import {
     BarChart3,
     History as HistoryIcon,
     Download,
-    Clock
+    Clock,
+    Trash2
 } from 'lucide-react';
 import { Stock, BranchId, Transaction, PalletId, User } from '../../types';
+import { useStock } from '../../contexts/StockContext';
 import StatsCard from './StatsCard';
 import StockAdjustmentModal from './StockAdjustmentModal';
 import TransactionTimelineModal from '../movements/TransactionTimelineModal';
@@ -25,6 +27,7 @@ interface DashboardProps {
 }
 
 const Dashboard: React.FC<DashboardProps> = ({ stock, selectedBranch, transactions, addTransaction, currentUser }) => {
+    const { deleteTransaction } = useStock();
     const [isAdjModalOpen, setIsAdjModalOpen] = useState(false);
 
     // Timeline State
@@ -34,6 +37,36 @@ const Dashboard: React.FC<DashboardProps> = ({ stock, selectedBranch, transactio
     const handleViewTimeline = (tx: Transaction) => {
         setTimelineTx(tx);
         setIsTimelineOpen(true);
+    };
+
+    const handleDelete = (txId: number) => {
+        // @ts-ignore
+        const Swal = window.Swal;
+        if (Swal) {
+            Swal.fire({
+                title: 'ยืนยันการลบรายการ?',
+                text: "รายการจะถูกขีดฆ่าและทำเครื่องหมายว่ายกเลิก",
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonColor: '#d33',
+                cancelButtonColor: '#3085d6',
+                confirmButtonText: 'ลบรายการ',
+                cancelButtonText: 'ยกเลิก'
+            }).then((result: any) => {
+                if (result.isConfirmed) {
+                    deleteTransaction(txId);
+                    Swal.fire(
+                        'ลบสำเร็จ!',
+                        'รายการถูกยกเลิกแล้ว',
+                        'success'
+                    );
+                }
+            });
+        } else {
+            if (confirm('ยืนยันการลบรายการ?')) {
+                deleteTransaction(txId);
+            }
+        }
     };
 
     const currentStock = useMemo(() => {
@@ -63,7 +96,7 @@ const Dashboard: React.FC<DashboardProps> = ({ stock, selectedBranch, transactio
             filtered = filtered.filter(t => t.source === selectedBranch || t.dest === selectedBranch);
         }
         return filtered
-            .filter(t => t.status === 'COMPLETED')
+            // Show both COMPLETED and PENDING to allow tracking status
             .sort((a, b) => b.id - a.id);
     }, [transactions, selectedBranch]);
 
@@ -300,55 +333,74 @@ const Dashboard: React.FC<DashboardProps> = ({ stock, selectedBranch, transactio
                                         }
                                     }
 
+                                    const isCancelled = tx.status === 'CANCELLED';
+
                                     return (
-                                        <tr key={tx.docNo + tx.id} className="hover:bg-slate-50/50 transition-colors">
-                                            <td className="p-4 text-slate-500 whitespace-nowrap">
+                                        <tr key={tx.docNo + tx.id} className={`transition-colors ${isCancelled ? 'bg-red-50/30' : 'hover:bg-slate-50/50'}`}>
+                                            <td className={`p-4 text-slate-500 whitespace-nowrap ${isCancelled ? 'line-through decoration-red-300 opacity-60' : ''}`}>
                                                 {new Date(tx.date).toLocaleDateString('th-TH')}
                                             </td>
                                             <td className="p-4 whitespace-nowrap">
-                                                <div className="flex items-center gap-2">
-                                                    <span className="font-mono font-medium text-blue-600">
+                                                <div className="flex flex-col items-start gap-1">
+                                                    <span className={`font-mono font-medium ${isCancelled ? 'text-slate-400 line-through decoration-red-300' : 'text-blue-600'}`}>
                                                         {tx.docNo}
                                                     </span>
-                                                    <button
-                                                        onClick={() => handleViewTimeline(tx)}
-                                                        className="p-1 hover:bg-slate-100 rounded-full text-slate-400 hover:text-blue-600 transition-colors"
-                                                        title="View Timeline"
-                                                    >
-                                                        <Clock size={14} />
-                                                    </button>
+                                                    <div className="flex items-center gap-1">
+                                                        <button
+                                                            onClick={() => handleViewTimeline(tx)}
+                                                            className="px-2 py-0.5 bg-slate-100 hover:bg-blue-50 text-slate-500 hover:text-blue-600 rounded border border-slate-200 hover:border-blue-200 text-[10px] font-bold transition-all flex items-center gap-1"
+                                                            title="View Timeline"
+                                                        >
+                                                            <Clock size={10} /> Timeline
+                                                        </button>
+                                                        {currentUser?.role === 'ADMIN' && !isCancelled && (
+                                                            <button
+                                                                onClick={() => handleDelete(tx.id)}
+                                                                className="p-1 bg-white hover:bg-red-50 text-slate-400 hover:text-red-500 rounded border border-slate-200 hover:border-red-200 transition-colors"
+                                                                title="Delete Transaction"
+                                                            >
+                                                                <Trash2 size={12} />
+                                                            </button>
+                                                        )}
+                                                    </div>
                                                 </div>
                                             </td>
-                                            <td className="p-4 text-slate-900 font-bold whitespace-nowrap">
-                                                <span className={`px-2 py-0.5 rounded-md text-[10px] ${tx.type === 'IN' ? 'bg-emerald-100 text-emerald-700' :
-                                                    tx.type === 'OUT' ? 'bg-orange-100 text-orange-700' :
-                                                        tx.type === 'ADJUST' ? 'bg-amber-100 text-amber-700' :
-                                                            'bg-slate-100 text-slate-600'
-                                                    }`}>
-                                                    {tx.type}
-                                                </span>
+                                            <td className={`p-4 text-slate-900 font-bold whitespace-nowrap ${isCancelled ? 'opacity-50' : ''}`}>
+                                                {isCancelled ? (
+                                                    <span className="px-2 py-0.5 rounded-md text-[10px] bg-red-100 text-red-600 font-black">
+                                                        CANCELLED
+                                                    </span>
+                                                ) : (
+                                                    <span className={`px-2 py-0.5 rounded-md text-[10px] ${tx.type === 'IN' ? 'bg-emerald-100 text-emerald-700' :
+                                                        tx.type === 'OUT' ? 'bg-orange-100 text-orange-700' :
+                                                            tx.type === 'ADJUST' ? 'bg-amber-100 text-amber-700' :
+                                                                'bg-slate-100 text-slate-600'
+                                                        }`}>
+                                                        {tx.type}
+                                                    </span>
+                                                )}
                                             </td>
-                                            <td className="p-4 text-slate-600">
+                                            <td className={`p-4 text-slate-600 ${isCancelled ? 'line-through opacity-50' : ''}`}>
                                                 {tx.referenceDocNo || '-'}
                                             </td>
-                                            <td className="p-4 text-slate-600 text-xs">
+                                            <td className={`p-4 text-slate-600 text-xs ${isCancelled ? 'line-through opacity-50' : ''}`}>
                                                 <div className="flex flex-col gap-0.5">
                                                     {tx.carRegistration && <span className="font-bold">{tx.carRegistration}</span>}
                                                     {tx.driverName && <span>{tx.driverName}</span>}
                                                     {tx.transportCompany && <span className="text-[10px] text-slate-400">{tx.transportCompany}</span>}
                                                 </div>
                                             </td>
-                                            <td className="p-4 text-slate-600">
+                                            <td className={`p-4 text-slate-600 ${isCancelled ? 'line-through opacity-50' : ''}`}>
                                                 <div className="font-medium text-slate-800">{tx.palletId}</div>
                                                 <div className="text-xs text-slate-400">
                                                     {tx.source} <span className="mx-1">→</span> {tx.dest}
                                                 </div>
                                                 {tx.note && <div className="text-[10px] text-slate-400 mt-1 italic">"{tx.note}"</div>}
                                             </td>
-                                            <td className="p-4 text-center font-black text-emerald-600 bg-emerald-50/30">
+                                            <td className={`p-4 text-center font-black ${isCancelled ? 'text-slate-400 line-through opacity-50' : 'text-emerald-600 bg-emerald-50/30'}`}>
                                                 {qtyIn}
                                             </td>
-                                            <td className="p-4 text-center font-black text-red-600 bg-red-50/30">
+                                            <td className={`p-4 text-center font-black ${isCancelled ? 'text-slate-400 line-through opacity-50' : 'text-red-600 bg-red-50/30'}`}>
                                                 {qtyOut}
                                             </td>
                                         </tr>

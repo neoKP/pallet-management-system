@@ -86,7 +86,7 @@ export interface Transaction {
   date: string;
   docNo: string; // Document Number
   type: TransactionType;
-  status: 'PENDING' | 'COMPLETED';
+  status: 'PENDING' | 'COMPLETED' | 'CANCELLED';
   source: string;
   dest: string;
   palletId: PalletId;
