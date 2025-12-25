@@ -1,16 +1,24 @@
 import React, { useState, useEffect } from 'react';
-import { Settings, MapPin, Package, Plus, Trash2, Save, Building2, Truck, X } from 'lucide-react';
+import { Settings, MapPin, Package, Plus, Trash2, Save, Building2, Truck, X, Send } from 'lucide-react';
 import * as firebaseService from '../../services/firebase';
 import { PalletType, Branch, Partner, BranchId } from '../../types';
+import { useStock } from '../../contexts/StockContext';
+import * as telegramService from '../../services/telegramService';
 import Swal from 'sweetalert2';
 
 const SettingsTab: React.FC = () => {
-    const [activeSection, setActiveSection] = useState<'pallets' | 'locations'>('pallets');
+    const [activeSection, setActiveSection] = useState<'pallets' | 'locations' | 'telegram'>('pallets');
 
     // Real-time data from Firebase
     const [pallets, setPallets] = useState<PalletType[]>([]);
     const [branches, setBranches] = useState<Branch[]>([]);
     const [partners, setPartners] = useState<Partner[]>([]);
+    const { config, updateSystemConfig } = useStock();
+    const [telegramChatId, setTelegramChatId] = useState(config.telegramChatId);
+
+    useEffect(() => {
+        setTelegramChatId(config.telegramChatId);
+    }, [config.telegramChatId]);
 
     const [isAddModalOpen, setIsAddModalOpen] = useState(false);
 
@@ -19,9 +27,6 @@ const SettingsTab: React.FC = () => {
         const unsubBranches = firebaseService.subscribeToBranches(setBranches);
         const unsubPartners = firebaseService.subscribeToPartners(setPartners);
         return () => {
-            // Unsubscribe functions if available from service (our service currently returns void but good practice to prep)
-            // Currently service implementation returns onValue result which is unsubscribe function
-            // We need to cast or check if function
             if (typeof unsubPallets === 'function') (unsubPallets as Function)();
             if (typeof unsubBranches === 'function') (unsubBranches as Function)();
             if (typeof unsubPartners === 'function') (unsubPartners as Function)();
@@ -122,6 +127,16 @@ const SettingsTab: React.FC = () => {
                     <MapPin size={18} />
                     Locations (Source/Dest)
                 </button>
+                <button
+                    onClick={() => setActiveSection('telegram')}
+                    className={`flex items-center gap-2 px-6 py-2.5 rounded-xl text-sm font-bold transition-all ${activeSection === 'telegram'
+                        ? 'bg-blue-600 text-white shadow-md'
+                        : 'text-slate-500 hover:bg-slate-50'
+                        }`}
+                >
+                    <Send size={18} />
+                    Telegram Bot
+                </button>
             </div>
 
             {/* Content Area */}
@@ -129,21 +144,24 @@ const SettingsTab: React.FC = () => {
                 <div className="p-6 border-b border-slate-100 flex justify-between items-center bg-slate-50/50">
                     <div>
                         <h2 className="text-lg font-black text-slate-800">
-                            {activeSection === 'pallets' ? 'Registered Pallet Types' : 'Registered Locations'}
+                            {activeSection === 'pallets' ? 'Registered Pallet Types' :
+                                activeSection === 'locations' ? 'Registered Locations' : 'Telegram Integration'}
                         </h2>
                         <p className="text-sm text-slate-500">
-                            {activeSection === 'pallets'
-                                ? 'Manage types of pallets tracked in the system.'
-                                : 'Manage internal branches and external partners.'}
+                            {activeSection === 'pallets' ? 'Manage types of pallets tracked in the system.' :
+                                activeSection === 'locations' ? 'Manage internal branches and external partners.' :
+                                    'ตั้งค่าการแจ้งเตือนผ่าน Telegram Group หรือ Chat'}
                         </p>
                     </div>
-                    <button
-                        onClick={() => setIsAddModalOpen(true)}
-                        className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white text-sm font-bold rounded-xl hover:bg-blue-700 transition-colors shadow-lg shadow-blue-200"
-                    >
-                        <Plus size={18} />
-                        Add New
-                    </button>
+                    {activeSection !== 'telegram' && (
+                        <button
+                            onClick={() => setIsAddModalOpen(true)}
+                            className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white text-sm font-bold rounded-xl hover:bg-blue-700 transition-colors shadow-lg shadow-blue-200"
+                        >
+                            <Plus size={18} />
+                            Add New
+                        </button>
+                    )}
                 </div>
 
                 <div className="overflow-x-auto">
@@ -188,7 +206,7 @@ const SettingsTab: React.FC = () => {
                                 })}
                             </tbody>
                         </table>
-                    ) : (
+                    ) : activeSection === 'locations' ? (
                         <table className="w-full text-left text-sm">
                             <thead className="bg-slate-50 text-slate-500 font-bold border-b border-slate-100">
                                 <tr>
@@ -245,6 +263,63 @@ const SettingsTab: React.FC = () => {
                                 ))}
                             </tbody>
                         </table>
+                    ) : (
+                        <div className="p-8 max-w-2xl">
+                            <div className="bg-blue-50 rounded-2xl p-6 border border-blue-100 flex items-start gap-4 mb-8">
+                                <div className="p-3 bg-white rounded-xl shadow-sm">
+                                    <Send className="text-blue-600" />
+                                </div>
+                                <div>
+                                    <h3 className="font-black text-blue-900 mb-1">Telegram Bot: @NSPalletBot</h3>
+                                    <p className="text-sm text-blue-700 leading-relaxed">
+                                        บอทจะทำหน้าที่ส่งการแจ้งเตือนเมื่อมีการทำรายการในระบบ คุณสามารถรับ <b>Chat ID</b> ได้โดยการทักแชทไปที่บอท <b>@NSPalletBot</b> แล้วส่งข้อความอะไรก็ได้ จากนั้นใช้บอท <b>@userinfobot</b> เพื่อดูไอดีของคุณ หรือหากเป็นกลุ่มให้ใช้บอท <b>@GroupBuddy_Bot</b>
+                                    </p>
+                                </div>
+                            </div>
+
+                            <div className="space-y-6">
+                                <div>
+                                    <label className="block text-sm font-bold text-slate-700 mb-2">Telegram Chat ID <span className="text-red-500">*</span></label>
+                                    <div className="flex gap-2">
+                                        <input
+                                            type="text"
+                                            className="flex-1 bg-slate-50 border border-slate-200 rounded-xl p-3 font-bold text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-500/20"
+                                            placeholder="ระบุ Chat ID (เช่น -100123456789)"
+                                            value={telegramChatId}
+                                            onChange={(e) => setTelegramChatId(e.target.value)}
+                                        />
+                                        <button
+                                            onClick={() => {
+                                                updateSystemConfig({ telegramChatId: telegramChatId });
+                                                Swal.fire('บันทึกสำเร็จ', 'Chat ID ถูกอัปเดตแล้ว', 'success');
+                                            }}
+                                            className="px-6 py-3 bg-blue-600 text-white rounded-xl font-bold flex items-center gap-2 shadow-lg shadow-blue-200 active:scale-95 transition-all"
+                                        >
+                                            <Save size={18} /> บันทึก
+                                        </button>
+                                    </div>
+                                    <p className="text-[10px] text-slate-400 mt-2 italic">* หากต้องการส่งเข้ากลุ่ม ให้ดึงบอทเข้ากลุ่มก่อนแล้วหา Chat ID ของกลุ่มนั้น</p>
+                                </div>
+
+                                <div className="pt-6 border-t border-slate-100">
+                                    <h4 className="font-bold text-slate-800 mb-4">ทดสอบการส่งข้อความ</h4>
+                                    <button
+                                        onClick={async () => {
+                                            if (!telegramChatId) return Swal.fire('ผิดพลาด', 'กรุณาระบุ Chat ID ก่อน', 'error');
+                                            const res = await telegramService.sendMessage(telegramChatId, '🔔 *ทดสอบการแจ้งเตือน*\nระบบบริหารจัดการพาเลทเชื่อมต่อสำเร็จแล้ว!');
+                                            if (res?.ok) {
+                                                Swal.fire('สำเร็จ', 'ส่งข้อความทดสอบแล้ว กรุณาเช็คที่ Telegram', 'success');
+                                            } else {
+                                                Swal.fire('ล้มเหลว', 'ไม่สามารถส่งได้ กรุณาเช็ค Chat ID อีกครั้ง', 'error');
+                                            }
+                                        }}
+                                        className="w-full py-4 bg-slate-100 text-slate-600 rounded-xl font-black text-sm hover:bg-slate-200 transition-all flex items-center justify-center gap-2 border border-slate-200"
+                                    >
+                                        <Send size={16} /> ส่งข้อความทดสอบ (Test Notification)
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
                     )}
                 </div>
             </div>

@@ -109,6 +109,16 @@ export const initializeData = async () => {
             await set(requestsRef, []);
         }
 
+        // Check System Config
+        const configRef = ref(db, 'config');
+        const configSnap = await get(configRef);
+        if (!configSnap.exists()) {
+            console.log('Initializing system config...');
+            await set(configRef, {
+                telegramChatId: ''
+            });
+        }
+
     } catch (error) {
         console.error("Error initializing data:", error);
     }
@@ -238,6 +248,22 @@ export const subscribeToPalletRequests = (callback: (requests: any[]) => void) =
     }
 };
 
+export const subscribeToConfig = (callback: (config: any) => void) => {
+    try {
+        const db = getDb();
+        const { ref, onValue } = getUtils();
+        const configRef = ref(db, 'config');
+
+        return onValue(configRef, (snapshot) => {
+            const val = snapshot.val();
+            if (val) callback(val);
+        });
+    } catch (error) {
+        console.error("Error subscribing to config:", error);
+        return () => { };
+    }
+};
+
 // --- Add Data ---
 
 export const addTransaction = async (transaction: Transaction) => {
@@ -344,6 +370,17 @@ export const updatePalletRequestsBatch = async (requests: any[]) => {
         await set(refPath, requests);
     } catch (error) {
         console.error("Error updating pallet requests batch:", error);
+        throw error;
+    }
+};
+
+export const updateConfig = async (config: any) => {
+    try {
+        const db = getDb();
+        const { ref, update } = getUtils();
+        await update(ref(db, 'config'), config);
+    } catch (error) {
+        console.error("Error updating config:", error);
         throw error;
     }
 };

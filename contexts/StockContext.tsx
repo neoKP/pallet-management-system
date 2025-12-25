@@ -34,6 +34,8 @@ interface StockContextType {
     palletRequests: PalletRequest[];
     createPalletRequest: (data: Partial<PalletRequest>) => void;
     updatePalletRequestStatus: (requestId: string, status: PalletRequest['status'], docNo?: string) => void;
+    config: { telegramChatId: string };
+    updateSystemConfig: (newConfig: Partial<{ telegramChatId: string }>) => Promise<void>;
 }
 
 const StockContext = createContext<StockContextType | undefined>(undefined);
@@ -54,6 +56,7 @@ export const StockProvider: React.FC<StockProviderProps> = ({ children }) => {
     const [stock, setStock] = useState<Stock>(INITIAL_STOCK);
     const [transactions, setTransactions] = useState<Transaction[]>(INITIAL_TRANSACTIONS);
     const [palletRequests, setPalletRequests] = useState<PalletRequest[]>([]);
+    const [config, setConfig] = useState<{ telegramChatId: string }>({ telegramChatId: '' });
 
     // --- Firebase Sync ---
     useEffect(() => {
@@ -70,6 +73,11 @@ export const StockProvider: React.FC<StockProviderProps> = ({ children }) => {
         // Subscribe to Pallet Requests
         firebaseService.subscribeToPalletRequests((data) => {
             if (data) setPalletRequests(data as PalletRequest[]);
+        });
+
+        // Subscribe to Config
+        firebaseService.subscribeToConfig((data) => {
+            if (data) setConfig(data);
         });
 
         // Cleanup: Ideally we should unsubscribe, but our service wrapper currently returns void.
@@ -347,6 +355,10 @@ export const StockProvider: React.FC<StockProviderProps> = ({ children }) => {
         [stock]
     );
 
+    const updateSystemConfig = async (newConfig: Partial<{ telegramChatId: string }>) => {
+        await firebaseService.updateConfig(newConfig);
+    };
+
     return (
         <StockContext.Provider
             value={{
@@ -361,6 +373,8 @@ export const StockProvider: React.FC<StockProviderProps> = ({ children }) => {
                 palletRequests,
                 createPalletRequest,
                 updatePalletRequestStatus,
+                config,
+                updateSystemConfig
             }}
         >
             {children}

@@ -5,6 +5,7 @@ import { BRANCHES, PALLET_TYPES, EXTERNAL_PARTNERS } from '../../constants';
 import { BranchId, PalletId, PalletRequest, User } from '../../types';
 // @ts-ignore
 import Swal from 'sweetalert2';
+import * as telegramService from '../../services/telegramService';
 
 interface PalletRequestTabProps {
     selectedBranch: BranchId;
@@ -12,7 +13,7 @@ interface PalletRequestTabProps {
 }
 
 const PalletRequestTab: React.FC<PalletRequestTabProps> = ({ selectedBranch, currentUser }) => {
-    const { palletRequests, createPalletRequest, updatePalletRequestStatus, addMovementBatch } = useStock();
+    const { palletRequests, createPalletRequest, updatePalletRequestStatus, addMovementBatch, config } = useStock();
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [requestItems, setRequestItems] = useState<{ palletId: PalletId | ''; qty: string }[]>([
         { palletId: '', qty: '' }
@@ -65,14 +66,31 @@ const PalletRequestTab: React.FC<PalletRequestTabProps> = ({ selectedBranch, cur
             return;
         }
 
-        createPalletRequest({
+        const newReq = {
             branchId: selectedBranch,
             items: validItems.map(i => ({ palletId: i.palletId as PalletId, qty: parseInt(i.qty) })),
             purpose: newRequestMeta.purpose,
             priority: newRequestMeta.priority,
             targetBranchId: newRequestMeta.targetBranchId,
-            note: newRequestMeta.note
-        });
+            note: newRequestMeta.note,
+            requestNo: '' // Will be set by createPalletRequest, but we can't get it immediately easily without refactoring createPalletRequest to return data or using the context update.
+        };
+
+        createPalletRequest(newReq);
+
+        // Telegram Notification
+        if (config.telegramChatId) {
+            const branchName = BRANCHES.find(b => b.id === selectedBranch)?.name || 'Unknown';
+            const targetName = ALL_DESTINATIONS.find(d => d.id === newRequestMeta.targetBranchId)?.name;
+            // Note: Since requestNo is generated inside, we might need a workaround or just accept a placeholder until it syncs.
+            // Better to pass the formatted message.
+            const message = telegramService.formatPalletRequest(
+                { ...newReq, requestNo: 'รอระบบยืนยัน...' },
+                branchName,
+                targetName
+            );
+            telegramService.sendMessage(config.telegramChatId, message);
+        }
 
         setIsModalOpen(false);
         setRequestItems([{ palletId: '', qty: '' }]);
@@ -143,6 +161,13 @@ const PalletRequestTab: React.FC<PalletRequestTabProps> = ({ selectedBranch, cur
                 });
 
                 updatePalletRequestStatus(req.id, 'SHIPPED', docNo);
+
+                // Telegram Notification
+                if (config.telegramChatId) {
+                    const message = telegramService.formatShipmentNotification(req, docNo);
+                    telegramService.sendMessage(config.telegramChatId, message);
+                }
+
                 Swal.fire('จัดส่งแล้ว!', `สร้างเลขที่เอกสาร ${docNo}`, 'success');
             }
         });
