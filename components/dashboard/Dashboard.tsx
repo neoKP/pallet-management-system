@@ -1,4 +1,4 @@
-import React, { useMemo } from 'react';
+import React, { useMemo, useState } from 'react';
 import {
     AlertCircle,
     Package,
@@ -9,9 +9,9 @@ import {
     History as HistoryIcon,
     Download
 } from 'lucide-react';
-import { PALLET_TYPES } from '../../constants';
 import { Stock, BranchId, Transaction, PalletId } from '../../types';
 import StatsCard from './StatsCard';
+import StockAdjustmentModal from './StockAdjustmentModal';
 import * as XLSX from 'xlsx';
 
 interface DashboardProps {
@@ -19,9 +19,11 @@ interface DashboardProps {
     selectedBranch: BranchId | 'ALL';
     transactions: Transaction[];
     stats?: any;
+    addTransaction: (transaction: Partial<Transaction>) => void;
 }
 
-const Dashboard: React.FC<DashboardProps> = ({ stock, selectedBranch, transactions }) => {
+const Dashboard: React.FC<DashboardProps> = ({ stock, selectedBranch, transactions, addTransaction }) => {
+    const [isAdjModalOpen, setIsAdjModalOpen] = useState(false);
 
     const currentStock = useMemo(() => {
         if (selectedBranch === 'ALL') {
@@ -83,8 +85,28 @@ const Dashboard: React.FC<DashboardProps> = ({ stock, selectedBranch, transactio
         XLSX.writeFile(wb, `inventory_log_${new Date().toISOString().split('T')[0]}.xlsx`);
     };
 
+    const handleAdjustmentSubmit = (data: { type: 'IN' | 'OUT'; branchId: string; palletId: PalletId; qty: number; note: string }) => {
+        addTransaction({
+            type: 'ADJUST',
+            source: data.type === 'IN' ? 'ADJUSTMENT' : data.branchId,
+            dest: data.type === 'IN' ? data.branchId : 'ADJUSTMENT',
+            palletId: data.palletId,
+            qty: data.qty,
+            note: data.note,
+            status: 'COMPLETED'
+        });
+    };
+
     return (
         <div className="space-y-6">
+            {/* Modal */}
+            <StockAdjustmentModal
+                isOpen={isAdjModalOpen}
+                onClose={() => setIsAdjModalOpen(false)}
+                onSubmit={handleAdjustmentSubmit}
+                currentBranch={selectedBranch}
+            />
+
             {/* 1. Alert Banner (Top Priority) */}
             {isRedAlert && (
                 <div className="bg-red-50 border border-red-200 rounded-2xl p-4 flex items-start gap-3 shadow-sm animate-in fade-in slide-in-from-top-2">
@@ -204,7 +226,7 @@ const Dashboard: React.FC<DashboardProps> = ({ stock, selectedBranch, transactio
                     </div>
                     <div className="flex gap-2">
                         <button
-                            onClick={() => alert("Coming Soon: Feature to adjust stock manually.")}
+                            onClick={() => setIsAdjModalOpen(true)}
                             className="px-3 py-1.5 text-xs font-bold bg-amber-50 text-amber-600 rounded-lg hover:bg-amber-100 transition-colors"
                         >
                             ปรับปรุงยอด (Adj)
@@ -239,8 +261,40 @@ const Dashboard: React.FC<DashboardProps> = ({ stock, selectedBranch, transactio
                                 </tr>
                             ) : (
                                 displayTransactions.map((tx) => {
-                                    const qtyIn = (tx.type === 'IN') ? tx.qty : '-';
-                                    const qtyOut = (tx.type === 'OUT') ? tx.qty : '-';
+                                    const isAdjustment = tx.type === 'ADJUST';
+                                    let qtyIn, qtyOut;
+
+                                    if (isAdjustment) {
+                                        // If ADJUST, infer IN/OUT based on source
+                                        if (tx.source === 'ADJUSTMENT' || tx.source === 'SYSTEM_ADJUST' || tx.source === 'SYSTEM') {
+                                            qtyIn = tx.qty;
+                                            qtyOut = '-';
+                                        } else {
+                                            qtyIn = '-';
+                                            qtyOut = tx.qty;
+                                        }
+                                    } else {
+                                        qtyIn = (tx.type === 'IN' || tx.type === 'EXT-IN' as any) ? tx.qty : '-'; // EXT-IN handled by generic type match usually? Type is just string in DB sometimes. Using strict checks.
+                                        // Wait, simple check: is dest the current branch?
+                                        // But table shows GLOBAL transactions if ALL selected?
+                                        // Logic: "IN" column means ADDED to the RELEVANT branch (Source->Dest).
+                                        // Actually, standard: IN type = In. OUT type = Out.
+                                        // ADJUST type: ?
+                                        qtyIn = (tx.type === 'IN') ? tx.qty : '-';
+                                        qtyOut = (tx.type === 'OUT') ? tx.qty : '-';
+                                    }
+
+                                    // Better visual logic for ADJUST
+                                    if (tx.type === 'ADJUST') {
+                                        // If generated by this tool, we look at source.
+                                        if (tx.source === 'ADJUSTMENT') {
+                                            qtyIn = tx.qty;
+                                            qtyOut = '-';
+                                        } else {
+                                            qtyIn = '-';
+                                            qtyOut = tx.qty;
+                                        }
+                                    }
 
                                     return (
                                         <tr key={tx.docNo + tx.id} className="hover:bg-slate-50/50 transition-colors">
@@ -252,8 +306,9 @@ const Dashboard: React.FC<DashboardProps> = ({ stock, selectedBranch, transactio
                                             </td>
                                             <td className="p-4 text-slate-900 font-bold whitespace-nowrap">
                                                 <span className={`px-2 py-0.5 rounded-md text-[10px] ${tx.type === 'IN' ? 'bg-emerald-100 text-emerald-700' :
-                                                    tx.type === 'OUT' ? 'bg-orange-100 text-orange-700' :
-                                                        'bg-slate-100 text-slate-600'
+                                                        tx.type === 'OUT' ? 'bg-orange-100 text-orange-700' :
+                                                            tx.type === 'ADJUST' ? 'bg-amber-100 text-amber-700' :
+                                                                'bg-slate-100 text-slate-600'
                                                     }`}>
                                                     {tx.type}
                                                 </span>

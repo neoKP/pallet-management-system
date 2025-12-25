@@ -26,7 +26,7 @@ export type BranchId =
 /**
  * Transaction Types
  */
-export type TransactionType = 'IN' | 'OUT' | 'MAINTENANCE';
+export type TransactionType = 'IN' | 'OUT' | 'MAINTENANCE' | 'ADJUST';
 
 /**
  * Maintenance Action Types

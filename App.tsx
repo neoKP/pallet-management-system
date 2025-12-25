@@ -176,6 +176,7 @@ export default function App() {
               stock={stock}
               selectedBranch={selectedBranch}
               transactions={transactions}
+              addTransaction={addTransaction}
             />
           )}
 

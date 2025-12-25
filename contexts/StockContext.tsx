@@ -74,7 +74,9 @@ export const StockProvider: React.FC<StockProviderProps> = ({ children }) => {
         const isDestBranch = BRANCHES.some(b => b.id === dest);
 
         let prefix = 'INT';
-        if (isSourceBranch && isDestBranch) {
+        if (type === 'ADJUST') {
+            prefix = 'ADJ';
+        } else if (isSourceBranch && isDestBranch) {
             prefix = 'INT'; // Internal Transfer
         } else if (!isSourceBranch && isDestBranch) {
             prefix = 'EXT-IN'; // External Receive
