@@ -9,13 +9,15 @@ import {
     History as HistoryIcon,
     Download,
     Clock,
-    Trash2
+    Trash2,
+    Printer
 } from 'lucide-react';
 import { Stock, BranchId, Transaction, PalletId, User } from '../../types';
 import { useStock } from '../../contexts/StockContext';
 import StatsCard from './StatsCard';
 import StockAdjustmentModal from './StockAdjustmentModal';
 import TransactionTimelineModal from '../movements/TransactionTimelineModal';
+import DocumentPreviewModal from '../movements/DocumentPreviewModal';
 import ExcelJS from 'exceljs';
 
 interface DashboardProps {
@@ -33,6 +35,10 @@ const Dashboard: React.FC<DashboardProps> = ({ stock, selectedBranch, transactio
     // Timeline State
     const [timelineTx, setTimelineTx] = useState<Transaction | null>(null);
     const [isTimelineOpen, setIsTimelineOpen] = useState(false);
+
+    // Print State
+    const [isPrintOpen, setIsPrintOpen] = useState(false);
+    const [printData, setPrintData] = useState<any>(null);
 
     const handleViewTimeline = (tx: Transaction) => {
         setTimelineTx(tx);
@@ -67,6 +73,25 @@ const Dashboard: React.FC<DashboardProps> = ({ stock, selectedBranch, transactio
                 deleteTransaction(txId);
             }
         }
+    };
+
+    const handlePrintDoc = (mainTx: Transaction) => {
+        // Group all items with the same Doc No.
+        const group = transactions.filter(t => t.docNo === mainTx.docNo);
+        const data = {
+            source: mainTx.source,
+            dest: mainTx.dest,
+            docNo: mainTx.docNo,
+            date: mainTx.date,
+            carRegistration: mainTx.carRegistration,
+            driverName: mainTx.driverName,
+            transportCompany: mainTx.transportCompany,
+            referenceDocNo: mainTx.referenceDocNo,
+            note: mainTx.note,
+            items: group.map(t => ({ palletId: t.palletId, qty: t.qty }))
+        };
+        setPrintData(data);
+        setIsPrintOpen(true);
     };
 
     const currentStock = useMemo(() => {
@@ -412,6 +437,13 @@ const Dashboard: React.FC<DashboardProps> = ({ stock, selectedBranch, transactio
                                                         >
                                                             <Clock size={10} /> Timeline
                                                         </button>
+                                                        <button
+                                                            onClick={() => handlePrintDoc(tx)}
+                                                            className="p-1 px-1.5 bg-slate-100 hover:bg-slate-200 text-slate-500 hover:text-slate-800 rounded border border-slate-200 transition-all flex items-center gap-1"
+                                                            title="Print PDF"
+                                                        >
+                                                            <Printer size={10} />
+                                                        </button>
                                                         {currentUser?.role === 'ADMIN' && !isCancelled && (
                                                             <button
                                                                 onClick={() => handleDelete(tx.id)}
@@ -478,6 +510,20 @@ const Dashboard: React.FC<DashboardProps> = ({ stock, selectedBranch, transactio
                     transaction={timelineTx}
                 />
             )}
+
+            <DocumentPreviewModal
+                isOpen={isPrintOpen}
+                onClose={() => {
+                    setIsPrintOpen(false);
+                    setPrintData(null);
+                }}
+                onConfirm={() => {
+                    // Reuse confirm as just close in context of History view
+                    setIsPrintOpen(false);
+                    setPrintData(null);
+                }}
+                data={printData}
+            />
         </div>
     );
 };

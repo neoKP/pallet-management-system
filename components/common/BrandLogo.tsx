@@ -6,11 +6,11 @@ interface BrandLogoProps {
     imgClassName?: string;
 }
 
-const LOGO_URL = "https://www.pic.in.th/images/2025/03/02/logo-neo.png";
+const LOGO_URL = "/logo.png";
 
 const BrandLogo: React.FC<BrandLogoProps> = ({
-    className = "w-20 h-20",
-    imgClassName = "p-2"
+    className = "w-32 h-32",
+    imgClassName = "p-1"
 }) => {
     const [error, setError] = useState(false);
 

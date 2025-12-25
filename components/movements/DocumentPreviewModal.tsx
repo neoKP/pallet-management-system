@@ -55,8 +55,8 @@ const DocumentPreviewModal: React.FC<DocumentPreviewModalProps> = ({ isOpen, onC
                 </div>
 
                 {/* Document Preview Area (Scrollable) */}
-                <div className="flex-1 overflow-y-auto p-8 bg-slate-100 flex justify-center">
-                    <div id="print-area" className="bg-white p-8 w-[210mm] min-h-[297mm] shadow-lg text-slate-900 relative">
+                <div className="flex-1 overflow-y-auto p-12 bg-slate-100 flex justify-center">
+                    <div id="print-area" className="bg-white p-12 w-[210mm] min-h-[297mm] shadow-lg text-slate-900 relative">
                         {/* Styles for Print */}
                         <style>
                             {`
@@ -69,32 +69,38 @@ const DocumentPreviewModal: React.FC<DocumentPreviewModalProps> = ({ isOpen, onC
                         </style>
 
                         {/* Document Header */}
-                        <div className="flex justify-between items-start mb-6">
-                            <div className="flex items-center gap-4">
-                                {/* Use a placeholder logo or text */}
-                                <div className="w-16 h-16 bg-blue-600 rounded-lg flex items-center justify-center text-white font-bold text-2xl">
-                                    N
-                                </div>
-                                <div>
-                                    <h1 className="text-xl font-bold text-slate-900">Neo Siam Logistics Co., Ltd.</h1>
-                                    <p className="text-xs text-slate-500">123 Logistics Way, Bangkok, Thailand</p>
-                                    <p className="text-xs text-slate-500">Tel: 02-123-4567 | Tax ID: 1234567890123</p>
+                        {/* Document Header */}
+                        <div className="flex justify-between items-stretch mb-8 gap-12">
+                            {/* Boxed Company Info (Left) - Stretched to match height */}
+                            <div className="border border-slate-200 px-4 py-6 rounded-2xl flex flex-col items-center gap-5 shadow-xl shadow-slate-100/50 bg-white flex-1 min-w-0">
+                                <img src="/logo.png" alt="Company Logo" className="w-28 h-20 object-contain flex-shrink-0" />
+                                <div className="w-full text-center px-2">
+                                    <h1 className="text-[17px] font-black text-slate-900 whitespace-nowrap mb-1 tracking-tight">บริษัท นีโอสยาม โลจิสติกส์ แอนด์ ทรานสปอร์ต จำกัด</h1>
+                                    <h2 className="text-[11.5px] font-bold text-slate-700 whitespace-nowrap uppercase mb-2 tracking-wide">NEOSIAM LOGISTICS & TRANSPORT CO., LTD.</h2>
+                                    <div className="text-[10px] text-slate-500 space-y-1 font-medium leading-tight">
+                                        <p className="whitespace-nowrap">159/9-10 หมู่ 7 ตําบลบางม่วง อําเภอเมืองนครสวรรค์ จังหวัดนครสวรรค์ 60000</p>
+                                        <p className="whitespace-nowrap text-[9.5px]">159/9-10 Village No.7, Bang Muang, Muang Nakhon Sawan, Nakhon Sawan 60000</p>
+                                    </div>
                                 </div>
                             </div>
-                            <div className="text-right">
-                                <h2 className="text-2xl font-black text-slate-800 uppercase tracking-wide">ใบส่งสินค้า</h2>
-                                <h3 className="text-sm font-bold text-slate-500 uppercase tracking-widest mb-2">Delivery Note / Transfer Note</h3>
-                                <div className="border border-slate-900 px-4 py-2 rounded mb-2 inline-block">
-                                    <p className="text-xs text-slate-500 uppercase font-bold text-left">Document No.</p>
-                                    <p className="text-lg font-mono font-bold">{data.docNo}</p>
+
+                            {/* Document Info (Right) */}
+                            <div className="text-right flex flex-col justify-between items-end min-w-[220px] pr-2 py-1">
+                                <div className="mb-3">
+                                    <h2 className="text-3xl font-black text-slate-900 leading-none mb-1">ใบส่งคืนพาเลท</h2>
+                                    <p className="text-[11px] font-bold text-slate-500 tracking-wider uppercase border-t border-slate-200 pt-1">Pallet Return Form</p>
                                 </div>
-                                <div>
-                                    {/* Barcode from Public API for Demo */}
+                                <div className="flex-1 flex flex-col justify-center mb-4">
+                                    <span className="text-[10px] font-bold text-slate-400 block uppercase">Document No.</span>
+                                    <span className="text-xl font-mono font-black text-blue-600 tracking-tight whitespace-nowrap">{data.docNo}</span>
+                                </div>
+                                <div className="bg-white p-1 rounded-sm">
                                     <img
-                                        src={`https://bwipjs-api.metafloor.com/?bcid=code128&text=${data.docNo}&scale=2&height=5&incltext&textxalign=center`}
+                                        src={`https://bwipjs-api.metafloor.com/?bcid=code128&text=${data.docNo}&scale=2&height=8&incltext=0&textxalign=center`}
                                         alt="Barcode"
-                                        className="h-12 ml-auto"
+                                        className="h-9 w-44"
                                     />
+                                    <p className="text-[8px] text-slate-400 text-center font-mono mt-1 tracking-[0.5em]">{data.docNo}</p>
                                 </div>
                             </div>
                         </div>
@@ -230,13 +236,12 @@ const DocumentPreviewModal: React.FC<DocumentPreviewModalProps> = ({ isOpen, onC
                     >
                         แก้ไข (Edit)
                     </button>
-                    {/* Print Button - Optional if needed separately */}
-                    {/* <button 
+                    <button
                         onClick={handlePrint}
                         className="px-6 py-2 rounded-xl bg-slate-800 text-white font-bold hover:bg-slate-900 transition-colors flex items-center gap-2"
                     >
-                        <Printer size={18} /> พิมพ์ (Print)
-                    </button> */}
+                        <Printer size={18} /> พิมพ์/ดาวน์โหลด (PDF)
+                    </button>
                     <button
                         onClick={onConfirm}
                         className="px-6 py-2 rounded-xl bg-blue-600 text-white font-bold hover:bg-blue-700 transition-colors shadow-lg shadow-blue-200 flex items-center gap-2"
