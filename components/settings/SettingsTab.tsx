@@ -1,62 +1,88 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Settings, MapPin, Package, Plus, Trash2, Save, Building2, Truck, X } from 'lucide-react';
-import { PALLET_TYPES, BRANCHES, EXTERNAL_PARTNERS } from '../../constants';
+import * as firebaseService from '../../services/firebase';
 import { PalletType, Branch, Partner, BranchId } from '../../types';
 import Swal from 'sweetalert2';
 
 const SettingsTab: React.FC = () => {
     const [activeSection, setActiveSection] = useState<'pallets' | 'locations'>('pallets');
 
-    // Local state to simulate management (Note: Real implementation requires moving constants to Context/Firebase)
-    const [pallets, setPallets] = useState<PalletType[]>(PALLET_TYPES);
-    const [branches, setBranches] = useState<Branch[]>(BRANCHES);
-    const [partners, setPartners] = useState<Partner[]>(EXTERNAL_PARTNERS);
+    // Real-time data from Firebase
+    const [pallets, setPallets] = useState<PalletType[]>([]);
+    const [branches, setBranches] = useState<Branch[]>([]);
+    const [partners, setPartners] = useState<Partner[]>([]);
 
     const [isAddModalOpen, setIsAddModalOpen] = useState(false);
+
+    useEffect(() => {
+        const unsubPallets = firebaseService.subscribeToPallets(setPallets);
+        const unsubBranches = firebaseService.subscribeToBranches(setBranches);
+        const unsubPartners = firebaseService.subscribeToPartners(setPartners);
+        return () => {
+            // Unsubscribe functions if available from service (our service currently returns void but good practice to prep)
+            // Currently service implementation returns onValue result which is unsubscribe function
+            // We need to cast or check if function
+            if (typeof unsubPallets === 'function') (unsubPallets as Function)();
+            if (typeof unsubBranches === 'function') (unsubBranches as Function)();
+            if (typeof unsubPartners === 'function') (unsubPartners as Function)();
+        };
+    }, []);
 
     // Temporary form state
     const [newPallet, setNewPallet] = useState<Partial<PalletType>>({ material: 'wood', isRental: false, color: '#cccccc' });
     const [newLocation, setNewLocation] = useState<{ name: string, type: 'internal' | 'external', subType: string }>({ name: '', type: 'internal', subType: 'BRANCH' });
 
-    const handleAddPallet = (e: React.FormEvent) => {
+    const handleAddPallet = async (e: React.FormEvent) => {
         e.preventDefault();
         if (!newPallet.id || !newPallet.name) return;
 
         const pallet: PalletType = {
             id: newPallet.id as any,
             name: newPallet.name,
-            color: newPallet.color || 'bg-gray-400', // Simplified color handling
+            color: newPallet.color || 'bg-gray-400',
             isRental: newPallet.isRental || false,
             material: newPallet.material || 'wood'
         };
 
-        setPallets([...pallets, pallet]);
-        setIsAddModalOpen(false);
-        Swal.fire('Success', 'Pallet type added successfully (Local Session Only)', 'success');
+        try {
+            await firebaseService.addMasterData('pallets', pallet);
+            setIsAddModalOpen(false);
+            Swal.fire('Success', 'Pallet type added successfully', 'success');
+            setNewPallet({ material: 'wood', isRental: false, color: '#cccccc' }); // Reset form
+        } catch (error) {
+            console.error(error);
+            Swal.fire('Error', 'Failed to add pallet type', 'error');
+        }
     };
 
-    const handleAddLocation = (e: React.FormEvent) => {
+    const handleAddLocation = async (e: React.FormEvent) => {
         e.preventDefault();
         if (!newLocation.name) return;
 
-        if (newLocation.type === 'internal') {
-            const newBranch: Branch = {
-                id: newLocation.name.toLowerCase().replace(/\s+/g, '_') as BranchId,
-                name: newLocation.name,
-                type: newLocation.subType as 'HUB' | 'BRANCH'
-            };
-            setBranches([...branches, newBranch]);
-        } else {
-            const newPartner: Partner = {
-                id: newLocation.name.toLowerCase().replace(/\s+/g, '_'),
-                name: newLocation.name,
-                type: newLocation.subType as 'customer' | 'provider',
-                allowedPallets: [] // Default empty
-            };
-            setPartners([...partners, newPartner]);
+        try {
+            if (newLocation.type === 'internal') {
+                const newBranch: Branch = {
+                    id: newLocation.name.toLowerCase().replace(/\s+/g, '_') as BranchId,
+                    name: newLocation.name,
+                    type: newLocation.subType as 'HUB' | 'BRANCH'
+                };
+                await firebaseService.addMasterData('branches', newBranch);
+            } else {
+                const newPartner: Partner = {
+                    id: newLocation.name.toLowerCase().replace(/\s+/g, '_'),
+                    name: newLocation.name,
+                    type: newLocation.subType as 'customer' | 'provider',
+                    allowedPallets: [] // Default empty
+                };
+                await firebaseService.addMasterData('partners', newPartner);
+            }
+            setIsAddModalOpen(false);
+            Swal.fire('Success', 'Location added successfully', 'success');
+            setNewLocation({ name: '', type: 'internal', subType: 'BRANCH' }); // Reset form
+        } catch (error) {
+            console.error(error);
+            Swal.fire('Error', 'Failed to add location', 'error');
         }
-        setIsAddModalOpen(false);
-        Swal.fire('Success', 'Location added successfully (Local Session Only)', 'success');
     };
 
     return (
@@ -150,10 +176,7 @@ const SettingsTab: React.FC = () => {
                                             </td>
                                             <td className="p-4 text-center">
                                                 {/* eslint-disable-next-line */}
-                                                <div
-                                                    className={`w-6 h-6 rounded-full mx-auto shadow-sm border border-slate-200 ${p.color.startsWith('bg-') ? p.color : ''}`}
-                                                    style={dotStyle}
-                                                ></div>
+                                                <div className={`w-6 h-6 rounded-full mx-auto shadow-sm border border-slate-200 ${p.color.startsWith('bg-') ? p.color : ''}`} style={dotStyle}></div>
                                             </td>
                                             <td className="p-4 text-center">
                                                 <button aria-label="Delete" className="text-slate-400 hover:text-red-500 transition-colors">

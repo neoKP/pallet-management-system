@@ -28,20 +28,16 @@ export const EXTERNAL_PARTNERS: Partner[] = [
 ];
 
 export const INITIAL_STOCK: Stock = {
-  hub_nks: { loscam_red: 150, loscam_yellow: 50, loscam_blue: 30, hiq: 40, general: 100, plastic_circular: 50 },
-  sai3: { loscam_red: 20, loscam_yellow: 10, loscam_blue: 5, hiq: 10, general: 50, plastic_circular: 10 },
-  kpp: { loscam_red: 10, loscam_yellow: 5, loscam_blue: 0, hiq: 5, general: 20, plastic_circular: 5 },
-  plk: { loscam_red: 15, loscam_yellow: 5, loscam_blue: 0, hiq: 5, general: 25, plastic_circular: 5 },
-  cm: { loscam_red: 30, loscam_yellow: 0, loscam_blue: 0, hiq: 0, general: 10, plastic_circular: 0 },
+  hub_nks: { loscam_red: 0, loscam_yellow: 0, loscam_blue: 0, hiq: 0, general: 0, plastic_circular: 0 },
+  sai3: { loscam_red: 0, loscam_yellow: 0, loscam_blue: 0, hiq: 0, general: 0, plastic_circular: 0 },
+  kpp: { loscam_red: 0, loscam_yellow: 0, loscam_blue: 0, hiq: 0, general: 0, plastic_circular: 0 },
+  plk: { loscam_red: 0, loscam_yellow: 0, loscam_blue: 0, hiq: 0, general: 0, plastic_circular: 0 },
+  cm: { loscam_red: 0, loscam_yellow: 0, loscam_blue: 0, hiq: 0, general: 0, plastic_circular: 0 },
   ekp: { loscam_red: 0, loscam_yellow: 0, loscam_blue: 0, hiq: 0, general: 0, plastic_circular: 0 },
   maintenance_stock: { loscam_red: 0, loscam_yellow: 0, loscam_blue: 0, hiq: 0, general: 0, plastic_circular: 0 },
 };
 
-export const INITIAL_TRANSACTIONS: Transaction[] = [
-  { id: 1, docNo: 'EXT-IN-20231025-001', date: '2023-10-25', type: 'IN', status: 'COMPLETED', source: 'neo_corp', dest: 'hub_nks', palletId: 'loscam_red', qty: 50, note: 'รับเข้าพร้อมสินค้า' },
-  { id: 2, docNo: 'EXT-OUT-20231026-001', date: '2023-10-26', type: 'OUT', status: 'COMPLETED', source: 'hub_nks', dest: 'loscam_wangnoi', palletId: 'loscam_red', qty: 100, note: 'คืนตามรอบ' },
-  { id: 3, docNo: 'INT-20231026-001', date: '2023-10-26', type: 'OUT', status: 'COMPLETED', source: 'hub_nks', dest: 'kpp', palletId: 'general', qty: 30, note: 'โอนย้ายภายใน' },
-];
+export const INITIAL_TRANSACTIONS: Transaction[] = [];
 
 export const MOCK_USERS: User[] = [
   { username: 'admin', role: 'ADMIN', name: 'System Administrator' },

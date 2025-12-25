@@ -127,15 +127,15 @@ export default function App() {
                   <select
                     value={selectedBranch}
                     onChange={(e) => setSelectedBranch(e.target.value as BranchId | 'ALL')}
-                    className="appearance-none bg-transparent border-none py-1 pr-8 pl-0 text-right text-lg font-bold text-slate-700 focus:ring-0 cursor-pointer hover:text-blue-600 transition-colors"
+                    className="appearance-none bg-white border border-slate-200 rounded-full py-2 pl-6 pr-10 text-center text-sm font-bold text-slate-700 shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 cursor-pointer hover:bg-slate-50 transition-all min-w-[200px]"
                     aria-label="Select Branch Scope"
                   >
-                    <option value="ALL">All Branches</option>
+                    <option value="ALL">All Branches (ทุกสาขา)</option>
                     {BRANCHES.map(b => (
                       <option key={b.id} value={b.id}>{b.name}</option>
                     ))}
                   </select>
-                  <div className="absolute right-0 top-1/2 -translate-y-1/2 pointer-events-none text-slate-400 group-hover:text-blue-600">
+                  <div className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-slate-400 group-hover:text-blue-600 transition-colors">
                     <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><path d="m6 9 6 6 6-6" /></svg>
                   </div>
                 </div>

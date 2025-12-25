@@ -1,5 +1,5 @@
-import { Stock, Transaction } from '../types';
-import { INITIAL_STOCK, INITIAL_TRANSACTIONS } from '../constants';
+import { Stock, Transaction, PalletType, Branch, Partner } from '../types';
+import { INITIAL_STOCK, INITIAL_TRANSACTIONS, PALLET_TYPES, BRANCHES, EXTERNAL_PARTNERS } from '../constants';
 
 // Declare global firebase instance interface
 declare global {
@@ -47,6 +47,13 @@ export const initializeData = async () => {
         if (!stockSnap.exists()) {
             console.log('Seeding initial stock data...');
             await set(stockRef, INITIAL_STOCK);
+        } else {
+            // Check for legacy mock data signature and clear it
+            const val = stockSnap.val();
+            if (val.hub_nks?.loscam_red === 150 && val.sai3?.loscam_red === 20) {
+                console.log('Detected mock stock data. Clearing...');
+                await set(stockRef, INITIAL_STOCK);
+            }
         }
 
         // Check transactions
@@ -56,7 +63,44 @@ export const initializeData = async () => {
         if (!txSnap.exists()) {
             console.log('Seeding initial transaction data...');
             await set(txRef, INITIAL_TRANSACTIONS);
+        } else {
+            // Check for legacy mock transaction signature and clear it
+            const val = txSnap.val();
+            if (val) {
+                const txs = Array.isArray(val) ? val : Object.values(val);
+                // Check for specific mock docNo
+                const hasMockTx = txs.some((t: any) => t.docNo === 'EXT-IN-20231025-001');
+                if (hasMockTx) {
+                    console.log('Detected mock transaction data. Clearing...');
+                    await set(txRef, INITIAL_TRANSACTIONS);
+                }
+            }
         }
+
+        // Check Master Data: Pallets
+        const palletsRef = ref(db, 'pallets');
+        const palletsSnap = await get(palletsRef);
+        if (!palletsSnap.exists()) {
+            console.log('Seeding initial pallets data...');
+            await set(palletsRef, PALLET_TYPES);
+        }
+
+        // Check Master Data: Branches
+        const branchesRef = ref(db, 'branches');
+        const branchesSnap = await get(branchesRef);
+        if (!branchesSnap.exists()) {
+            console.log('Seeding initial branches data...');
+            await set(branchesRef, BRANCHES);
+        }
+
+        // Check Master Data: Partners
+        const partnersRef = ref(db, 'partners');
+        const partnersSnap = await get(partnersRef);
+        if (!partnersSnap.exists()) {
+            console.log('Seeding initial partners data...');
+            await set(partnersRef, EXTERNAL_PARTNERS);
+        }
+
     } catch (error) {
         console.error("Error initializing data:", error);
     }
@@ -99,6 +143,73 @@ export const subscribeToTransactions = (callback: (transactions: Transaction[]) 
         return () => { };
     }
 };
+
+// --- Master Data Subscriptions ---
+
+export const subscribeToPallets = (callback: (pallets: PalletType[]) => void) => {
+    try {
+        const db = getDb();
+        const { ref, onValue } = getUtils();
+        const refPath = ref(db, 'pallets');
+
+        return onValue(refPath, (snapshot) => {
+            const val = snapshot.val();
+            if (val) {
+                const arr = Array.isArray(val) ? val : Object.values(val);
+                callback(arr as PalletType[]);
+            } else {
+                callback([]);
+            }
+        });
+    } catch (error) {
+        console.error("Error subscribing to pallets:", error);
+        return () => { };
+    }
+};
+
+export const subscribeToBranches = (callback: (branches: Branch[]) => void) => {
+    try {
+        const db = getDb();
+        const { ref, onValue } = getUtils();
+        const refPath = ref(db, 'branches');
+
+        return onValue(refPath, (snapshot) => {
+            const val = snapshot.val();
+            if (val) {
+                const arr = Array.isArray(val) ? val : Object.values(val);
+                callback(arr as Branch[]);
+            } else {
+                callback([]);
+            }
+        });
+    } catch (error) {
+        console.error("Error subscribing to branches:", error);
+        return () => { };
+    }
+};
+
+export const subscribeToPartners = (callback: (partners: Partner[]) => void) => {
+    try {
+        const db = getDb();
+        const { ref, onValue } = getUtils();
+        const refPath = ref(db, 'partners');
+
+        return onValue(refPath, (snapshot) => {
+            const val = snapshot.val();
+            if (val) {
+                const arr = Array.isArray(val) ? val : Object.values(val);
+                callback(arr as Partner[]);
+            } else {
+                callback([]);
+            }
+        });
+    } catch (error) {
+        console.error("Error subscribing to partners:", error);
+        return () => { };
+    }
+};
+
+// --- Add Data ---
 
 export const addTransaction = async (transaction: Transaction) => {
     try {
@@ -145,6 +256,29 @@ export const updateTransactionAndStock = async (transaction: Transaction, newSto
 
     } catch (error) {
         console.error("Error updating stock and transactions:", error);
+        throw error;
+    }
+};
+
+export const addMasterData = async (type: 'pallets' | 'branches' | 'partners', data: any) => {
+    try {
+        const db = getDb();
+        const { ref, get, set } = getUtils();
+
+        const path = type; // 'pallets', 'branches', or 'partners'
+        const dbRef = ref(db, path);
+        const snapshot = await get(dbRef);
+        let currentData = snapshot.val() || [];
+
+        if (!Array.isArray(currentData)) {
+            currentData = Object.values(currentData);
+        }
+
+        const newData = [...currentData, data];
+        await set(dbRef, newData);
+
+    } catch (error) {
+        console.error(`Error adding ${type}:`, error);
         throw error;
     }
 };
