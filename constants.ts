@@ -24,7 +24,7 @@ export const EXTERNAL_PARTNERS: Partner[] = [
   { id: 'sino', name: 'บ. ซีโน-แปซิฟิค', type: 'customer', allowedPallets: ['loscam_red'] },
   { id: 'lamsoon', name: 'บ. ล่ำสูง', type: 'customer', allowedPallets: ['loscam_red'] },
   { id: 'loscam_wangnoi', name: 'Loscam วังน้อย', type: 'provider', allowedPallets: ['loscam_red'] },
-  { id: 'hiq_th', name: 'HI-Q (บริษัท)', type: 'provider', allowedPallets: ['hiq'] },
+  { id: 'hiq_th', name: 'HI-Q', type: 'provider', allowedPallets: ['hiq'] },
 ];
 
 export const INITIAL_STOCK: Stock = {

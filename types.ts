@@ -172,3 +172,25 @@ export interface AppError {
   message: string;
   details?: unknown;
 }
+
+/**
+ * Pallet Request Status Type
+ */
+export type PalletRequestStatus = 'PENDING' | 'APPROVED' | 'SHIPPED' | 'REJECTED';
+
+/**
+ * Pallet Request Interface
+ */
+export interface PalletRequest {
+  id: string;
+  date: string;
+  requestNo: string;
+  branchId: BranchId; // Store branch that requested
+  items: { palletId: PalletId; qty: number }[];
+  purpose: string; // e.g., "ส่งคืนลำสูง"
+  priority: 'NORMAL' | 'URGENT';
+  status: PalletRequestStatus;
+  targetBranchId?: string; // Specify destination (e.g., Lum Soon, Sino, CM)
+  note?: string;
+  processDocNo?: string; // Links to the OUT transaction once processed
+}

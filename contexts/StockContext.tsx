@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useState, useCallback, ReactNode, useEffect } from 'react';
-import { Stock, Transaction, BranchId, PalletId, TransactionType } from '../types';
+import { Stock, Transaction, BranchId, PalletId, TransactionType, PalletRequest } from '../types';
 import { INITIAL_STOCK, INITIAL_TRANSACTIONS, BRANCHES } from '../constants';
 import * as firebaseService from '../services/firebase';
 
@@ -18,6 +18,7 @@ interface StockContextType {
         driverName?: string;
         transportCompany?: string;
         referenceDocNo?: string;
+        note?: string;
     }) => void;
     confirmTransaction: (txId: number) => void;
     deleteTransaction: (txId: number) => void;
@@ -30,6 +31,9 @@ interface StockContextType {
         targetBranchId?: BranchId;
     }) => void;
     getStockForBranch: (branchId: BranchId) => Record<PalletId, number>;
+    palletRequests: PalletRequest[];
+    createPalletRequest: (data: Partial<PalletRequest>) => void;
+    updatePalletRequestStatus: (requestId: string, status: PalletRequest['status'], docNo?: string) => void;
 }
 
 const StockContext = createContext<StockContextType | undefined>(undefined);
@@ -49,6 +53,7 @@ interface StockProviderProps {
 export const StockProvider: React.FC<StockProviderProps> = ({ children }) => {
     const [stock, setStock] = useState<Stock>(INITIAL_STOCK);
     const [transactions, setTransactions] = useState<Transaction[]>(INITIAL_TRANSACTIONS);
+    const [palletRequests, setPalletRequests] = useState<PalletRequest[]>([]);
 
     // --- Firebase Sync ---
     useEffect(() => {
@@ -60,6 +65,11 @@ export const StockProvider: React.FC<StockProviderProps> = ({ children }) => {
         // Subscribe to Transactions
         firebaseService.subscribeToTransactions((data) => {
             if (data) setTransactions(data);
+        });
+
+        // Subscribe to Pallet Requests
+        firebaseService.subscribeToPalletRequests((data) => {
+            if (data) setPalletRequests(data as PalletRequest[]);
         });
 
         // Cleanup: Ideally we should unsubscribe, but our service wrapper currently returns void.
@@ -93,6 +103,13 @@ export const StockProvider: React.FC<StockProviderProps> = ({ children }) => {
 
         return `${prefix}-${datePart}-${running}`;
     }, [transactions]);
+
+    const generateRequestNo = useCallback((dateStr: string) => {
+        const datePart = dateStr.replace(/-/g, '');
+        const existingReqs = palletRequests.filter(r => r.requestNo.startsWith(`REQ-${datePart}`));
+        const running = (existingReqs.length + 1).toString().padStart(3, '0');
+        return `REQ-${datePart}-${running}`;
+    }, [palletRequests]);
 
     const addTransaction = useCallback((txData: Partial<Transaction>) => {
         const dateStr = new Date().toISOString().split('T')[0];
@@ -138,8 +155,7 @@ export const StockProvider: React.FC<StockProviderProps> = ({ children }) => {
         }
 
         // Send to Firebase
-        firebaseService.updateTransactionAndStock(newTx, nextStock);
-
+        firebaseService.addMovementBatch([newTx], nextStock);
     }, [stock, generateDocNo]);
 
     const confirmTransaction = useCallback((txId: number) => {
@@ -158,7 +174,7 @@ export const StockProvider: React.FC<StockProviderProps> = ({ children }) => {
         }
 
         // Send to Firebase
-        firebaseService.updateTransactionAndStock(updatedTx, nextStock);
+        firebaseService.addMovementBatch([updatedTx], nextStock);
 
     }, [stock, transactions]);
 
@@ -170,7 +186,7 @@ export const StockProvider: React.FC<StockProviderProps> = ({ children }) => {
         // effectively handling it as a string or updating type definitions would be best.
         // For now, assuming standard update handles arbitrary status strings for display.
         const updatedTx = { ...tx, status: 'CANCELLED' as const };
-        firebaseService.updateTransactionAndStock(updatedTx, stock);
+        firebaseService.addMovementBatch([updatedTx], stock);
     }, [transactions, stock]);
 
     const addMovementBatch = useCallback((data: {
@@ -184,6 +200,7 @@ export const StockProvider: React.FC<StockProviderProps> = ({ children }) => {
         driverName?: string;
         transportCompany?: string;
         referenceDocNo?: string;
+        note?: string;
     }) => {
         const dateStr = new Date().toISOString().split('T')[0];
         const docNo = data.docNo || generateDocNo(data.type, data.source, data.dest, dateStr);
@@ -212,6 +229,7 @@ export const StockProvider: React.FC<StockProviderProps> = ({ children }) => {
                 driverName: data.driverName,
                 transportCompany: data.transportCompany,
                 referenceDocNo: data.referenceDocNo,
+                note: data.note,
             } as Transaction;
 
             newTransactions.push(newTx);
@@ -231,21 +249,7 @@ export const StockProvider: React.FC<StockProviderProps> = ({ children }) => {
             }
         });
 
-        // Directly access firebase utils for batch update here
-        // Assuming window.firebase is available globally or imported
-        if (typeof window !== 'undefined' && window.firebase && window.firebase.utils && window.firebase.database()) {
-            const { utils, database } = window.firebase;
-            const updates: Record<string, any> = {};
-
-            updates['/transactions'] = newTransactions;
-            updates['/stock'] = nextStock;
-
-            utils.update(utils.ref(database(), '/'), updates);
-        } else {
-            console.error("Firebase utilities not available for batch update.");
-            // Fallback or error handling if firebase is not initialized or window.firebase is not set
-        }
-
+        firebaseService.addMovementBatch(newTransactions, nextStock);
     }, [stock, generateDocNo]);
 
     const processBatchMaintenance = useCallback(
@@ -303,10 +307,38 @@ export const StockProvider: React.FC<StockProviderProps> = ({ children }) => {
                 nextStock[targetBranch] = t;
             }
 
-            firebaseService.updateTransactionAndStock(newTx, nextStock);
+            firebaseService.addMovementBatch([newTx], nextStock);
         },
         [stock, transactions]
     );
+
+    const createPalletRequest = useCallback((reqData: Partial<PalletRequest>) => {
+        const dateStr = new Date().toISOString().split('T')[0];
+        const requestNo = generateRequestNo(dateStr);
+
+        const newReq: PalletRequest = {
+            id: Date.now().toString(),
+            date: dateStr,
+            requestNo,
+            branchId: reqData.branchId || 'hub_nks',
+            items: reqData.items || [],
+            targetBranchId: reqData.targetBranchId,
+            purpose: reqData.purpose || '',
+            priority: reqData.priority || 'NORMAL',
+            status: 'PENDING',
+            note: reqData.note || '',
+        };
+
+        firebaseService.updatePalletRequest(newReq);
+    }, [generateRequestNo]);
+
+    const updatePalletRequestStatus = useCallback((requestId: string, status: PalletRequest['status'], docNo?: string) => {
+        const req = palletRequests.find(r => r.id === requestId);
+        if (!req) return;
+
+        const updatedReq = { ...req, status, processDocNo: docNo };
+        firebaseService.updatePalletRequest(updatedReq);
+    }, [palletRequests]);
 
     const getStockForBranch = useCallback(
         (branchId: BranchId): Record<PalletId, number> => {
@@ -326,6 +358,9 @@ export const StockProvider: React.FC<StockProviderProps> = ({ children }) => {
                 deleteTransaction,
                 processBatchMaintenance,
                 getStockForBranch,
+                palletRequests,
+                createPalletRequest,
+                updatePalletRequestStatus,
             }}
         >
             {children}

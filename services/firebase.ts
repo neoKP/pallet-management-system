@@ -101,6 +101,14 @@ export const initializeData = async () => {
             await set(partnersRef, EXTERNAL_PARTNERS);
         }
 
+        // Check Pallet Requests
+        const requestsRef = ref(db, 'palletRequests');
+        const requestsSnap = await get(requestsRef);
+        if (!requestsSnap.exists()) {
+            console.log('Initializing pallet requests...');
+            await set(requestsRef, []);
+        }
+
     } catch (error) {
         console.error("Error initializing data:", error);
     }
@@ -209,6 +217,27 @@ export const subscribeToPartners = (callback: (partners: Partner[]) => void) => 
     }
 };
 
+export const subscribeToPalletRequests = (callback: (requests: any[]) => void) => {
+    try {
+        const db = getDb();
+        const { ref, onValue } = getUtils();
+        const refPath = ref(db, 'palletRequests');
+
+        return onValue(refPath, (snapshot) => {
+            const val = snapshot.val();
+            if (val) {
+                const arr = Array.isArray(val) ? val : Object.values(val);
+                callback(arr);
+            } else {
+                callback([]);
+            }
+        });
+    } catch (error) {
+        console.error("Error subscribing to pallet requests:", error);
+        return () => { };
+    }
+};
+
 // --- Add Data ---
 
 export const addTransaction = async (transaction: Transaction) => {
@@ -232,15 +261,15 @@ export const addTransaction = async (transaction: Transaction) => {
     }
 };
 
-export const updateTransactionAndStock = async (transaction: Transaction, newStock: Stock) => {
+export const addMovementBatch = async (newTransactions: Transaction[], newStock: Stock) => {
     try {
         const db = getDb();
-        const { ref, update, get, set } = getUtils();
+        const { ref, update, get } = getUtils();
 
         const updates: any = {};
         updates['/stock'] = newStock;
 
-        // Append transaction
+        // Append multiple transactions
         const txRef = ref(db, 'transactions');
         const snapshot = await get(txRef);
         let currentTxs = snapshot.val() || [];
@@ -248,14 +277,12 @@ export const updateTransactionAndStock = async (transaction: Transaction, newSto
             currentTxs = Object.values(currentTxs);
         }
 
-        const newTxs = [...currentTxs, transaction];
-        updates['/transactions'] = newTxs;
+        const updatedTxs = [...currentTxs, ...newTransactions];
+        updates['/transactions'] = updatedTxs;
 
-        // Fix: Call ref(db, '/') for root path update
         await update(ref(db, '/'), updates);
-
     } catch (error) {
-        console.error("Error updating stock and transactions:", error);
+        console.error("Error adding movement batch:", error);
         throw error;
     }
 };
@@ -279,6 +306,44 @@ export const addMasterData = async (type: 'pallets' | 'branches' | 'partners', d
 
     } catch (error) {
         console.error(`Error adding ${type}:`, error);
+        throw error;
+    }
+};
+
+export const updatePalletRequest = async (request: any) => {
+    try {
+        const db = getDb();
+        const { ref, get, set } = getUtils();
+
+        const refPath = ref(db, 'palletRequests');
+        const snapshot = await get(refPath);
+        let current = snapshot.val() || [];
+        if (!Array.isArray(current)) {
+            current = Object.values(current);
+        }
+
+        const index = current.findIndex((r: any) => r.id === request.id);
+        if (index > -1) {
+            current[index] = request;
+        } else {
+            current.push(request);
+        }
+
+        await set(refPath, current);
+    } catch (error) {
+        console.error("Error updating pallet request:", error);
+        throw error;
+    }
+};
+
+export const updatePalletRequestsBatch = async (requests: any[]) => {
+    try {
+        const db = getDb();
+        const { ref, set } = getUtils();
+        const refPath = ref(db, 'palletRequests');
+        await set(refPath, requests);
+    } catch (error) {
+        console.error("Error updating pallet requests batch:", error);
         throw error;
     }
 };
