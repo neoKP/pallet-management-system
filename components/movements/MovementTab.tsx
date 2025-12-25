@@ -1,6 +1,7 @@
 import React, { useState, useMemo } from 'react';
-import { ArrowDownCircle, ArrowUpCircle, Save, CheckCircle, Truck, Plus, Trash2, Car, User as UserIcon, Building, FileText } from 'lucide-react';
+import { ArrowDownCircle, ArrowUpCircle, Save, CheckCircle, Truck, Plus, Trash2, Car, User as UserIcon, Building, FileText, Clock } from 'lucide-react';
 import ReceiveModal from './ReceiveModal';
+import TransactionTimelineModal from './TransactionTimelineModal';
 import { BRANCHES, EXTERNAL_PARTNERS, PALLET_TYPES } from '../../constants';
 import { BranchId, Transaction, TransactionType, PalletId, Stock, User } from '../../types';
 import { useStock } from '../../contexts/StockContext';
@@ -33,6 +34,10 @@ const MovementTab: React.FC<MovementTabProps> = ({ selectedBranch, transactions 
     // Verification Modal State
     const [verifyingGroup, setVerifyingGroup] = useState<Transaction[] | null>(null);
     const [isReceiveModalOpen, setIsReceiveModalOpen] = useState(false);
+
+    // Timeline Modal State
+    const [timelineTx, setTimelineTx] = useState<Transaction | null>(null);
+    const [isTimelineOpen, setIsTimelineOpen] = useState(false);
 
     // Group transactions by DocNo
     const { pendingGroups, historyGroups } = useMemo(() => {
@@ -83,6 +88,11 @@ const MovementTab: React.FC<MovementTabProps> = ({ selectedBranch, transactions 
             newItems[index].qty = value;
         }
         setItems(newItems);
+    };
+
+    const handleViewTimeline = (tx: Transaction) => {
+        setTimelineTx(tx);
+        setIsTimelineOpen(true);
     };
 
     const handleSubmit = (e: React.FormEvent) => {
@@ -207,7 +217,16 @@ const MovementTab: React.FC<MovementTabProps> = ({ selectedBranch, transactions 
                                             <span className="px-2 py-1 bg-orange-100 text-orange-700 text-xs font-bold rounded-lg">
                                                 {mainTx.docNo}
                                             </span>
-                                            <span className="text-xs text-slate-400 font-medium">{mainTx.date}</span>
+                                            <div className="flex items-center gap-2">
+                                                <button
+                                                    onClick={() => handleViewTimeline(mainTx)}
+                                                    className="p-1 px-2 text-xs font-bold bg-slate-50 text-slate-400 hover:bg-white hover:text-blue-600 rounded-lg transition-all border border-transparent hover:border-blue-100 shadow-sm hover:shadow active:scale-95 flex items-center gap-1"
+                                                    title="View Timeline"
+                                                >
+                                                    <Clock size={14} /> Timeline
+                                                </button>
+                                                <span className="text-xs text-slate-400 font-medium">{mainTx.date}</span>
+                                            </div>
                                         </div>
                                         <div className="space-y-2 mb-4 border-t border-slate-100 pt-2">
                                             <div className="text-sm text-slate-600">
@@ -263,6 +282,14 @@ const MovementTab: React.FC<MovementTabProps> = ({ selectedBranch, transactions 
                 group={verifyingGroup || []}
                 onConfirm={handleConfirmReceive}
             />
+
+            {timelineTx && (
+                <TransactionTimelineModal
+                    isOpen={isTimelineOpen}
+                    onClose={() => setIsTimelineOpen(false)}
+                    transaction={timelineTx}
+                />
+            )}
 
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                 {/* Form */}
@@ -490,7 +517,16 @@ const MovementTab: React.FC<MovementTabProps> = ({ selectedBranch, transactions 
                                             </div>
                                             <span className="text-xs font-mono font-bold text-slate-500">{tx.docNo || '-'}</span>
                                         </div>
-                                        <span className="text-xs text-slate-400">{tx.date}</span>
+                                        <div className="flex flex-col items-end gap-1">
+                                            <span className="text-xs text-slate-400">{tx.date}</span>
+                                            <button
+                                                onClick={() => handleViewTimeline(tx)}
+                                                className="text-xs flex items-center gap-1 text-slate-400 font-bold hover:text-blue-600 transition-colors"
+                                                title="View Timeline"
+                                            >
+                                                <Clock size={12} /> Timeline
+                                            </button>
+                                        </div>
                                     </div>
                                     <div className="text-sm text-slate-600">
                                         <div className="mb-2"><span className="font-bold text-slate-800">Route:</span> {tx.source} → {tx.dest}</div>

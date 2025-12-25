@@ -176,7 +176,7 @@ const SettingsTab: React.FC = () => {
                                             </td>
                                             <td className="p-4 text-center">
                                                 {/* eslint-disable-next-line */}
-                                                <div className={`w-6 h-6 rounded-full mx-auto shadow-sm border border-slate-200 ${p.color.startsWith('bg-') ? p.color : ''}`} style={dotStyle}></div>
+                                                <div className={`w-6 h-6 rounded-full mx-auto shadow-sm border border-slate-200 ${p.color.startsWith('bg-') ? p.color : ''}`} {...{ style: dotStyle }}></div>
                                             </td>
                                             <td className="p-4 text-center">
                                                 <button aria-label="Delete" className="text-slate-400 hover:text-red-500 transition-colors">

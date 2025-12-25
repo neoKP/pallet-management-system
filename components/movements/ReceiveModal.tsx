@@ -69,7 +69,7 @@ const ReceiveModal: React.FC<ReceiveModalProps> = ({ isOpen, onClose, group, onC
                         </h3>
                         <p className="text-sm text-slate-500 mt-1">Doc No: <span className="font-mono text-slate-700">{docNo}</span> | From: <span className="font-bold text-slate-700">{sourceBranch}</span></p>
                     </div>
-                    <button onClick={onClose} className="p-2 hover:bg-slate-200 rounded-full transition-colors">
+                    <button onClick={onClose} className="p-2 hover:bg-slate-200 rounded-full transition-colors" aria-label="Close">
                         <X size={20} className="text-slate-500" />
                     </button>
                 </div>

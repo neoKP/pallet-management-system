@@ -176,7 +176,7 @@ const Dashboard: React.FC<DashboardProps> = ({ stock, selectedBranch, transactio
                         </div>
                         <div className="h-3 bg-slate-100 rounded-full overflow-hidden">
                             {/* eslint-disable-next-line */}
-                            <div className="h-full bg-red-500 rounded-full transition-all duration-1000 w-[var(--bar-width)]" style={redBarStyle}></div>
+                            <div className="h-full bg-red-500 rounded-full transition-all duration-1000 w-[var(--bar-width)]" {...{ style: redBarStyle }}></div>
                         </div>
                     </div>
                     {/* Yellow */}
@@ -189,7 +189,7 @@ const Dashboard: React.FC<DashboardProps> = ({ stock, selectedBranch, transactio
                         </div>
                         <div className="h-3 bg-slate-100 rounded-full overflow-hidden">
                             {/* eslint-disable-next-line */}
-                            <div className="h-full bg-amber-400 rounded-full transition-all duration-1000 w-[var(--bar-width)]" style={yellowBarStyle}></div>
+                            <div className="h-full bg-amber-400 rounded-full transition-all duration-1000 w-[var(--bar-width)]" {...{ style: yellowBarStyle }}></div>
                         </div>
                     </div>
                     {/* Blue */}
@@ -202,7 +202,7 @@ const Dashboard: React.FC<DashboardProps> = ({ stock, selectedBranch, transactio
                         </div>
                         <div className="h-3 bg-slate-100 rounded-full overflow-hidden">
                             {/* eslint-disable-next-line */}
-                            <div className="h-full bg-blue-500 rounded-full transition-all duration-1000 w-[var(--bar-width)]" style={blueBarStyle}></div>
+                            <div className="h-full bg-blue-500 rounded-full transition-all duration-1000 w-[var(--bar-width)]" {...{ style: blueBarStyle }}></div>
                         </div>
                     </div>
                 </div>

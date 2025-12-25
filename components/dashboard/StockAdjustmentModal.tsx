@@ -156,7 +156,7 @@ const StockAdjustmentModal: React.FC<StockAdjustmentModalProps> = ({
                                     >
                                         <div className="flex items-center gap-2 mb-1">
                                             {/* eslint-disable-next-line */}
-                                            <div className="w-2.5 h-2.5 rounded-full shadow-sm shrink-0" style={palletDotStyle} />
+                                            <div className="w-2.5 h-2.5 rounded-full shadow-sm shrink-0" {...{ style: palletDotStyle }} />
                                             <span className={`text-xs font-bold leading-tight ${selectedPallet === pallet.id ? 'text-slate-900' : 'text-slate-600'}`}>
                                                 {pallet.name}
                                             </span>
