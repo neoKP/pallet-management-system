@@ -1,5 +1,6 @@
 import React, { useState, useMemo } from 'react';
 import { ArrowDownCircle, ArrowUpCircle, Save, CheckCircle, Truck, Plus, Trash2, Car, User as UserIcon, Building, FileText } from 'lucide-react';
+import ReceiveModal from './ReceiveModal';
 import { BRANCHES, EXTERNAL_PARTNERS, PALLET_TYPES } from '../../constants';
 import { BranchId, Transaction, TransactionType, PalletId, Stock, User } from '../../types';
 import { useStock } from '../../contexts/StockContext';
@@ -28,6 +29,10 @@ const MovementTab: React.FC<MovementTabProps> = ({ selectedBranch, transactions 
         driverName: '',
         transportCompany: ''
     });
+
+    // Verification Modal State
+    const [verifyingGroup, setVerifyingGroup] = useState<Transaction[] | null>(null);
+    const [isReceiveModalOpen, setIsReceiveModalOpen] = useState(false);
 
     // Group transactions by DocNo
     const { pendingGroups, historyGroups } = useMemo(() => {
@@ -156,38 +161,25 @@ const MovementTab: React.FC<MovementTabProps> = ({ selectedBranch, transactions 
     };
 
     const handleBatchConfirm = (txs: Transaction[]) => {
-        const totalQty = txs.reduce((sum, t) => sum + t.qty, 0);
-        const source = txs[0].source;
+        setVerifyingGroup(txs);
+        setIsReceiveModalOpen(true);
+    };
+
+    const handleConfirmReceive = (txs: Transaction[]) => {
+        txs.forEach(tx => confirmTransaction(tx.id));
         // @ts-ignore
         const Swal = window.Swal;
-
         if (Swal) {
             Swal.fire({
-                title: 'ยืนยันการรับของ?',
-                html: `คุณต้องการยืนยันการรับพาเลททั้งหมด <b>${totalQty}</b> ตัว<br/>จาก <b>${source}</b> ใช่หรือไม่?`,
-                icon: 'question',
-                showCancelButton: true,
-                confirmButtonColor: '#10b981',
-                cancelButtonColor: '#ef4444',
-                confirmButtonText: 'ยืนยัน, รับของ',
-                cancelButtonText: 'ยกเลิก'
-            }).then((result: any) => {
-                if (result.isConfirmed) {
-                    txs.forEach(tx => confirmTransaction(tx.id));
-                    Swal.fire({
-                        icon: 'success',
-                        title: 'เรียบร้อย!',
-                        text: 'ยืนยันการรับของเสร็จสมบูรณ์',
-                        timer: 1500,
-                        showConfirmButton: false
-                    });
-                }
+                icon: 'success',
+                title: 'เรียบร้อย!',
+                text: 'ยืนยันการรับของเสร็จสมบูรณ์',
+                timer: 1500,
+                showConfirmButton: false
             });
-        } else {
-            if (window.confirm(`Confirm receipt of ${totalQty} pallets from ${source}?`)) {
-                txs.forEach(tx => confirmTransaction(tx.id));
-            }
         }
+        setVerifyingGroup(null);
+        setIsReceiveModalOpen(false);
     };
 
     return (
@@ -200,7 +192,7 @@ const MovementTab: React.FC<MovementTabProps> = ({ selectedBranch, transactions 
                             <Truck size={24} />
                         </div>
                         <div>
-                            <h2 className="text-lg font-black text-slate-900">Incoming Deliveries</h2>
+                            <h2 className="text-lg font-black text-slate-900">Incoming Deliveries (รอรับเข้า)</h2>
                             <p className="text-sm text-slate-500">Items sent from other branches waiting for acceptance</p>
                         </div>
                     </div>
@@ -256,7 +248,7 @@ const MovementTab: React.FC<MovementTabProps> = ({ selectedBranch, transactions 
                                         className="w-full py-2 bg-slate-900 text-white rounded-xl font-bold text-sm hover:bg-slate-800 transition-colors flex items-center justify-center gap-2"
                                     >
                                         <CheckCircle size={16} />
-                                        Confirm All
+                                        ตรวจสอบ & รับของ
                                     </button>
                                 </div>
                             );
@@ -264,6 +256,13 @@ const MovementTab: React.FC<MovementTabProps> = ({ selectedBranch, transactions 
                     </div>
                 </div>
             )}
+
+            <ReceiveModal
+                isOpen={isReceiveModalOpen}
+                onClose={() => setIsReceiveModalOpen(false)}
+                group={verifyingGroup || []}
+                onConfirm={handleConfirmReceive}
+            />
 
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                 {/* Form */}
