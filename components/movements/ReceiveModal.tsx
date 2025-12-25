@@ -91,7 +91,7 @@ const ReceiveModal: React.FC<ReceiveModalProps> = ({ isOpen, onClose, group, onC
                                 <div key={item.palletId} className={`p-4 rounded-xl border-2 transition-all ${isMatch ? 'border-green-500 bg-green-50' : 'border-slate-100 bg-white'}`}>
                                     <div className="flex justify-between items-center mb-2">
                                         <div className="font-bold text-slate-900">{pallet?.name}</div>
-                                        <div className="text-xs font-bold text-slate-500">ยอดส่งมา: {item.qty}</div>
+                                        <div className="text-sm font-bold text-slate-600 bg-slate-100 px-3 py-1 rounded-lg">ยอดส่งมา: <span className="text-lg text-slate-900">{item.qty}</span></div>
                                     </div>
                                     <div className="flex items-center gap-3">
                                         <div className="grow">
