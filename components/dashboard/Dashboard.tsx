@@ -7,11 +7,13 @@ import {
     Layers,
     BarChart3,
     History as HistoryIcon,
-    Download
+    Download,
+    Clock
 } from 'lucide-react';
 import { Stock, BranchId, Transaction, PalletId, User } from '../../types';
 import StatsCard from './StatsCard';
 import StockAdjustmentModal from './StockAdjustmentModal';
+import TransactionTimelineModal from '../movements/TransactionTimelineModal';
 import * as XLSX from 'xlsx';
 
 interface DashboardProps {
@@ -24,6 +26,15 @@ interface DashboardProps {
 
 const Dashboard: React.FC<DashboardProps> = ({ stock, selectedBranch, transactions, addTransaction, currentUser }) => {
     const [isAdjModalOpen, setIsAdjModalOpen] = useState(false);
+
+    // Timeline State
+    const [timelineTx, setTimelineTx] = useState<Transaction | null>(null);
+    const [isTimelineOpen, setIsTimelineOpen] = useState(false);
+
+    const handleViewTimeline = (tx: Transaction) => {
+        setTimelineTx(tx);
+        setIsTimelineOpen(true);
+    };
 
     const currentStock = useMemo(() => {
         if (selectedBranch === 'ALL') {
@@ -294,8 +305,19 @@ const Dashboard: React.FC<DashboardProps> = ({ stock, selectedBranch, transactio
                                             <td className="p-4 text-slate-500 whitespace-nowrap">
                                                 {new Date(tx.date).toLocaleDateString('th-TH')}
                                             </td>
-                                            <td className="p-4 font-mono font-medium text-blue-600 whitespace-nowrap">
-                                                {tx.docNo}
+                                            <td className="p-4 whitespace-nowrap">
+                                                <div className="flex items-center gap-2">
+                                                    <span className="font-mono font-medium text-blue-600">
+                                                        {tx.docNo}
+                                                    </span>
+                                                    <button
+                                                        onClick={() => handleViewTimeline(tx)}
+                                                        className="p-1 hover:bg-slate-100 rounded-full text-slate-400 hover:text-blue-600 transition-colors"
+                                                        title="View Timeline"
+                                                    >
+                                                        <Clock size={14} />
+                                                    </button>
+                                                </div>
                                             </td>
                                             <td className="p-4 text-slate-900 font-bold whitespace-nowrap">
                                                 <span className={`px-2 py-0.5 rounded-md text-[10px] ${tx.type === 'IN' ? 'bg-emerald-100 text-emerald-700' :
@@ -337,6 +359,14 @@ const Dashboard: React.FC<DashboardProps> = ({ stock, selectedBranch, transactio
                     </table>
                 </div>
             </div>
+
+            {timelineTx && (
+                <TransactionTimelineModal
+                    isOpen={isTimelineOpen}
+                    onClose={() => setIsTimelineOpen(false)}
+                    transaction={timelineTx}
+                />
+            )}
         </div>
     );
 };
