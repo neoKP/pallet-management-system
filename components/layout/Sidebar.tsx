@@ -1,10 +1,10 @@
 import React from 'react';
-import { LayoutDashboard, ArrowRightLeft, Wrench, Menu } from 'lucide-react';
+import { LayoutDashboard, ArrowRightLeft, Wrench, Menu, Settings } from 'lucide-react';
 import { BranchId, User } from '../../types';
 
 interface SidebarProps {
-    activeTab: 'dashboard' | 'record' | 'maintenance';
-    setActiveTab: (tab: 'dashboard' | 'record' | 'maintenance') => void;
+    activeTab: 'dashboard' | 'record' | 'maintenance' | 'settings';
+    setActiveTab: (tab: 'dashboard' | 'record' | 'maintenance' | 'settings') => void;
     currentUser: User | null;
     selectedBranch: BranchId | 'ALL';
 }
@@ -27,8 +27,8 @@ const Sidebar: React.FC<SidebarProps> = ({ activeTab, setActiveTab, currentUser,
                 <button
                     onClick={() => setActiveTab('dashboard')}
                     className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200 font-bold group ${activeTab === 'dashboard'
-                            ? 'bg-blue-600 text-white shadow-lg shadow-blue-200'
-                            : 'text-slate-500 hover:bg-slate-50 hover:text-blue-600'
+                        ? 'bg-blue-600 text-white shadow-lg shadow-blue-200'
+                        : 'text-slate-500 hover:bg-slate-50 hover:text-blue-600'
                         }`}
                 >
                     <LayoutDashboard size={20} className={activeTab === 'dashboard' ? 'text-white' : 'text-slate-400 group-hover:text-blue-600'} />
@@ -39,8 +39,8 @@ const Sidebar: React.FC<SidebarProps> = ({ activeTab, setActiveTab, currentUser,
                     <button
                         onClick={() => setActiveTab('record')}
                         className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200 font-bold group ${activeTab === 'record'
-                                ? 'bg-blue-600 text-white shadow-lg shadow-blue-200'
-                                : 'text-slate-500 hover:bg-slate-50 hover:text-blue-600'
+                            ? 'bg-blue-600 text-white shadow-lg shadow-blue-200'
+                            : 'text-slate-500 hover:bg-slate-50 hover:text-blue-600'
                             }`}
                     >
                         <ArrowRightLeft size={20} className={activeTab === 'record' ? 'text-white' : 'text-slate-400 group-hover:text-blue-600'} />
@@ -53,12 +53,25 @@ const Sidebar: React.FC<SidebarProps> = ({ activeTab, setActiveTab, currentUser,
                     <button
                         onClick={() => setActiveTab('maintenance')}
                         className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200 font-bold group ${activeTab === 'maintenance'
-                                ? 'bg-blue-600 text-white shadow-lg shadow-blue-200'
-                                : 'text-slate-500 hover:bg-slate-50 hover:text-blue-600'
+                            ? 'bg-blue-600 text-white shadow-lg shadow-blue-200'
+                            : 'text-slate-500 hover:bg-slate-50 hover:text-blue-600'
                             }`}
                     >
                         <Wrench size={20} className={activeTab === 'maintenance' ? 'text-white' : 'text-slate-400 group-hover:text-blue-600'} />
                         Maintenance
+                    </button>
+                )}
+                {/* Settings Menu: Visible only/User Role Admin */}
+                {currentUser?.role === 'ADMIN' && (
+                    <button
+                        onClick={() => setActiveTab('settings' as any)}
+                        className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200 font-bold group ${activeTab === ('settings' as any)
+                            ? 'bg-slate-900 text-white shadow-lg shadow-slate-200'
+                            : 'text-slate-500 hover:bg-slate-50 hover:text-slate-900'
+                            }`}
+                    >
+                        <Settings size={20} className={activeTab === ('settings' as any) ? 'text-white' : 'text-slate-400 group-hover:text-slate-900'} />
+                        System Settings
                     </button>
                 )}
             </nav>

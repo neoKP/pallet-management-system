@@ -14,6 +14,7 @@ import MovementTab from './components/movements/MovementTab';
 import MaintenanceTab from './components/maintenance/MaintenanceTab';
 import Sidebar from './components/layout/Sidebar'; // New import
 import { BRANCHES } from './constants';
+import SettingsTab from './components/settings/SettingsTab';
 
 export default function App() {
   const { currentUser, login, logout } = useAuth();
@@ -23,7 +24,7 @@ export default function App() {
   const canViewAll = currentUser?.role === 'ADMIN' || currentUser?.branchId === 'hub_nks';
 
   // Removing 'ai' from activeTab state type definition and default state since we are removing the feature
-  const [activeTab, setActiveTab] = useState<'dashboard' | 'record' | 'maintenance'>('dashboard');
+  const [activeTab, setActiveTab] = useState<'dashboard' | 'record' | 'maintenance' | 'settings'>('dashboard');
 
   const [selectedBranch, setSelectedBranch] = useState<BranchId | 'ALL'>(() => {
     // Initialize based on user role immediately
@@ -172,11 +173,11 @@ export default function App() {
         <main className="flex-1 p-4 md:p-8 overflow-y-auto w-full max-w-[1600px] mx-auto">
           {activeTab === 'dashboard' && (
             <Dashboard
-              stats={{ totalStock: 0, loscamRed: 0, loscamYellow: 0, loscamBlue: 0 }} // Dashboard calculates its own via props
               stock={stock}
               selectedBranch={selectedBranch}
               transactions={transactions}
               addTransaction={addTransaction}
+              currentUser={currentUser}
             />
           )}
 
@@ -197,6 +198,10 @@ export default function App() {
               onBatchMaintenance={processBatchMaintenance}
               onAddTransaction={addTransaction}
             />
+          )}
+
+          {activeTab === 'settings' && currentUser?.role === 'ADMIN' && (
+            <SettingsTab />
           )}
         </main>
 

@@ -130,7 +130,7 @@
     window.firebase = {
       app,
       analytics,
-      database,
+      database: () => database,
       utils: { ref, onValue, set, push, update, get, child }
     };
   </script>
