@@ -26,7 +26,12 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ onLogin }) => {
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
         const user = MOCK_USERS.find(u => u.username === username);
-        if (user && password === '1234') {
+
+        // สำหรับ System Administrator (admin) ใช้รหัส 8888
+        // สำหรับผู้ใช้อื่นๆ (Operator/Staff) ใช้รหัส 1234
+        const requiredPassword = username === 'admin' ? '8888' : '1234';
+
+        if (user && password === requiredPassword) {
             onLogin(user);
         } else {
             setError('ชื่อผู้ใช้หรือรหัสผ่านไม่ถูกต้อง');
@@ -101,9 +106,11 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ onLogin }) => {
                         </button>
                     </form>
 
-                    <div className="mt-6 text-center text-xs text-slate-400">
-                        <ShieldCheck size={14} className="inline mr-1" />
-                        Demo: รหัสผ่านทดสอบคือ <code className="bg-slate-100 px-2 py-1 rounded border border-slate-200">1234</code>
+                    <div className="mt-6 text-center text-[10px] text-slate-400">
+                        <ShieldCheck size={12} className="inline mr-1" />
+                        รหัสผ่าน Admin: <code className="bg-slate-100 px-1.5 py-0.5 rounded border border-slate-200 ml-1">8888</code>
+                        <span className="mx-2">|</span>
+                        ผู้ใช้อื่นๆ: <code className="bg-slate-100 px-1.5 py-0.5 rounded border border-slate-200 ml-1">1234</code>
                     </div>
                 </div>
             </div>
