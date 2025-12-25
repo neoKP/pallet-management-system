@@ -371,3 +371,5 @@ This project is licensed under the MIT License.
 ---
 
 **Made with ❤️ by Neo Siam Development Team**
+#   p a l l e t - m a n a g e m e n t - s y s t e m  
+ 
