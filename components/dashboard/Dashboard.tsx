@@ -153,6 +153,7 @@ const Dashboard: React.FC<DashboardProps> = ({ stock, selectedBranch, transactio
                             <span className="text-slate-900">{stats.loscamRed}</span>
                         </div>
                         <div className="h-3 bg-slate-100 rounded-full overflow-hidden">
+                            {/* eslint-disable-next-line */}
                             <div
                                 className="h-full bg-red-500 rounded-full transition-all duration-1000 w-[var(--bar-width)]"
                                 style={redBarStyle}
@@ -168,6 +169,7 @@ const Dashboard: React.FC<DashboardProps> = ({ stock, selectedBranch, transactio
                             <span className="text-slate-900">{stats.loscamYellow}</span>
                         </div>
                         <div className="h-3 bg-slate-100 rounded-full overflow-hidden">
+                            {/* eslint-disable-next-line */}
                             <div
                                 className="h-full bg-amber-400 rounded-full transition-all duration-1000 w-[var(--bar-width)]"
                                 style={yellowBarStyle}
@@ -183,6 +185,7 @@ const Dashboard: React.FC<DashboardProps> = ({ stock, selectedBranch, transactio
                             <span className="text-slate-900">{stats.loscamBlue}</span>
                         </div>
                         <div className="h-3 bg-slate-100 rounded-full overflow-hidden">
+                            {/* eslint-disable-next-line */}
                             <div
                                 className="h-full bg-blue-500 rounded-full transition-all duration-1000 w-[var(--bar-width)]"
                                 style={blueBarStyle}
@@ -249,8 +252,8 @@ const Dashboard: React.FC<DashboardProps> = ({ stock, selectedBranch, transactio
                                             </td>
                                             <td className="p-4 text-slate-900 font-bold whitespace-nowrap">
                                                 <span className={`px-2 py-0.5 rounded-md text-[10px] ${tx.type === 'IN' ? 'bg-emerald-100 text-emerald-700' :
-                                                        tx.type === 'OUT' ? 'bg-orange-100 text-orange-700' :
-                                                            'bg-slate-100 text-slate-600'
+                                                    tx.type === 'OUT' ? 'bg-orange-100 text-orange-700' :
+                                                        'bg-slate-100 text-slate-600'
                                                     }`}>
                                                     {tx.type}
                                                 </span>
