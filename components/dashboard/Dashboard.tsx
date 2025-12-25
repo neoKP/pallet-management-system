@@ -16,7 +16,7 @@ import { useStock } from '../../contexts/StockContext';
 import StatsCard from './StatsCard';
 import StockAdjustmentModal from './StockAdjustmentModal';
 import TransactionTimelineModal from '../movements/TransactionTimelineModal';
-import * as XLSX from 'xlsx';
+import ExcelJS from 'exceljs';
 
 interface DashboardProps {
     stock: Stock;
@@ -107,26 +107,85 @@ const Dashboard: React.FC<DashboardProps> = ({ stock, selectedBranch, transactio
     const yellowBarStyle = { '--bar-width': `${stats.totalStock > 0 ? (stats.loscamYellow / stats.totalStock) * 100 : 0}%` } as React.CSSProperties;
     const blueBarStyle = { '--bar-width': `${stats.totalStock > 0 ? (stats.loscamBlue / stats.totalStock) * 100 : 0}%` } as React.CSSProperties;
 
-    const handleExport = () => {
-        const data = displayTransactions.map(t => ({
-            Date: t.date,
-            DocNo: t.docNo,
-            Type: t.type,
-            Source: t.source,
-            Destination: t.dest,
-            Pallet: t.palletId,
-            Qty: t.qty,
-            Note: t.note || '',
-            RefDoc: t.referenceDocNo || '',
-            CarReg: t.carRegistration || '',
-            Driver: t.driverName || '',
-            TransCo: t.transportCompany || ''
-        }));
+    const handleExport = async () => {
+        const workbook = new ExcelJS.Workbook();
+        const worksheet = workbook.addWorksheet('Inventory Log');
 
-        const ws = XLSX.utils.json_to_sheet(data);
-        const wb = XLSX.utils.book_new();
-        XLSX.utils.book_append_sheet(wb, ws, "Transactions");
-        XLSX.writeFile(wb, `inventory_log_${new Date().toISOString().split('T')[0]}.xlsx`);
+        // Define Columns
+        worksheet.columns = [
+            { header: 'วันที่ (Date)', key: 'date', width: 15 },
+            { header: 'เลขที่เอกสาร (Doc No)', key: 'docNo', width: 20 },
+            { header: 'ประเภท (Type)', key: 'type', width: 10 },
+            { header: 'ต้นทาง (Source)', key: 'source', width: 15 },
+            { header: 'ปลายทาง (Dest)', key: 'dest', width: 15 },
+            { header: 'พาเลท (Pallet)', key: 'palletId', width: 15 },
+            { header: 'รับเข้า (In)', key: 'qtyIn', width: 10 },
+            { header: 'จ่ายออก (Out)', key: 'qtyOut', width: 10 },
+            { header: 'เอกสารอ้างอิง (Ref Doc)', key: 'referenceDocNo', width: 20 },
+            { header: 'ทะเบียนรถ (Vehicle)', key: 'carRegistration', width: 15 },
+            { header: 'คนขับ (Driver)', key: 'driverName', width: 20 },
+            { header: 'บริษัทขนส่ง (Transit Co)', key: 'transportCompany', width: 20 },
+            { header: 'หมายเหตุ (Note)', key: 'note', width: 30 }
+        ];
+
+        // Process Data
+        displayTransactions.forEach(t => {
+            const qtyIn = t.type === 'IN' || (t.type === 'ADJUST' && t.qty > 0) ? t.qty : 0;
+            const qtyOut = t.type === 'OUT' || (t.type === 'ADJUST' && t.qty < 0) ? Math.abs(t.qty) : 0;
+
+            const row = worksheet.addRow({
+                date: t.date,
+                docNo: t.docNo,
+                type: t.status === 'CANCELLED' ? 'CANCELLED' : t.type,
+                source: t.source,
+                dest: t.dest,
+                palletId: t.palletId,
+                qtyIn: qtyIn || '-',
+                qtyOut: qtyOut || '-',
+                referenceDocNo: t.referenceDocNo || '-',
+                carRegistration: t.carRegistration || '-',
+                driverName: t.driverName || '-',
+                transportCompany: t.transportCompany || '-',
+                note: t.note || '-'
+            });
+
+            // If cancelled, make row look subtle
+            if (t.status === 'CANCELLED') {
+                row.font = { color: { argb: 'FFAAAAAA' }, strike: true };
+            }
+        });
+
+        // Styling Header
+        const headerRow = worksheet.getRow(1);
+        headerRow.font = { bold: true, color: { argb: 'FFFFFFFF' } };
+        headerRow.fill = {
+            type: 'pattern',
+            pattern: 'solid',
+            fgColor: { argb: 'FF1E293B' } // slate-800
+        };
+        headerRow.alignment = { vertical: 'middle', horizontal: 'center' };
+
+        // Add borders to all cells
+        worksheet.eachRow((row, rowNumber) => {
+            row.eachCell(cell => {
+                cell.border = {
+                    top: { style: 'thin' },
+                    left: { style: 'thin' },
+                    bottom: { style: 'thin' },
+                    right: { style: 'thin' }
+                };
+            });
+        });
+
+        // Generate and Download
+        const buffer = await workbook.xlsx.writeBuffer();
+        const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+        const url = window.URL.createObjectURL(blob);
+        const anchor = document.createElement('a');
+        anchor.href = url;
+        anchor.download = `inventory_log_${new Date().toISOString().split('T')[0]}.xlsx`;
+        anchor.click();
+        window.URL.revokeObjectURL(url);
     };
 
     const handleAdjustmentSubmit = (data: { type: 'IN' | 'OUT'; branchId: string; palletId: PalletId; qty: number; note: string }) => {

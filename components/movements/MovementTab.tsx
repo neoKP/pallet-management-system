@@ -2,6 +2,9 @@ import React, { useState, useMemo } from 'react';
 import { ArrowDownCircle, ArrowUpCircle, Save, CheckCircle, Truck, Plus, Trash2, Car, User as UserIcon, Building, FileText, Clock } from 'lucide-react';
 import ReceiveModal from './ReceiveModal';
 import TransactionTimelineModal from './TransactionTimelineModal';
+import DocumentPreviewModal from './DocumentPreviewModal';
+// @ts-ignore
+import Swal from 'sweetalert2';
 import { BRANCHES, EXTERNAL_PARTNERS, PALLET_TYPES } from '../../constants';
 import { BranchId, Transaction, TransactionType, PalletId, Stock, User } from '../../types';
 import { useStock } from '../../contexts/StockContext';
@@ -38,6 +41,10 @@ const MovementTab: React.FC<MovementTabProps> = ({ selectedBranch, transactions 
     // Timeline Modal State
     const [timelineTx, setTimelineTx] = useState<Transaction | null>(null);
     const [isTimelineOpen, setIsTimelineOpen] = useState(false);
+
+    // Document Preview State
+    const [isPreviewOpen, setIsPreviewOpen] = useState(false);
+    const [previewData, setPreviewData] = useState<any>(null);
 
     // Group transactions by DocNo
     const { pendingGroups, historyGroups } = useMemo(() => {
@@ -133,18 +140,44 @@ const MovementTab: React.FC<MovementTabProps> = ({ selectedBranch, transactions 
             return;
         }
 
+        // Generate DocNo logic (simplified)
+        const dateStr = new Date().toISOString().split('T')[0];
+        const datePart = dateStr.replace(/-/g, '');
+        const todayDocs = transactions.filter(t => t.docNo && t.docNo.includes(datePart));
+        // This is a rough estimate for preview. Server/Context might generate final one, 
+        // but for Consistency between Preview and Save, we should generate it here and pass it.
+        const running = (todayDocs.length + 1).toString().padStart(3, '0');
+        const prefix = 'INT'; // Assuming Internal for now, or logic based on source/dest
+        const docNo = `${prefix}-${datePart}-${running}`;
+
         const data = {
-            type: transactionType,
+            type: transactionType as TransactionType,
             source: transactionType === 'IN' ? target : selectedBranch,
             dest: transactionType === 'IN' ? selectedBranch : target,
             items: validItems.map(i => ({
                 palletId: i.palletId as PalletId,
                 qty: parseInt(i.qty)
             })),
+            docNo,
+            date: new Date().toISOString(), // Use full ISO for data
             referenceDocNo,
             ...transportInfo
         };
 
+        // If it's OUT (Dispatch), show Preview.
+        // If IN (Receive), usually we scan or quick add? 
+        // User request: "In the *recording dispatch* step (บันทึกจ่ายออก), show pdf".
+        if (transactionType === 'OUT') {
+            setPreviewData(data);
+            setIsPreviewOpen(true);
+        } else {
+            // Check if IN logic needs preview? User said "Dispatch".
+            // proceed with save for IN
+            saveTransaction(data);
+        }
+    };
+
+    const saveTransaction = (data: any) => {
         addMovementBatch(data);
 
         // Reset form
@@ -157,6 +190,11 @@ const MovementTab: React.FC<MovementTabProps> = ({ selectedBranch, transactions 
             driverName: '',
             transportCompany: ''
         });
+
+        // Close preview if open
+        setIsPreviewOpen(false);
+        setPreviewData(null);
+
         if (Swal) {
             Swal.fire({
                 icon: 'success',
@@ -167,6 +205,12 @@ const MovementTab: React.FC<MovementTabProps> = ({ selectedBranch, transactions 
             });
         } else {
             alert('บันทึกสำเร็จ!');
+        }
+    };
+
+    const handleConfirmSave = () => {
+        if (previewData) {
+            saveTransaction(previewData);
         }
     };
 
@@ -563,6 +607,14 @@ const MovementTab: React.FC<MovementTabProps> = ({ selectedBranch, transactions 
                     </div>
                 </div>
             </div>
+
+            {/* Document Preview Modal */}
+            <DocumentPreviewModal
+                isOpen={isPreviewOpen}
+                onClose={() => setIsPreviewOpen(false)}
+                onConfirm={handleConfirmSave}
+                data={previewData}
+            />
         </div>
     );
 };
