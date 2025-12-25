@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html lang="th">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Neo Siam Logistics - Pallet Management</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+  <link
+    href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=Kanit:wght@300;400;500;600;700;800&display=swap"
+    rel="stylesheet">
+  <style>
+    :root {
+      --glass-bg: rgba(255, 255, 255, 0.85);
+      --glass-border: rgba(255, 255, 255, 0.4);
+    }
+
+    body {
+      font-family: 'Kanit', 'Inter', sans-serif;
+      background-color: #f8fafc;
+      background-image:
+        radial-gradient(at 0% 0%, rgba(59, 130, 246, 0.08) 0px, transparent 50%),
+        radial-gradient(at 100% 100%, rgba(99, 102, 241, 0.08) 0px, transparent 50%),
+        url('https://www.transparenttextures.com/patterns/cubes.png');
+      min-height: 100vh;
+      color: #1e293b;
+    }
+
+    .glass {
+      background: var(--glass-bg);
+      -webkit-backdrop-filter: blur(16px);
+      backdrop-filter: blur(16px);
+      border: 1px solid var(--glass-border);
+    }
+
+    .bento-card {
+      transition: all 0.5s cubic-bezier(0.16, 1, 0.3, 1);
+      border: 1px solid rgba(255, 255, 255, 0.5);
+    }
+
+    .bento-card:hover {
+      transform: translateY(-8px);
+      box-shadow: 0 30px 60px -12px rgba(0, 0, 0, 0.1), 0 18px 36px -18px rgba(0, 0, 0, 0.05);
+      border-color: rgba(59, 130, 246, 0.3);
+    }
+
+    @keyframes fadeInUp {
+      from {
+        opacity: 0;
+        transform: translateY(30px);
+      }
+
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+    .animate-fade-up {
+      animation: fadeInUp 0.8s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+    }
+
+    .no-scrollbar::-webkit-scrollbar {
+      display: none;
+    }
+
+    .no-scrollbar {
+      -ms-overflow-style: none;
+    }
+
+    @supports (scrollbar-width: none) {
+      .no-scrollbar {
+        scrollbar-width: none;
+      }
+    }
+
+    /* Typography Overrides */
+    h1,
+    h2,
+    h3,
+    h4 {
+      letter-spacing: -0.02em;
+    }
+  </style>
+  <script type="importmap">
+    {
+      "imports": {
+        "react-dom/": "https://esm.sh/react-dom@^19.2.3/",
+        "@google/genai": "https://esm.sh/@google/genai@^1.34.0",
+        "react/": "https://esm.sh/react@^19.2.3/",
+        "react": "https://esm.sh/react@^19.2.3",
+        "lucide-react": "https://esm.sh/lucide-react@^0.562.0",
+        "firebase/app": "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js",
+        "firebase/analytics": "https://www.gstatic.com/firebasejs/10.12.0/firebase-analytics.js",
+        "firebase/database": "https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js"
+      }
+    }
+    </script>
+  <link rel="stylesheet" href="/index.css">
+</head>
+
+<body>
+  <div id="root"></div>
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+    import { getAnalytics } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-analytics.js";
+    import { getDatabase, ref, onValue, set, push, update, get, child } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js";
+
+    const firebaseConfig = {
+      apiKey: "AIzaSyApl6zoaw61cStIphgZOt_cqDmFrA5FfEs",
+      authDomain: "pallet-management-system-310ed.firebaseapp.com",
+      databaseURL: "https://pallet-management-system-310ed-default-rtdb.asia-southeast1.firebasedatabase.app",
+      projectId: "pallet-management-system-310ed",
+      storageBucket: "pallet-management-system-310ed.firebasestorage.app",
+      messagingSenderId: "426889147070",
+      appId: "1:426889147070:web:11920cfd3f33404fd264ef",
+      measurementId: "G-8RZ0CPG20P"
+    };
+
+    // Initialize Firebase
+    const app = initializeApp(firebaseConfig);
+    const analytics = getAnalytics(app);
+    const database = getDatabase(app);
+
+    console.log("Firebase initialized:", app);
+    console.log("Realtime Database connected:", database);
+
+    // Make firebase instances and utils globally available
+    window.firebase = {
+      app,
+      analytics,
+      database,
+      utils: { ref, onValue, set, push, update, get, child }
+    };
+  </script>
+  <script type="module" src="/index.tsx"></script>
+</body>
+
+</html>

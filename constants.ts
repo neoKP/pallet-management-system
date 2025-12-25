@@ -1,0 +1,54 @@
+﻿import { PalletType, Branch, Partner, Stock, Transaction, User } from './types';
+
+export const PALLET_TYPES: PalletType[] = [
+  { id: 'loscam_red', name: 'Loscam (สีแดง)', color: 'bg-red-600', isRental: true, material: 'wood' },
+  { id: 'loscam_yellow', name: 'Loscam (สีเหลือง)', color: 'bg-yellow-400', isRental: false, material: 'wood' },
+  { id: 'loscam_blue', name: 'Loscam (สีฟ้า)', color: 'bg-blue-400', isRental: false, material: 'wood' },
+  { id: 'hiq', name: 'HI-Q', color: 'bg-orange-500', isRental: false, material: 'wood' },
+  { id: 'general', name: 'พาเลทหมุนเวียน (ไม้/คละสี)', color: 'bg-gray-400', isRental: false, material: 'wood' },
+  { id: 'plastic_circular', name: 'พาเลทพลาสติก (หมุนเวียน)', color: 'bg-teal-500', isRental: false, material: 'plastic' },
+];
+
+export const BRANCHES: Branch[] = [
+  { id: 'hub_nks', name: 'ศูนย์ฯ นครสวรรค์ (Hub)', type: 'HUB' },
+  { id: 'sai3', name: 'พุทธมณฑลสาย 3', type: 'BRANCH' },
+  { id: 'kpp', name: 'สาขากำแพงเพชร', type: 'BRANCH' },
+  { id: 'plk', name: 'สาขาพิษณุโลก', type: 'BRANCH' },
+  { id: 'cm', name: 'สาขาเชียงใหม่', type: 'BRANCH' },
+  { id: 'ekp', name: 'EKP', type: 'BRANCH' },
+  { id: 'maintenance_stock', name: 'คลังซ่อมบำรุง (Maintenance Stock)', type: 'BRANCH' },
+];
+
+export const EXTERNAL_PARTNERS: Partner[] = [
+  { id: 'neo_corp', name: 'บ. นีโอ คอร์ปอเรท', type: 'customer', allowedPallets: ['loscam_red'] },
+  { id: 'sino', name: 'บ. ซีโน-แปซิฟิค', type: 'customer', allowedPallets: ['loscam_red'] },
+  { id: 'lamsoon', name: 'บ. ล่ำสูง', type: 'customer', allowedPallets: ['loscam_red'] },
+  { id: 'loscam_wangnoi', name: 'Loscam วังน้อย', type: 'provider', allowedPallets: ['loscam_red'] },
+  { id: 'hiq_th', name: 'HI-Q (บริษัท)', type: 'provider', allowedPallets: ['hiq'] },
+];
+
+export const INITIAL_STOCK: Stock = {
+  hub_nks: { loscam_red: 150, loscam_yellow: 50, loscam_blue: 30, hiq: 40, general: 100, plastic_circular: 50 },
+  sai3: { loscam_red: 20, loscam_yellow: 10, loscam_blue: 5, hiq: 10, general: 50, plastic_circular: 10 },
+  kpp: { loscam_red: 10, loscam_yellow: 5, loscam_blue: 0, hiq: 5, general: 20, plastic_circular: 5 },
+  plk: { loscam_red: 15, loscam_yellow: 5, loscam_blue: 0, hiq: 5, general: 25, plastic_circular: 5 },
+  cm: { loscam_red: 30, loscam_yellow: 0, loscam_blue: 0, hiq: 0, general: 10, plastic_circular: 0 },
+  ekp: { loscam_red: 0, loscam_yellow: 0, loscam_blue: 0, hiq: 0, general: 0, plastic_circular: 0 },
+  maintenance_stock: { loscam_red: 0, loscam_yellow: 0, loscam_blue: 0, hiq: 0, general: 0, plastic_circular: 0 },
+};
+
+export const INITIAL_TRANSACTIONS: Transaction[] = [
+  { id: 1, docNo: 'EXT-IN-20231025-001', date: '2023-10-25', type: 'IN', status: 'COMPLETED', source: 'neo_corp', dest: 'hub_nks', palletId: 'loscam_red', qty: 50, note: 'รับเข้าพร้อมสินค้า' },
+  { id: 2, docNo: 'EXT-OUT-20231026-001', date: '2023-10-26', type: 'OUT', status: 'COMPLETED', source: 'hub_nks', dest: 'loscam_wangnoi', palletId: 'loscam_red', qty: 100, note: 'คืนตามรอบ' },
+  { id: 3, docNo: 'INT-20231026-001', date: '2023-10-26', type: 'OUT', status: 'COMPLETED', source: 'hub_nks', dest: 'kpp', palletId: 'general', qty: 30, note: 'โอนย้ายภายใน' },
+];
+
+export const MOCK_USERS: User[] = [
+  { username: 'admin', role: 'ADMIN', name: 'System Administrator' },
+  { username: 'user_nks', role: 'USER', branchId: 'hub_nks', name: 'Operator - Hub NKS' },
+  { username: 'user_sai3', role: 'USER', branchId: 'sai3', name: 'Staff - Sai 3' },
+  { username: 'user_cm', role: 'USER', branchId: 'cm', name: 'Staff - Chiang Mai' },
+  { username: 'user_kpp', role: 'USER', branchId: 'kpp', name: 'Staff - Kamphaeng Phet' },
+  { username: 'user_plk', role: 'USER', branchId: 'plk', name: 'Staff - Phitsanulok' },
+  { username: 'user_ekp', role: 'USER', branchId: 'ekp', name: 'Staff - EKP' },
+];
