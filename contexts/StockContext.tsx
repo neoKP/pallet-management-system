@@ -21,6 +21,7 @@ interface StockContextType {
         note?: string;
     }) => void;
     confirmTransaction: (txId: number) => void;
+    confirmTransactionsBatch: (txIds: number[]) => void;
     deleteTransaction: (txId: number) => void;
     processBatchMaintenance: (data: {
         items: { palletId: PalletId; qty: number }[];
@@ -166,25 +167,34 @@ export const StockProvider: React.FC<StockProviderProps> = ({ children }) => {
         firebaseService.addMovementBatch([newTx], nextStock);
     }, [stock, generateDocNo]);
 
-    const confirmTransaction = useCallback((txId: number) => {
-        const tx = transactions.find(t => t.id === txId);
-        if (!tx || tx.status === 'COMPLETED') return;
-
-        // Update Transaction
-        const updatedTx = { ...tx, status: 'COMPLETED' as const };
-
-        // Update Stock (Add to Dest)
+    const confirmTransactionsBatch = useCallback((txIds: number[]) => {
+        const updatedTxs: Transaction[] = [];
         const nextStock = { ...stock };
-        if (updatedTx.dest && nextStock[updatedTx.dest as BranchId]) {
-            const d = { ...nextStock[updatedTx.dest as BranchId] } as Record<PalletId, number>;
-            d[updatedTx.palletId] = (d[updatedTx.palletId] || 0) + updatedTx.qty;
-            nextStock[updatedTx.dest as BranchId] = d;
+
+        txIds.forEach(id => {
+            const tx = transactions.find(t => t.id === id);
+            if (!tx || tx.status === 'COMPLETED') return;
+
+            const updatedTx = { ...tx, status: 'COMPLETED' as const };
+            updatedTxs.push(updatedTx);
+
+            // Update Stock (Add to Dest)
+            if (updatedTx.dest && nextStock[updatedTx.dest as BranchId]) {
+                const bId = updatedTx.dest as BranchId;
+                const d = { ...nextStock[bId] } as Record<PalletId, number>;
+                d[updatedTx.palletId] = (d[updatedTx.palletId] || 0) + updatedTx.qty;
+                nextStock[bId] = d;
+            }
+        });
+
+        if (updatedTxs.length > 0) {
+            firebaseService.addMovementBatch(updatedTxs, nextStock);
         }
-
-        // Send to Firebase
-        firebaseService.addMovementBatch([updatedTx], nextStock);
-
     }, [stock, transactions]);
+
+    const confirmTransaction = useCallback((txId: number) => {
+        confirmTransactionsBatch([txId]);
+    }, [confirmTransactionsBatch]);
 
     const deleteTransaction = useCallback((txId: number) => {
         const tx = transactions.find(t => t.id === txId);
@@ -367,6 +377,7 @@ export const StockProvider: React.FC<StockProviderProps> = ({ children }) => {
                 addTransaction,
                 addMovementBatch,
                 confirmTransaction,
+                confirmTransactionsBatch,
                 deleteTransaction,
                 processBatchMaintenance,
                 getStockForBranch,

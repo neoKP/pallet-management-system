@@ -48,3 +48,12 @@ export const MOCK_USERS: User[] = [
   { username: 'user_plk', role: 'USER', branchId: 'plk', name: 'Staff - Phitsanulok' },
   { username: 'user_ekp', role: 'USER', branchId: 'ekp', name: 'Staff - EKP' },
 ];
+
+export const VEHICLE_TYPES = [
+  { id: '4w', name: 'รถ 4 ล้อ' },
+  { id: '6w', name: 'รถ 6 ล้อ' },
+  { id: '10w', name: 'รถ 10 ล้อ' },
+  { id: 'trailer', name: 'รถเทรลเลอร์' },
+  { id: 'truck_trailer', name: 'รถพ่วง แม่ลูก' },
+  { id: 'container', name: 'รถตู้คอนเทนเนอร์' },
+];

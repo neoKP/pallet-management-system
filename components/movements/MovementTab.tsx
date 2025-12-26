@@ -6,7 +6,7 @@ import DocumentPreviewModal from './DocumentPreviewModal';
 import PalletRequestTab from './PalletRequestTab';
 // @ts-ignore
 import Swal from 'sweetalert2';
-import { BRANCHES, EXTERNAL_PARTNERS, PALLET_TYPES } from '../../constants';
+import { BRANCHES, EXTERNAL_PARTNERS, PALLET_TYPES, VEHICLE_TYPES } from '../../constants';
 import { BranchId, Transaction, TransactionType, PalletId, Stock, User } from '../../types';
 import { useStock } from '../../contexts/StockContext';
 
@@ -19,7 +19,7 @@ interface MovementTabProps {
 }
 
 const MovementTab: React.FC<MovementTabProps> = ({ selectedBranch, transactions, currentUser }) => {
-    const { confirmTransaction, addMovementBatch } = useStock();
+    const { confirmTransactionsBatch, addMovementBatch } = useStock();
     const [subTab, setSubTab] = useState<'movement' | 'requests'>('movement');
     const [transactionType, setTransactionType] = useState<TransactionType>('IN');
     const [target, setTarget] = useState('');
@@ -219,7 +219,7 @@ const MovementTab: React.FC<MovementTabProps> = ({ selectedBranch, transactions,
     };
 
     const handleConfirmReceive = (txs: Transaction[]) => {
-        txs.forEach(tx => confirmTransaction(tx.id));
+        confirmTransactionsBatch(txs.map(t => t.id));
         if (Swal) {
             Swal.fire({
                 icon: 'success',
@@ -304,7 +304,7 @@ const MovementTab: React.FC<MovementTabProps> = ({ selectedBranch, transactions,
                                                     {(mainTx.carRegistration || mainTx.transportCompany) && (
                                                         <div className="text-xs text-slate-500 bg-slate-50 p-2 rounded space-y-1">
                                                             {mainTx.transportCompany && <div className="flex items-center gap-1"><Building size={12} /> {mainTx.transportCompany}</div>}
-                                                            {mainTx.carRegistration && <div className="flex items-center gap-1"><Car size={12} /> {mainTx.carRegistration} {(mainTx.vehicleType) ? `(${mainTx.vehicleType})` : ''}</div>}
+                                                            {mainTx.carRegistration && <div className="flex items-center gap-1"><Car size={12} /> {mainTx.carRegistration} {(mainTx.vehicleType) ? `(${VEHICLE_TYPES.find(v => v.id === mainTx.vehicleType)?.name || mainTx.vehicleType})` : ''}</div>}
                                                             {mainTx.driverName && <div className="flex items-center gap-1"><UserIcon size={12} /> {mainTx.driverName}</div>}
                                                         </div>
                                                     )}
@@ -459,11 +459,9 @@ const MovementTab: React.FC<MovementTabProps> = ({ selectedBranch, transactions,
                                                 aria-label="Select vehicle type"
                                             >
                                                 <option value="">ระบุประเภท...</option>
-                                                <option value="4w">รถ 4 ล้อ</option>
-                                                <option value="6w">รถ 6 ล้อ</option>
-                                                <option value="10w">รถ 10 ล้อ</option>
-                                                <option value="trailer">รถเทรลเลอร์</option>
-                                                <option value="container">รถตู้คอนเทนเนอร์</option>
+                                                {VEHICLE_TYPES.map(v => (
+                                                    <option key={v.id} value={v.id}>{v.name}</option>
+                                                ))}
                                             </select>
                                         </div>
                                         <div>
@@ -602,7 +600,7 @@ const MovementTab: React.FC<MovementTabProps> = ({ selectedBranch, transactions,
                                                 {(tx.carRegistration || tx.transportCompany) && (
                                                     <div className="mb-2 text-xs text-slate-500 bg-white border border-slate-200 p-2 rounded space-y-1">
                                                         {tx.transportCompany && <div className="flex items-center gap-1"><Building size={10} /> {tx.transportCompany}</div>}
-                                                        {tx.carRegistration && <div className="flex items-center gap-1"><Car size={10} /> {tx.carRegistration} {(tx.vehicleType) ? `(${tx.vehicleType})` : ''}</div>}
+                                                        {tx.carRegistration && <div className="flex items-center gap-1"><Car size={10} /> {tx.carRegistration} {(tx.vehicleType) ? `(${VEHICLE_TYPES.find(v => v.id === tx.vehicleType)?.name || tx.vehicleType})` : ''}</div>}
                                                         {tx.driverName && <div className="flex items-center gap-1"><UserIcon size={10} /> {tx.driverName}</div>}
                                                     </div>
                                                 )}

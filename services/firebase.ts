@@ -295,7 +295,7 @@ export const addMovementBatch = async (newTransactions: Transaction[], newStock:
         const updates: any = {};
         updates['/stock'] = newStock;
 
-        // Append multiple transactions
+        // Sync transactions: replace existing ones by ID or append new ones
         const txRef = ref(db, 'transactions');
         const snapshot = await get(txRef);
         let currentTxs = snapshot.val() || [];
@@ -303,7 +303,16 @@ export const addMovementBatch = async (newTransactions: Transaction[], newStock:
             currentTxs = Object.values(currentTxs);
         }
 
-        const updatedTxs = [...currentTxs, ...newTransactions];
+        const updatedTxs = [...currentTxs];
+        newTransactions.forEach(newTx => {
+            const index = updatedTxs.findIndex(t => t.id === newTx.id);
+            if (index > -1) {
+                updatedTxs[index] = newTx;
+            } else {
+                updatedTxs.push(newTx);
+            }
+        });
+
         updates['/transactions'] = updatedTxs;
 
         await update(ref(db, '/'), updates);
