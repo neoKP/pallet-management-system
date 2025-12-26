@@ -61,6 +61,11 @@ export const StockProvider: React.FC<StockProviderProps> = ({ children }) => {
 
     // --- Firebase Sync ---
     useEffect(() => {
+        // Initialize/Seed/Migrate Data
+        firebaseService.initializeData().then(() => {
+            console.log('Firebase data initialized/checked.');
+        });
+
         // Subscribe to Stock
         firebaseService.subscribeToStock((data) => {
             if (data) setStock(data);

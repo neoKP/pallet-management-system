@@ -48,8 +48,17 @@ export const initializeData = async () => {
             console.log('Seeding initial stock data...');
             await set(stockRef, INITIAL_STOCK);
         } else {
+            // Data Migration: hub_nks -> hub_nw (Force move if nks exists)
+            let val = stockSnap.val();
+            if (val.hub_nks) {
+                console.log('Migrating stock data from hub_nks to hub_nw (Force)...');
+                // Move data to hub_nw, potentially merging or overwriting if nw is empty
+                val.hub_nw = val.hub_nks;
+                delete val.hub_nks;
+                await set(stockRef, val);
+            }
+
             // Check for legacy mock data signature and clear it
-            const val = stockSnap.val();
             if (val.hub_nw?.loscam_red === 150 && val.sai3?.loscam_red === 20) {
                 console.log('Detected mock stock data. Clearing...');
                 await set(stockRef, INITIAL_STOCK);
@@ -64,11 +73,26 @@ export const initializeData = async () => {
             console.log('Seeding initial transaction data...');
             await set(txRef, INITIAL_TRANSACTIONS);
         } else {
-            // Check for legacy mock transaction signature and clear it
             const val = txSnap.val();
             if (val) {
                 const txs = Array.isArray(val) ? val : Object.values(val);
-                // Check for specific mock docNo
+
+                // Data Migration: transactions source/dest
+                let modified = false;
+                const nextTxs = txs.map((t: any) => {
+                    let updated = false;
+                    if (t.source === 'hub_nks') { t.source = 'hub_nw'; updated = true; }
+                    if (t.dest === 'hub_nks') { t.dest = 'hub_nw'; updated = true; }
+                    if (updated) modified = true;
+                    return t;
+                });
+
+                if (modified) {
+                    console.log('Migrating transactions from hub_nks to hub_nw...');
+                    await set(txRef, nextTxs);
+                }
+
+                // Check for legacy mock transaction signature and clear it
                 const hasMockTx = txs.some((t: any) => t.docNo === 'EXT-IN-20231025-001');
                 if (hasMockTx) {
                     console.log('Detected mock transaction data. Clearing...');
@@ -104,7 +128,22 @@ export const initializeData = async () => {
         // Check Pallet Requests
         const requestsRef = ref(db, 'palletRequests');
         const requestsSnap = await get(requestsRef);
-        if (!requestsSnap.exists()) {
+        if (requestsSnap.exists()) {
+            const val = requestsSnap.val();
+            const reqs = Array.isArray(val) ? val : Object.values(val);
+            let modified = false;
+            const nextReqs = reqs.map((r: any) => {
+                let updated = false;
+                if (r.branchId === 'hub_nks') { r.branchId = 'hub_nw'; updated = true; }
+                if (r.targetBranchId === 'hub_nks') { r.targetBranchId = 'hub_nw'; updated = true; }
+                if (updated) modified = true;
+                return r;
+            });
+            if (modified) {
+                console.log('Migrating pallet requests from hub_nks to hub_nw...');
+                await set(requestsRef, nextReqs);
+            }
+        } else {
             console.log('Initializing pallet requests...');
             await set(requestsRef, []);
         }

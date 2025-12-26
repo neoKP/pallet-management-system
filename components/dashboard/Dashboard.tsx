@@ -10,7 +10,9 @@ import {
     Download,
     Clock,
     Trash2,
-    Printer
+    Printer,
+    ShieldCheck,
+    Recycle
 } from 'lucide-react';
 import { Stock, BranchId, Transaction, PalletId, User } from '../../types';
 import { useStock } from '../../contexts/StockContext';
@@ -20,7 +22,6 @@ import TransactionTimelineModal from '../movements/TransactionTimelineModal';
 import DocumentPreviewModal from '../movements/DocumentPreviewModal';
 import ExcelJS from 'exceljs';
 import { BRANCHES, PALLET_TYPES, VEHICLE_TYPES } from '../../constants';
-
 interface DashboardProps {
     stock: Stock;
     selectedBranch: BranchId | 'ALL';
@@ -28,6 +29,28 @@ interface DashboardProps {
     addTransaction: (transaction: Partial<Transaction>) => void;
     currentUser: User | null;
 }
+
+interface StockBarProps {
+    width: number;
+    color: string;
+}
+
+const StockBar: React.FC<StockBarProps> = ({ width, color }) => {
+    const barRef = React.useRef<HTMLDivElement>(null);
+
+    React.useEffect(() => {
+        if (barRef.current) {
+            barRef.current.style.width = `${width}%`;
+        }
+    }, [width]);
+
+    return (
+        <div
+            ref={barRef}
+            className={`h-full ${color} rounded-full transition-all duration-1000`}
+        />
+    );
+};
 
 const Dashboard: React.FC<DashboardProps> = ({ stock, selectedBranch, transactions, addTransaction, currentUser }) => {
     const { deleteTransaction } = useStock();
@@ -109,11 +132,14 @@ const Dashboard: React.FC<DashboardProps> = ({ stock, selectedBranch, transactio
     }, [stock, selectedBranch]);
 
     const stats = useMemo(() => {
-        const totalStock = Object.values(currentStock).reduce((a, b) => a + (typeof b === 'number' ? b : 0), 0);
-        const loscamRed = currentStock['loscam_red'] || 0;
-        const loscamYellow = currentStock['loscam_yellow'] || 0;
-        const loscamBlue = currentStock['loscam_blue'] || 0;
-        return { totalStock, loscamRed, loscamYellow, loscamBlue };
+        const totalStock = Object.values(currentStock).reduce((a: number, b) => a + (typeof b === 'number' ? b : 0), 0);
+        const loscamRed = (currentStock['loscam_red'] as number) || 0;
+        const loscamYellow = (currentStock['loscam_yellow'] as number) || 0;
+        const loscamBlue = (currentStock['loscam_blue'] as number) || 0;
+        const hiq = (currentStock['hiq'] as number) || 0;
+        const general = (currentStock['general'] as number) || 0;
+        const plastic = (currentStock['plastic_circular'] as number) || 0;
+        return { totalStock, loscamRed, loscamYellow, loscamBlue, hiq, general, plastic };
     }, [currentStock]);
 
     const displayTransactions = useMemo(() => {
@@ -121,17 +147,10 @@ const Dashboard: React.FC<DashboardProps> = ({ stock, selectedBranch, transactio
         if (selectedBranch !== 'ALL') {
             filtered = filtered.filter(t => t.source === selectedBranch || t.dest === selectedBranch);
         }
-        return filtered
-            // Show both COMPLETED and PENDING to allow tracking status
-            .sort((a, b) => b.id - a.id);
+        return filtered.sort((a, b) => b.id - a.id);
     }, [transactions, selectedBranch]);
 
     const isRedAlert = stats.loscamRed > 500;
-
-    // Extracted styles to avoid inline style warnings
-    const redBarStyle = { '--bar-width': `${stats.totalStock > 0 ? (stats.loscamRed / stats.totalStock) * 100 : 0}%` } as React.CSSProperties;
-    const yellowBarStyle = { '--bar-width': `${stats.totalStock > 0 ? (stats.loscamYellow / stats.totalStock) * 100 : 0}%` } as React.CSSProperties;
-    const blueBarStyle = { '--bar-width': `${stats.totalStock > 0 ? (stats.loscamBlue / stats.totalStock) * 100 : 0}%` } as React.CSSProperties;
 
     const handleExport = async () => {
         const workbook = new ExcelJS.Workbook();
@@ -250,7 +269,7 @@ const Dashboard: React.FC<DashboardProps> = ({ stock, selectedBranch, transactio
             )}
 
             {/* 2. Stats Grid */}
-            <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+            <div className="grid grid-cols-2 lg:grid-cols-4 xl:grid-cols-4 gap-4">
                 <StatsCard
                     title="ยอดรวมทั้งสิ้น"
                     value={stats.totalStock}
@@ -269,6 +288,14 @@ const Dashboard: React.FC<DashboardProps> = ({ stock, selectedBranch, transactio
                     alert={isRedAlert}
                 />
                 <StatsCard
+                    title="Loscam Blue"
+                    value={stats.loscamBlue}
+                    icon={Box}
+                    color="bg-blue-600"
+                    textColor="text-blue-600"
+                    subtext="General"
+                />
+                <StatsCard
                     title="Loscam Yellow"
                     value={stats.loscamYellow}
                     icon={Layers}
@@ -277,12 +304,28 @@ const Dashboard: React.FC<DashboardProps> = ({ stock, selectedBranch, transactio
                     subtext="Standard"
                 />
                 <StatsCard
-                    title="Loscam Blue"
-                    value={stats.loscamBlue}
-                    icon={Box}
-                    color="bg-blue-600"
-                    textColor="text-blue-600"
+                    title="HI-Q"
+                    value={stats.hiq}
+                    icon={ShieldCheck}
+                    color="bg-orange-500"
+                    textColor="text-orange-600"
+                    subtext="Special"
+                />
+                <StatsCard
+                    title="พาเลทหมุนเวียน (ไม้/คละสี)"
+                    value={stats.general}
+                    icon={Package}
+                    color="bg-gray-400"
+                    textColor="text-gray-600"
                     subtext="General"
+                />
+                <StatsCard
+                    title="พาเลทพลาสติก"
+                    value={stats.plastic}
+                    icon={Recycle}
+                    color="bg-teal-500"
+                    textColor="text-teal-600"
+                    subtext="Circular"
                 />
             </div>
 
@@ -295,45 +338,25 @@ const Dashboard: React.FC<DashboardProps> = ({ stock, selectedBranch, transactio
 
                 {/* Visual Bars */}
                 <div className="space-y-4">
-                    {/* Red */}
-                    <div>
-                        <div className="flex justify-between text-sm font-bold mb-1">
-                            <span className="text-slate-600 flex items-center gap-2">
-                                <span className="w-2 h-2 rounded-full bg-red-500"></span> Loscam Red
-                            </span>
-                            <span className="text-slate-900">{stats.loscamRed}</span>
-                        </div>
-                        <div className="h-3 bg-slate-100 rounded-full overflow-hidden">
-                            {/* eslint-disable-next-line */}
-                            <div className="h-full bg-red-500 rounded-full transition-all duration-1000 w-[var(--bar-width)]" {...{ style: redBarStyle }}></div>
-                        </div>
-                    </div>
-                    {/* Yellow */}
-                    <div>
-                        <div className="flex justify-between text-sm font-bold mb-1">
-                            <span className="text-slate-600 flex items-center gap-2">
-                                <span className="w-2 h-2 rounded-full bg-amber-400"></span> Loscam Yellow
-                            </span>
-                            <span className="text-slate-900">{stats.loscamYellow}</span>
-                        </div>
-                        <div className="h-3 bg-slate-100 rounded-full overflow-hidden">
-                            {/* eslint-disable-next-line */}
-                            <div className="h-full bg-amber-400 rounded-full transition-all duration-1000 w-[var(--bar-width)]" {...{ style: yellowBarStyle }}></div>
-                        </div>
-                    </div>
-                    {/* Blue */}
-                    <div>
-                        <div className="flex justify-between text-sm font-bold mb-1">
-                            <span className="text-slate-600 flex items-center gap-2">
-                                <span className="w-2 h-2 rounded-full bg-blue-500"></span> Loscam Blue
-                            </span>
-                            <span className="text-slate-900">{stats.loscamBlue}</span>
-                        </div>
-                        <div className="h-3 bg-slate-100 rounded-full overflow-hidden">
-                            {/* eslint-disable-next-line */}
-                            <div className="h-full bg-blue-500 rounded-full transition-all duration-1000 w-[var(--bar-width)]" {...{ style: blueBarStyle }}></div>
-                        </div>
-                    </div>
+                    {PALLET_TYPES.map(pallet => {
+                        const qty = currentStock[pallet.id] || 0;
+                        const barWidth = stats.totalStock > 0 ? (qty / stats.totalStock) * 100 : 0;
+
+                        return (
+                            <div key={pallet.id} className={qty === 0 ? 'opacity-40' : ''}>
+                                <div className="flex justify-between text-sm font-bold mb-1">
+                                    <span className="text-slate-600 flex items-center gap-2">
+                                        <span className={`w-2.5 h-2.5 rounded-full ${pallet.color}`}></span>
+                                        {pallet.name}
+                                    </span>
+                                    <span className="text-slate-900">{qty}</span>
+                                </div>
+                                <div className="h-2.5 bg-slate-100 rounded-full overflow-hidden">
+                                    <StockBar width={barWidth} color={pallet.color} />
+                                </div>
+                            </div>
+                        );
+                    })}
                 </div>
             </div>
 
