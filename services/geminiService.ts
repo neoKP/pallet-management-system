@@ -4,8 +4,8 @@ import { Stock, PalletType } from "../types";
 import { PALLET_TYPES } from "../constants";
 
 export async function getLogisticsAssistantResponse(
-  query: string, 
-  allStock: Stock, 
+  query: string,
+  allStock: Stock,
   selectedBranch: string,
   branchName: string
 ) {
@@ -39,7 +39,7 @@ export async function getLogisticsAssistantResponse(
        - พาเลทไม้ทั่วไป: แนะนำคัดแยกไม้ที่เสียเพื่อขายเป็นไม้ Biomass หรือไม้ฟืน
     
     3. รอบการบริหาร:
-       - เน้นโอนพาเลทแดงกลับ Hub นครสวรรค์เพื่อส่งคืน Supplier (วังน้อย) 3 ครั้งต่อสัปดาห์
+       - เน้นโอนพาเลทแดงกลับ Hub NW เพื่อส่งคืน Supplier (วังน้อย) 3 ครั้งต่อสัปดาห์
     
     คำแนะนำในการตอบ:
     - ตอบเป็นภาษาไทยอย่างมืออาชีพ มั่นใจ และสุภาพ

@@ -21,7 +21,7 @@ export default function App() {
   const { stock, transactions, addTransaction, processBatchMaintenance } = useStock();
 
   // Permissions: Admin and Hub NKS can see ALL
-  const canViewAll = currentUser?.role === 'ADMIN' || currentUser?.branchId === 'hub_nks';
+  const canViewAll = currentUser?.role === 'ADMIN' || currentUser?.branchId === 'hub_nw';
 
   // Removing 'ai' from activeTab state type definition and default state since we are removing the feature
   const [activeTab, setActiveTab] = useState<'dashboard' | 'record' | 'maintenance' | 'settings'>('dashboard');
@@ -31,20 +31,20 @@ export default function App() {
     const savedUser = localStorage.getItem('neo-siam-user');
     if (savedUser) {
       const user = JSON.parse(savedUser);
-      if (user.role === 'ADMIN' || user.branchId === 'hub_nks') return 'ALL';
+      if (user.role === 'ADMIN' || user.branchId === 'hub_nw') return 'ALL';
       if (user.role === 'USER' && user.branchId) return user.branchId;
     }
-    return 'hub_nks';
+    return 'hub_nw';
   });
 
   useEffect(() => {
     if (currentUser) {
       // If user is restricted (not admin and not hub_nks), force their branch
-      if (currentUser.role === 'USER' && currentUser.branchId !== 'hub_nks' && currentUser.branchId) {
+      if (currentUser.role === 'USER' && currentUser.branchId !== 'hub_nw' && currentUser.branchId) {
         setSelectedBranch(currentUser.branchId);
       }
       // If user is privileged but has invalid selection, reset to ALL
-      else if ((currentUser.role === 'ADMIN' || currentUser.branchId === 'hub_nks') && selectedBranch !== 'ALL' && !BRANCHES.some(b => b.id === selectedBranch)) {
+      else if ((currentUser.role === 'ADMIN' || currentUser.branchId === 'hub_nw') && selectedBranch !== 'ALL' && !BRANCHES.some(b => b.id === selectedBranch)) {
         setSelectedBranch('ALL');
       }
     }
@@ -191,10 +191,10 @@ export default function App() {
             />
           )}
 
-          {activeTab === 'maintenance' && (selectedBranch === 'hub_nks' || currentUser?.branchId === 'hub_nks') && (
+          {activeTab === 'maintenance' && (selectedBranch === 'hub_nw' || currentUser?.branchId === 'hub_nw') && (
             <MaintenanceTab
               stock={stock}
-              selectedBranch={'hub_nks'}
+              selectedBranch={'hub_nw'}
               onBatchMaintenance={processBatchMaintenance}
               onAddTransaction={addTransaction}
             />
@@ -221,7 +221,7 @@ export default function App() {
           </button>
         )}
 
-        {(selectedBranch === 'hub_nks' || currentUser?.branchId === 'hub_nks') && (
+        {(selectedBranch === 'hub_nw' || currentUser?.branchId === 'hub_nw') && (
           <button onClick={() => setActiveTab('maintenance')} className={`p-2 rounded-lg flex flex-col items-center ${activeTab === 'maintenance' ? 'text-blue-600' : 'text-slate-400'}`}>
             <Wrench size={24} />
             <span className="text-[10px] font-bold mt-1">Maint</span>

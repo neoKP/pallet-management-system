@@ -316,7 +316,7 @@ export const StockProvider: React.FC<StockProviderProps> = ({ children }) => {
                 nextStock[data.branchId] = s;
             }
 
-            // Add Fixed General to target (hub_nks)
+            // Add Fixed General to target (hub_nw)
             if (nextStock[targetBranch]) {
                 const t = { ...nextStock[targetBranch] } as Record<PalletId, number>;
                 if (data.fixedQty > 0) {
@@ -338,7 +338,7 @@ export const StockProvider: React.FC<StockProviderProps> = ({ children }) => {
             id: Date.now().toString(),
             date: dateStr,
             requestNo,
-            branchId: reqData.branchId || 'hub_nks',
+            branchId: reqData.branchId || 'hub_nw',
             items: reqData.items || [],
             targetBranchId: reqData.targetBranchId,
             purpose: reqData.purpose || '',

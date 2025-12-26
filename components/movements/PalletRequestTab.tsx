@@ -25,7 +25,7 @@ const PalletRequestTab: React.FC<PalletRequestTabProps> = ({ selectedBranch, cur
         note: ''
     });
 
-    const isHub = selectedBranch === 'hub_nks' || currentUser?.branchId === 'hub_nks';
+    const isHub = selectedBranch === 'hub_nw' || currentUser?.branchId === 'hub_nw';
 
     const ALL_DESTINATIONS = [
         ...BRANCHES.map(b => ({ id: b.id, name: b.name })),
@@ -99,7 +99,7 @@ const PalletRequestTab: React.FC<PalletRequestTabProps> = ({ selectedBranch, cur
         Swal.fire({
             icon: 'success',
             title: 'ส่งคำขอแล้ว',
-            text: 'คำขอของคุณถูกส่งไปยังสาขานครสวรรค์แล้ว',
+            text: 'คำขอของคุณถูกส่งไปยังสาขา NW แล้ว',
             timer: 2000,
             showConfirmButton: false
         });
@@ -152,7 +152,7 @@ const PalletRequestTab: React.FC<PalletRequestTabProps> = ({ selectedBranch, cur
 
                 addMovementBatch({
                     type: 'OUT',
-                    source: 'hub_nks',
+                    source: 'hub_nw',
                     dest: req.branchId,
                     items: req.items,
                     docNo,
@@ -193,7 +193,7 @@ const PalletRequestTab: React.FC<PalletRequestTabProps> = ({ selectedBranch, cur
             <div className="flex justify-between items-center">
                 <div>
                     <h2 className="text-xl font-black text-slate-900">Pallet Return Requests</h2>
-                    <p className="text-sm text-slate-500">ระบบร้องขอการส่งคืนพาเลทจากสาขานครสวรรค์</p>
+                    <p className="text-sm text-slate-500">ระบบร้องขอการส่งคืนพาเลทจากสาขา NW</p>
                 </div>
                 {!isHub && (
                     <button

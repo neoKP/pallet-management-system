@@ -50,7 +50,7 @@ export const initializeData = async () => {
         } else {
             // Check for legacy mock data signature and clear it
             const val = stockSnap.val();
-            if (val.hub_nks?.loscam_red === 150 && val.sai3?.loscam_red === 20) {
+            if (val.hub_nw?.loscam_red === 150 && val.sai3?.loscam_red === 20) {
                 console.log('Detected mock stock data. Clearing...');
                 await set(stockRef, INITIAL_STOCK);
             }

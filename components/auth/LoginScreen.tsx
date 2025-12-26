@@ -6,7 +6,7 @@ import { User } from '../../types';
 // Used locally for mock login
 const MOCK_USERS: User[] = [
     { username: 'admin', role: 'ADMIN', name: 'System Administrator' },
-    { username: 'user_nks', role: 'USER', branchId: 'hub_nks', name: 'Operator - Hub NKS' },
+    { username: 'user_nw', role: 'USER', branchId: 'hub_nw', name: 'Operator - Hub NW' },
     { username: 'user_sai3', role: 'USER', branchId: 'sai3', name: 'Staff - Sai 3' },
     { username: 'user_cm', role: 'USER', branchId: 'cm', name: 'Staff - Chiang Mai' },
     { username: 'user_kpp', role: 'USER', branchId: 'kpp', name: 'Staff - Kamphaeng Phet' },

@@ -10,7 +10,7 @@ export const PALLET_TYPES: PalletType[] = [
 ];
 
 export const BRANCHES: Branch[] = [
-  { id: 'hub_nks', name: 'ศูนย์ฯ นครสวรรค์ (Hub)', type: 'HUB' },
+  { id: 'hub_nw', name: 'ศูนย์ฯ NW (Hub)', type: 'HUB' },
   { id: 'sai3', name: 'พุทธมณฑลสาย 3', type: 'BRANCH' },
   { id: 'kpp', name: 'สาขากำแพงเพชร', type: 'BRANCH' },
   { id: 'plk', name: 'สาขาพิษณุโลก', type: 'BRANCH' },
@@ -28,7 +28,7 @@ export const EXTERNAL_PARTNERS: Partner[] = [
 ];
 
 export const INITIAL_STOCK: Stock = {
-  hub_nks: { loscam_red: 0, loscam_yellow: 0, loscam_blue: 0, hiq: 0, general: 0, plastic_circular: 0 },
+  hub_nw: { loscam_red: 0, loscam_yellow: 0, loscam_blue: 0, hiq: 0, general: 0, plastic_circular: 0 },
   sai3: { loscam_red: 0, loscam_yellow: 0, loscam_blue: 0, hiq: 0, general: 0, plastic_circular: 0 },
   kpp: { loscam_red: 0, loscam_yellow: 0, loscam_blue: 0, hiq: 0, general: 0, plastic_circular: 0 },
   plk: { loscam_red: 0, loscam_yellow: 0, loscam_blue: 0, hiq: 0, general: 0, plastic_circular: 0 },
@@ -41,7 +41,7 @@ export const INITIAL_TRANSACTIONS: Transaction[] = [];
 
 export const MOCK_USERS: User[] = [
   { username: 'admin', role: 'ADMIN', name: 'System Administrator' },
-  { username: 'user_nks', role: 'USER', branchId: 'hub_nks', name: 'Operator - Hub NKS' },
+  { username: 'user_nw', role: 'USER', branchId: 'hub_nw', name: 'Operator - Hub NW' },
   { username: 'user_sai3', role: 'USER', branchId: 'sai3', name: 'Staff - Sai 3' },
   { username: 'user_cm', role: 'USER', branchId: 'cm', name: 'Staff - Chiang Mai' },
   { username: 'user_kpp', role: 'USER', branchId: 'kpp', name: 'Staff - Kamphaeng Phet' },

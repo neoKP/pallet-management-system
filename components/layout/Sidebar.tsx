@@ -49,7 +49,7 @@ const Sidebar: React.FC<SidebarProps> = ({ activeTab, setActiveTab, currentUser,
                 )}
 
                 {/* Maintenance Menu: Visible if 'hub_nks' or user is Hub Operator */}
-                {(selectedBranch === 'hub_nks' || currentUser?.branchId === 'hub_nks') && (
+                {(selectedBranch === 'hub_nw' || currentUser?.branchId === 'hub_nw') && (
                     <button
                         onClick={() => setActiveTab('maintenance')}
                         className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200 font-bold group ${activeTab === 'maintenance'

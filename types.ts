@@ -15,7 +15,7 @@ export type PalletId =
  * Branch Identifiers
  */
 export type BranchId =
-  | 'hub_nks'
+  | 'hub_nw'
   | 'sai3'
   | 'kpp'
   | 'plk'

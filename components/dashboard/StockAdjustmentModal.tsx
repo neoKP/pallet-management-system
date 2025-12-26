@@ -24,7 +24,7 @@ const StockAdjustmentModal: React.FC<StockAdjustmentModalProps> = ({
     currentBranch
 }) => {
     const [adjType, setAdjType] = useState<'IN' | 'OUT'>('IN');
-    const [selectedBranch, setSelectedBranch] = useState<string>(currentBranch === 'ALL' ? 'hub_nks' : currentBranch);
+    const [selectedBranch, setSelectedBranch] = useState<string>(currentBranch === 'ALL' ? 'hub_nw' : currentBranch);
     const [selectedPallet, setSelectedPallet] = useState<PalletId>('loscam_red');
     const [qty, setQty] = useState<string>('');
     const [note, setNote] = useState<string>('');
@@ -32,7 +32,7 @@ const StockAdjustmentModal: React.FC<StockAdjustmentModalProps> = ({
     useEffect(() => {
         if (isOpen) {
             setAdjType('IN');
-            setSelectedBranch(currentBranch === 'ALL' ? 'hub_nks' : currentBranch);
+            setSelectedBranch(currentBranch === 'ALL' ? 'hub_nw' : currentBranch);
             setSelectedPallet('loscam_red');
             setQty('');
             setNote('');
