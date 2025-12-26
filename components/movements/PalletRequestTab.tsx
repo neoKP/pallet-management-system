@@ -5,7 +5,6 @@ import { BRANCHES, PALLET_TYPES, EXTERNAL_PARTNERS } from '../../constants';
 import { BranchId, PalletId, PalletRequest, User } from '../../types';
 // @ts-ignore
 import Swal from 'sweetalert2';
-import * as telegramService from '../../services/telegramService';
 
 interface PalletRequestTabProps {
     selectedBranch: BranchId;
@@ -78,20 +77,6 @@ const PalletRequestTab: React.FC<PalletRequestTabProps> = ({ selectedBranch, cur
 
         createPalletRequest(newReq);
 
-        // Telegram Notification
-        if (config.telegramChatId) {
-            const branchName = BRANCHES.find(b => b.id === selectedBranch)?.name || 'Unknown';
-            const targetName = ALL_DESTINATIONS.find(d => d.id === newRequestMeta.targetBranchId)?.name;
-            // Note: Since requestNo is generated inside, we might need a workaround or just accept a placeholder until it syncs.
-            // Better to pass the formatted message.
-            const message = telegramService.formatPalletRequest(
-                { ...newReq, requestNo: 'รอระบบยืนยัน...' },
-                branchName,
-                targetName
-            );
-            telegramService.sendMessage(config.telegramChatId, message);
-        }
-
         setIsModalOpen(false);
         setRequestItems([{ palletId: '', qty: '' }]);
         setNewRequestMeta({ purpose: '', priority: 'NORMAL', targetBranchId: '', note: '' });
@@ -162,11 +147,7 @@ const PalletRequestTab: React.FC<PalletRequestTabProps> = ({ selectedBranch, cur
 
                 updatePalletRequestStatus(req.id, 'SHIPPED', docNo);
 
-                // Telegram Notification
-                if (config.telegramChatId) {
-                    const message = telegramService.formatShipmentNotification(req, docNo);
-                    telegramService.sendMessage(config.telegramChatId, message);
-                }
+                updatePalletRequestStatus(req.id, 'SHIPPED', docNo);
 
                 Swal.fire('จัดส่งแล้ว!', `สร้างเลขที่เอกสาร ${docNo}`, 'success');
             }

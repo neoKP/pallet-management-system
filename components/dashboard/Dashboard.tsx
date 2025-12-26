@@ -233,8 +233,8 @@ const Dashboard: React.FC<DashboardProps> = ({ stock, selectedBranch, transactio
         window.URL.revokeObjectURL(url);
     };
 
-    const handleAdjustmentSubmit = (data: { type: 'IN' | 'OUT'; branchId: string; palletId: PalletId; qty: number; note: string }) => {
-        addTransaction({
+    const handleAdjustmentSubmit = async (data: { type: 'IN' | 'OUT'; branchId: string; palletId: PalletId; qty: number; note: string }) => {
+        await addTransaction({
             type: 'ADJUST',
             source: data.type === 'IN' ? 'ADJUSTMENT' : data.branchId,
             dest: data.type === 'IN' ? data.branchId : 'ADJUSTMENT',
@@ -424,7 +424,7 @@ const Dashboard: React.FC<DashboardProps> = ({ stock, selectedBranch, transactio
                                     const isCancelled = tx.status === 'CANCELLED';
 
                                     return (
-                                        <tr key={tx.docNo + tx.id} className={`transition-colors ${isCancelled ? 'bg-red-50/30' : 'hover:bg-slate-50/50'}`}>
+                                        <tr key={`${tx.id}-${tx.docNo}`} className={`transition-colors ${isCancelled ? 'bg-red-50/30' : 'hover:bg-slate-50/50'}`}>
                                             <td className={`p-4 text-slate-500 whitespace-nowrap ${isCancelled ? 'line-through decoration-red-300 opacity-60' : ''}`}>
                                                 {new Date(tx.date).toLocaleDateString('th-TH')}
                                             </td>

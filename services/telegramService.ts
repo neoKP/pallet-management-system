@@ -34,35 +34,96 @@ export const sendMessage = async (chatId: string, text: string) => {
     }
 };
 
+import { PALLET_TYPES, VEHICLE_TYPES } from '../constants';
+
+/**
+ * Helper to get pallet name
+ */
+const getPalletName = (palletId: string) => {
+    return PALLET_TYPES.find(p => p.id === palletId)?.name || palletId;
+};
+
+/**
+ * Helper to get vehicle name
+ */
+const getVehicleName = (vehicleId: string) => {
+    return VEHICLE_TYPES.find(v => v.id === vehicleId)?.name || vehicleId;
+};
+
+/**
+ * Helper to format transport info
+ */
+const formatTransportInfo = (data: any) => {
+    if (!data.carRegistration && !data.driverName && !data.vehicleType) return '';
+
+    return `\n*ข้อมูลการขนส่ง:*
+🚛 ประเภท: ${getVehicleName(data.vehicleType || '-')}
+🔢 ทะเบียน: ${data.carRegistration || '-'}
+👤 คนขับ: ${data.driverName || '-'}
+🏢 บริษัท: ${data.transportCompany || '-'}`;
+};
+
 /**
  * Format a Pallet Request for Telegram
  */
 export const formatPalletRequest = (req: any, branchName: string, targetName?: string) => {
     const priorityEmoji = req.priority === 'URGENT' ? '🔴' : '⚪';
-    const itemsText = req.items.map((item: any) => `  - ${item.palletId}: ${item.qty}`).join('\n');
+    const itemsText = req.items.map((item: any) => `  • ${getPalletName(item.palletId)}: ${item.qty} ชิ้น`).join('\n');
 
     return `🔔 *มีคำขอรับพาเลทใหม่!*
 ----------------------------
-*เลขที่:* \`${req.requestNo}\`
-*จาก:* ${branchName}
+*เลขที่คำขอ:* \`${req.requestNo}\`
+*จากสาขา:* ${branchName}
+*ต้องการให้ส่งที่:* ${targetName || 'ไม่ระบุ'}
 *รายการ:*
 ${itemsText}
-*ปลายทาง:* ${targetName || 'ไม่ระบุ'}
 *วัตถุประสงค์:* ${req.purpose}
 *ความสำคัญ:* ${priorityEmoji} ${req.priority}
 ----------------------------
-_กรุณาตรวจสอบในระบบแอปพลิเคชัน_`;
+_กรุณาตรวจสอบและอนุมัติในระบบ_`;
 };
 
 /**
- * Format a Processing Notification (Shipped)
+ * Format a Processing Notification (Shipped/Dispatch)
  */
-export const formatShipmentNotification = (req: any, docNo: string) => {
+export const formatShipmentNotification = (req: any, docNo: string, sourceName: string, destName: string, transportData?: any) => {
+    const itemsText = req.items?.map((item: any) => `  • ${getPalletName(item.palletId)}: ${item.qty} ชิ้น`).join('\n') || '';
+    const transportPart = transportData ? formatTransportInfo(transportData) : '';
+
     return `🚚 *แจ้งส่งมอบพาเลท!*
 ----------------------------
-*เลขที่คำขอ:* \`${req.requestNo}\`
+*อ้างอิงคำขอ:* \`${req.requestNo}\`
 *เลขที่เอกสาร:* \`${docNo}\`
+*ต้นทาง:* ${sourceName}
+*ปลายทาง:* ${destName}
+*รายการ:*
+${itemsText}
 *สถานะ:* ✅ จัดส่งเรียบร้อยแล้ว
+${transportPart}
 ----------------------------
-_พาเลทกำลังเดินทางไปยังสาขาของคุณ_`;
+_พาเลทกำลังเดินทางไปยังสาขาปลายทาง_`;
+};
+
+/**
+ * Format a General Movement Notification (IN/OUT)
+ */
+export const formatMovementNotification = (data: any, sourceName: string, destName: string) => {
+    const isReceive = data.type === 'IN';
+    const title = isReceive ? '📥 *แจ้งรับเข้าพาเลท!*' : '📤 *แจ้งจ่ายออกพาเลท!*';
+    const icon = isReceive ? '✅' : '📦';
+    const itemsText = data.items.map((item: any) => `  • ${getPalletName(item.palletId)}: ${item.qty} ชิ้น`).join('\n');
+    const transportPart = formatTransportInfo(data);
+
+    return `${title}
+----------------------------
+*เลขที่เอกสาร:* \`${data.docNo}\`
+*จาก:* ${sourceName}
+*เข้าที่:* ${destName}
+*รายการ:*
+${itemsText}
+*อ้างอิง:* ${data.referenceDocNo || '-'}
+*สถานะ:* ${icon} บันทึกสำเร็จ
+${transportPart}
+----------------------------
+_ตรวจสอบรายการในระบบจัดการพาเลท_`;
 };

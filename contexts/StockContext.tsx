@@ -1,7 +1,8 @@
 import React, { createContext, useContext, useState, useCallback, ReactNode, useEffect } from 'react';
 import { Stock, Transaction, BranchId, PalletId, TransactionType, PalletRequest } from '../types';
-import { INITIAL_STOCK, INITIAL_TRANSACTIONS, BRANCHES } from '../constants';
+import { INITIAL_STOCK, INITIAL_TRANSACTIONS, BRANCHES, EXTERNAL_PARTNERS } from '../constants';
 import * as firebaseService from '../services/firebase';
+import * as telegramService from '../services/telegramService';
 
 interface StockContextType {
     stock: Stock;
@@ -110,10 +111,10 @@ export const StockProvider: React.FC<StockProviderProps> = ({ children }) => {
         }
 
         const datePart = dateStr.replace(/-/g, '');
-        // Note: usage of 'transactions' here depends on the closure. 
-        // With firebase async updates, this might slightly lag but acceptable for doc generation.
-        const existingDocs = transactions.filter(t => t.docNo && t.docNo.startsWith(`${prefix}-${datePart}`));
-        const running = (existingDocs.length + 1).toString().padStart(3, '0');
+        const existingDocNos = Array.from(new Set(transactions
+            .filter(t => t.docNo && t.docNo.startsWith(`${prefix}-${datePart}`))
+            .map(t => t.docNo)));
+        const running = (existingDocNos.length + 1).toString().padStart(3, '0');
 
         return `${prefix}-${datePart}-${running}`;
     }, [transactions]);
@@ -125,9 +126,8 @@ export const StockProvider: React.FC<StockProviderProps> = ({ children }) => {
         return `REQ-${datePart}-${running}`;
     }, [palletRequests]);
 
-    const addTransaction = useCallback((txData: Partial<Transaction>) => {
+    const addTransaction = useCallback(async (txData: Partial<Transaction>) => {
         const dateStr = new Date().toISOString().split('T')[0];
-        // Ensure required fields for generateDocNo are present
         if (!txData.type || !txData.source || !txData.dest) {
             console.error("Missing required transaction data for doc number generation.");
             return;
@@ -137,42 +137,46 @@ export const StockProvider: React.FC<StockProviderProps> = ({ children }) => {
         const isSourceBranch = BRANCHES.some(b => b.id === txData.source);
         const isDestBranch = BRANCHES.some(b => b.id === txData.dest);
         const isInternalTransfer = isSourceBranch && isDestBranch && txData.type === 'OUT';
-
         const status = isInternalTransfer ? 'PENDING' : 'COMPLETED';
 
         const newTx: Transaction = {
             ...txData,
-            id: Date.now(),
+            id: Date.now() + Math.floor(Math.random() * 1000),
             date: dateStr,
             docNo,
             status,
-            // Ensure palletId and qty are defined for Transaction type
-            palletId: txData.palletId || 'unknown', // Default or handle error
-            qty: txData.qty || 0, // Default or handle error
-        } as Transaction; // Cast to Transaction after ensuring all fields
+            palletId: txData.palletId || 'unknown',
+            qty: txData.qty || 0,
+        } as Transaction;
 
-        // Calculate New Stock State locally
         const nextStock = { ...stock };
-
-        // Deduct from source if it's a branch
         if (newTx.source && nextStock[newTx.source as BranchId]) {
             const s = { ...nextStock[newTx.source as BranchId] } as Record<PalletId, number>;
             s[newTx.palletId] = Math.max(0, (s[newTx.palletId] || 0) - newTx.qty);
             nextStock[newTx.source as BranchId] = s;
         }
-
-        // Add to destination ONLY if it's NOT pending
         if (status === 'COMPLETED' && newTx.dest && nextStock[newTx.dest as BranchId]) {
             const d = { ...nextStock[newTx.dest as BranchId] } as Record<PalletId, number>;
             d[newTx.palletId] = (d[newTx.palletId] || 0) + newTx.qty;
             nextStock[newTx.dest as BranchId] = d;
         }
 
-        // Send to Firebase
-        firebaseService.addMovementBatch([newTx], nextStock);
-    }, [stock, generateDocNo]);
+        await firebaseService.addMovementBatch([newTx], nextStock);
 
-    const confirmTransactionsBatch = useCallback((txIds: number[]) => {
+        if (config?.telegramChatId) {
+            const allEntities = [...BRANCHES, ...EXTERNAL_PARTNERS,
+            { id: 'ADJUSTMENT', name: 'การปรับปรุงสต๊อก (Adjustment)' },
+            { id: 'maintenance_stock', name: 'คลังซ่อมพาเลท' },
+            { id: 'REPAIR_CONVERT', name: 'งานซ่อม/บำรุงรักษา' }
+            ];
+            const sourceName = allEntities.find(e => e.id === newTx.source)?.name || newTx.source;
+            const destName = allEntities.find(e => e.id === newTx.dest)?.name || newTx.dest;
+            const message = telegramService.formatMovementNotification({ ...newTx, items: [{ palletId: newTx.palletId, qty: newTx.qty }] }, sourceName, destName);
+            telegramService.sendMessage(config.telegramChatId, message);
+        }
+    }, [stock, generateDocNo, config]);
+
+    const confirmTransactionsBatch = useCallback(async (txIds: number[]) => {
         const updatedTxs: Transaction[] = [];
         const nextStock = { ...stock };
 
@@ -183,7 +187,6 @@ export const StockProvider: React.FC<StockProviderProps> = ({ children }) => {
             const updatedTx = { ...tx, status: 'COMPLETED' as const };
             updatedTxs.push(updatedTx);
 
-            // Update Stock (Add to Dest)
             if (updatedTx.dest && nextStock[updatedTx.dest as BranchId]) {
                 const bId = updatedTx.dest as BranchId;
                 const d = { ...nextStock[bId] } as Record<PalletId, number>;
@@ -193,9 +196,23 @@ export const StockProvider: React.FC<StockProviderProps> = ({ children }) => {
         });
 
         if (updatedTxs.length > 0) {
-            firebaseService.addMovementBatch(updatedTxs, nextStock);
+            await firebaseService.addMovementBatch(updatedTxs, nextStock);
+
+            if (config?.telegramChatId) {
+                const docNo = updatedTxs[0].docNo;
+                const sourceName = BRANCHES.find(b => b.id === updatedTxs[0].source)?.name || updatedTxs[0].source;
+                const destName = BRANCHES.find(b => b.id === updatedTxs[0].dest)?.name || updatedTxs[0].dest;
+                const summaryData = {
+                    type: 'IN',
+                    docNo,
+                    items: updatedTxs.map(t => ({ palletId: t.palletId, qty: t.qty })),
+                    referenceDocNo: updatedTxs[0].referenceDocNo
+                };
+                const message = telegramService.formatMovementNotification(summaryData, sourceName, destName);
+                telegramService.sendMessage(config.telegramChatId, message);
+            }
         }
-    }, [stock, transactions]);
+    }, [stock, transactions, config]);
 
     const confirmTransaction = useCallback((txId: number) => {
         confirmTransactionsBatch([txId]);
@@ -212,7 +229,7 @@ export const StockProvider: React.FC<StockProviderProps> = ({ children }) => {
         firebaseService.addMovementBatch([updatedTx], stock);
     }, [transactions, stock]);
 
-    const addMovementBatch = useCallback((data: {
+    const addMovementBatch = useCallback(async (data: {
         type: TransactionType;
         source: string;
         dest: string;
@@ -236,9 +253,10 @@ export const StockProvider: React.FC<StockProviderProps> = ({ children }) => {
         const newTransactions: Transaction[] = [];
         const nextStock = { ...stock };
 
+        const baseId = Date.now() + Math.floor(Math.random() * 1000);
         data.items.forEach((item, index) => {
             const newTx: Transaction = {
-                id: Date.now() + index, // Ensure unique IDs for batch
+                id: baseId + index, // Ensure unique IDs for batch
                 date: dateStr,
                 docNo,
                 type: data.type,
@@ -272,8 +290,34 @@ export const StockProvider: React.FC<StockProviderProps> = ({ children }) => {
             }
         });
 
-        firebaseService.addMovementBatch(newTransactions, nextStock);
-    }, [stock, generateDocNo]);
+        await firebaseService.addMovementBatch(newTransactions, nextStock);
+
+        // Telegram Notification
+        if (config?.telegramChatId) {
+            const allEntities = [...BRANCHES, ...EXTERNAL_PARTNERS,
+            { id: 'ADJUSTMENT', name: 'การปรับปรุงสต๊อก (Adjustment)' },
+            { id: 'maintenance_stock', name: 'คลังซ่อมพาเลท' }
+            ];
+            const sourceName = allEntities.find(e => e.id === data.source)?.name || data.source;
+            const destName = allEntities.find(e => e.id === data.dest)?.name || data.dest;
+
+            // Check if this is a shipment for a request
+            const isRequestShipment = data.referenceDocNo?.startsWith('REQ-');
+            if (isRequestShipment) {
+                const message = telegramService.formatShipmentNotification(
+                    { requestNo: data.referenceDocNo, items: data.items },
+                    docNo,
+                    sourceName,
+                    destName,
+                    data
+                );
+                telegramService.sendMessage(config.telegramChatId, message);
+            } else {
+                const message = telegramService.formatMovementNotification(data, sourceName, destName);
+                telegramService.sendMessage(config.telegramChatId, message);
+            }
+        }
+    }, [stock, generateDocNo, config]);
 
     const processBatchMaintenance = useCallback(
         (data: {
@@ -353,7 +397,16 @@ export const StockProvider: React.FC<StockProviderProps> = ({ children }) => {
         };
 
         firebaseService.updatePalletRequest(newReq);
-    }, [generateRequestNo]);
+
+        // Telegram Notification
+        if (config?.telegramChatId) {
+            const branchName = BRANCHES.find(b => b.id === newReq.branchId)?.name || 'Unknown';
+            const allEntities = [...BRANCHES, ...EXTERNAL_PARTNERS];
+            const targetName = allEntities.find(d => d.id === newReq.targetBranchId)?.name;
+            const message = telegramService.formatPalletRequest(newReq, branchName, targetName);
+            telegramService.sendMessage(config.telegramChatId, message);
+        }
+    }, [generateRequestNo, config]);
 
     const updatePalletRequestStatus = useCallback((requestId: string, status: PalletRequest['status'], docNo?: string) => {
         const req = palletRequests.find(r => r.id === requestId);

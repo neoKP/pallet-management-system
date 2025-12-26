@@ -142,11 +142,11 @@ const MovementTab: React.FC<MovementTabProps> = ({ selectedBranch, transactions,
         // Generate DocNo logic (simplified)
         const dateStr = new Date().toISOString().split('T')[0];
         const datePart = dateStr.replace(/-/g, '');
-        const todayDocs = transactions.filter(t => t.docNo && t.docNo.includes(datePart));
-        // This is a rough estimate for preview. Server/Context might generate final one, 
-        // but for Consistency between Preview and Save, we should generate it here and pass it.
-        const running = (todayDocs.length + 1).toString().padStart(3, '0');
-        const prefix = 'INT'; // Assuming Internal for now, or logic based on source/dest
+        const existingDocNos = Array.from(new Set(transactions
+            .filter(t => t.docNo && t.docNo.includes(datePart))
+            .map(t => t.docNo)));
+        const running = (existingDocNos.length + 1).toString().padStart(3, '0');
+        const prefix = 'INT';
         const docNo = `${prefix}-${datePart}-${running}`;
 
         const data = {
@@ -176,34 +176,47 @@ const MovementTab: React.FC<MovementTabProps> = ({ selectedBranch, transactions,
         }
     };
 
-    const saveTransaction = (data: any) => {
-        addMovementBatch(data);
+    const saveTransaction = async (data: any) => {
+        try {
+            await addMovementBatch(data);
 
-        // Reset form
-        setTarget('');
-        setReferenceDocNo('');
-        setItems([{ palletId: '', qty: '' }]);
-        setTransportInfo({
-            carRegistration: '',
-            vehicleType: '',
-            driverName: '',
-            transportCompany: ''
-        });
-
-        // Close preview if open
-        setIsPreviewOpen(false);
-        setPreviewData(null);
-
-        if (Swal) {
-            Swal.fire({
-                icon: 'success',
-                title: 'บันทึกสำเร็จ!',
-                text: 'รายการเคลื่อนย้ายถูกบันทึกเรียบร้อยแล้ว',
-                timer: 1500,
-                showConfirmButton: false
+            // Reset form
+            setTarget('');
+            setReferenceDocNo('');
+            setItems([{ palletId: '', qty: '' }]);
+            setTransportInfo({
+                carRegistration: '',
+                vehicleType: '',
+                driverName: '',
+                transportCompany: ''
             });
-        } else {
-            alert('บันทึกสำเร็จ!');
+
+            // Close preview if open
+            setIsPreviewOpen(false);
+            setPreviewData(null);
+
+            if (Swal) {
+                Swal.fire({
+                    icon: 'success',
+                    title: 'บันทึกสำเร็จ!',
+                    text: 'รายการเคลื่อนย้ายถูกบันทึกเรียบร้อยแล้ว',
+                    timer: 1500,
+                    showConfirmButton: false
+                });
+            } else {
+                alert('บันทึกสำเร็จ!');
+            }
+        } catch (error) {
+            console.error("Save failed:", error);
+            if (Swal) {
+                Swal.fire({
+                    icon: 'error',
+                    title: 'เกิดข้อผิดพลาด!',
+                    text: 'ไม่สามารถบันทึกข้อมูลได้ กรุณาลองใหม่อีกครั้ง',
+                });
+            } else {
+                alert('เกิดข้อผิดพลาด! ไม่สามารถบันทึกข้อมูลได้');
+            }
         }
     };
 

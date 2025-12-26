@@ -58,11 +58,7 @@ export const initializeData = async () => {
                 await set(stockRef, val);
             }
 
-            // Check for legacy mock data signature and clear it
-            if (val.hub_nw?.loscam_red === 150 && val.sai3?.loscam_red === 20) {
-                console.log('Detected mock stock data. Clearing...');
-                await set(stockRef, INITIAL_STOCK);
-            }
+            // Legacy migration logic only, removed dangerous auto-clear
         }
 
         // Check transactions
@@ -90,13 +86,6 @@ export const initializeData = async () => {
                 if (modified) {
                     console.log('Migrating transactions from hub_nks to hub_nw...');
                     await set(txRef, nextTxs);
-                }
-
-                // Check for legacy mock transaction signature and clear it
-                const hasMockTx = txs.some((t: any) => t.docNo === 'EXT-IN-20231025-001');
-                if (hasMockTx) {
-                    console.log('Detected mock transaction data. Clearing...');
-                    await set(txRef, INITIAL_TRANSACTIONS);
                 }
             }
         }
@@ -188,8 +177,8 @@ export const subscribeToTransactions = (callback: (transactions: Transaction[]) 
         return onValue(txRef, (snapshot) => {
             const val = snapshot.val();
             if (val) {
-                // Return as array regardless of storage format
-                const txArray = Array.isArray(val) ? val : Object.values(val);
+                // Return as array regardless of storage format, and filter out nulls/undefineds
+                const txArray = (Array.isArray(val) ? val : Object.values(val)).filter(Boolean);
                 callback(txArray as Transaction[]);
             } else {
                 callback([]);
@@ -329,7 +318,7 @@ export const addTransaction = async (transaction: Transaction) => {
 export const addMovementBatch = async (newTransactions: Transaction[], newStock: Stock) => {
     try {
         const db = getDb();
-        const { ref, update, get } = getUtils();
+        const { ref, update, get, set } = getUtils();
 
         const updates: any = {};
         updates['/stock'] = newStock;
@@ -337,14 +326,17 @@ export const addMovementBatch = async (newTransactions: Transaction[], newStock:
         // Sync transactions: replace existing ones by ID or append new ones
         const txRef = ref(db, 'transactions');
         const snapshot = await get(txRef);
-        let currentTxs = snapshot.val() || [];
-        if (!Array.isArray(currentTxs)) {
-            currentTxs = Object.values(currentTxs);
+        const val = snapshot.val();
+
+        // Ensure we always work with a clean array of objects
+        let currentTxs: any[] = [];
+        if (val) {
+            currentTxs = (Array.isArray(val) ? val : Object.values(val)).filter(t => t && typeof t === 'object');
         }
 
         const updatedTxs = [...currentTxs];
         newTransactions.forEach(newTx => {
-            const index = updatedTxs.findIndex(t => t.id === newTx.id);
+            const index = updatedTxs.findIndex(t => t && t.id === newTx.id);
             if (index > -1) {
                 updatedTxs[index] = newTx;
             } else {
@@ -352,10 +344,19 @@ export const addMovementBatch = async (newTransactions: Transaction[], newStock:
             }
         });
 
-        updates['/transactions'] = updatedTxs;
+        // Deep clean data to remove 'undefined' which Firebase RTDB does not accept
+        const cleanStock = JSON.parse(JSON.stringify(newStock));
+        const cleanTxs = JSON.parse(JSON.stringify(updatedTxs.filter(Boolean)));
 
-        await update(ref(db, '/'), updates);
-    } catch (error) {
+        const finalUpdates: any = {};
+        finalUpdates['/stock'] = cleanStock;
+        finalUpdates['/transactions'] = cleanTxs;
+
+        // Perform atomic update on root
+        await update(ref(db, '/'), finalUpdates);
+
+        console.log(`[Firebase] Movement batch saved. Docs: ${newTransactions.map(t => t.docNo).join(', ')}`);
+    } catch (error: any) {
         console.error("Error adding movement batch:", error);
         throw error;
     }
@@ -403,7 +404,8 @@ export const updatePalletRequest = async (request: any) => {
             current.push(request);
         }
 
-        await set(refPath, current);
+        const cleanedArray = JSON.parse(JSON.stringify(current.filter(Boolean)));
+        await set(refPath, cleanedArray);
     } catch (error) {
         console.error("Error updating pallet request:", error);
         throw error;
