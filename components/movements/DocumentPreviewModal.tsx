@@ -94,13 +94,23 @@ const DocumentPreviewModal: React.FC<DocumentPreviewModalProps> = ({ isOpen, onC
                                     <span className="text-[10px] font-bold text-slate-400 block uppercase">Document No.</span>
                                     <span className="text-xl font-mono font-black text-blue-600 tracking-tight whitespace-nowrap">{data.docNo}</span>
                                 </div>
-                                <div className="bg-white p-1 rounded-sm">
-                                    <img
-                                        src={`https://bwipjs-api.metafloor.com/?bcid=code128&text=${data.docNo}&scale=2&height=8&incltext=0&textxalign=center`}
-                                        alt="Barcode"
-                                        className="h-9 w-44"
-                                    />
-                                    <p className="text-[8px] text-slate-400 text-center font-mono mt-1 tracking-[0.5em]">{data.docNo}</p>
+                                <div className="flex gap-4 items-center">
+                                    <div className="bg-white p-2 rounded-xl border border-slate-100 shadow-sm">
+                                        <img
+                                            src={`https://bwipjs-api.metafloor.com/?bcid=qrcode&text=${encodeURIComponent(window.location.origin + '?receive=' + data.docNo)}&scale=3`}
+                                            alt="QR Code Receive"
+                                            className="h-20 w-20"
+                                        />
+                                        <p className="text-[7px] text-blue-600 font-bold text-center mt-1 uppercase">Scan to Receive</p>
+                                    </div>
+                                    <div className="bg-white p-1 rounded-sm">
+                                        <img
+                                            src={`https://bwipjs-api.metafloor.com/?bcid=code128&text=${data.docNo}&scale=2&height=8&incltext=0&textxalign=center`}
+                                            alt="Barcode"
+                                            className="h-9 w-44"
+                                        />
+                                        <p className="text-[8px] text-slate-400 text-center font-mono mt-1 tracking-[0.5em]">{data.docNo}</p>
+                                    </div>
                                 </div>
                             </div>
                         </div>

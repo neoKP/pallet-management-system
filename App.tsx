@@ -15,6 +15,8 @@ import MaintenanceTab from './components/maintenance/MaintenanceTab';
 import Sidebar from './components/layout/Sidebar'; // New import
 import { BRANCHES } from './constants';
 import SettingsTab from './components/settings/SettingsTab';
+// @ts-ignore
+import Swal from 'sweetalert2';
 
 export default function App() {
   const { currentUser, login, logout } = useAuth();
@@ -49,6 +51,66 @@ export default function App() {
       }
     }
   }, [currentUser, selectedBranch]);
+
+  // QR Code Quick Receive Handler
+  const { confirmTransactionsBatch } = useStock();
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const receiveDocNo = params.get('receive');
+
+    if (receiveDocNo && currentUser) {
+      // Find transactions for this docNo that are PENDING and for the current branch
+      const pendingTxs = transactions.filter(t =>
+        t.docNo === receiveDocNo &&
+        t.status === 'PENDING' &&
+        t.dest === currentUser.branchId
+      );
+
+      if (pendingTxs.length > 0) {
+        // Clear param from URL to prevent infinite loop/re-prompt
+        const newUrl = window.location.pathname;
+        window.history.replaceState({}, '', newUrl);
+
+        const itemsDescription = pendingTxs.map(t =>
+          `• ${t.palletId}: ${t.qty} ตัว`
+        ).join('\n');
+
+        Swal.fire({
+          title: 'สแกนรับพาเลทด่วน',
+          html: `ยืนยันการรับพาเลทจากเอกสาร <b>${receiveDocNo}</b><br/><br/>` +
+            `<div class="text-left bg-slate-50 p-4 rounded-xl border border-slate-100 font-bold text-slate-700 whitespace-pre-line">${itemsDescription}</div>`,
+          icon: 'question',
+          showCancelButton: true,
+          confirmButtonColor: '#2563eb',
+          cancelButtonColor: '#64748b',
+          confirmButtonText: 'ยืนยันการรับของทั้งหมด',
+          cancelButtonText: 'ยังไม่ได้รับ',
+          reverseButtons: true
+        }).then((result: any) => {
+          if (result.isConfirmed) {
+            confirmTransactionsBatch(pendingTxs.map(t => t.id));
+            Swal.fire({
+              title: 'สำเร็จ!',
+              text: 'บันทึกการรับพาเลทเรียบร้อยแล้ว',
+              icon: 'success',
+              timer: 2000,
+              showConfirmButton: false
+            });
+            setActiveTab('dashboard');
+          }
+        });
+      } else if (transactions.length > 0) {
+        // If we have transactions but no pending ones found for this user/doc
+        const anyTx = transactions.find(t => t.docNo === receiveDocNo);
+        if (anyTx && anyTx.status === 'COMPLETED') {
+          // Already received
+          const newUrl = window.location.pathname;
+          window.history.replaceState({}, '', newUrl);
+          Swal.fire('แจ้งเตือน', 'เอกสารนี้ถูกบันทึกรับเข้าเรียบร้อยแล้ว', 'info');
+        }
+      }
+    }
+  }, [currentUser, transactions, confirmTransactionsBatch]);
 
   const handleLogout = () => {
     // @ts-ignore
@@ -107,8 +169,22 @@ export default function App() {
         <header className="bg-white/80 backdrop-blur-md sticky top-0 z-40 border-b border-slate-200 shadow-sm px-6 py-3 flex justify-between items-center h-16">
           {/* Left Side (Title or Breadcrumb - Optional) */}
           <div className="flex items-center gap-2 md:hidden">
-            {/* Mobile Menu Trigger Placeholder - for now just Logo */}
             <div className="font-black text-xl text-slate-800">Neo<span className="text-blue-600">Siam</span></div>
+            <button
+              onClick={() => {
+                Swal.fire({
+                  title: 'วิธีสแกนรับของ',
+                  text: 'ใช้กล้องมือถือสแกน QR Code บนใบนำส่งเพื่อรับเข้าทันที',
+                  icon: 'info',
+                  confirmButtonText: 'รับทราบ'
+                });
+              }}
+              className="p-1.5 bg-blue-50 text-blue-600 rounded-lg ml-2"
+              aria-label="How to scan QR"
+              title="วิธีสแกน QR"
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect width="5" height="5" x="3" y="3" rx="1" /><rect width="5" height="5" x="16" y="3" rx="1" /><rect width="5" height="5" x="3" y="16" rx="1" /><path d="M21 16h-3a2 2 0 0 0-2 2v3" /><path d="M21 21v.01" /><path d="M12 7v3a2 2 0 0 1-2 2H7" /><path d="M3 12h.01" /><path d="M12 3h.01" /><path d="M12 16v.01" /><path d="M16 12h1" /><path d="M21 12v.01" /><path d="M12 21v-1" /></svg>
+            </button>
           </div>
           <div className="hidden md:block text-slate-400 font-medium text-sm disabled">
             {/* Optional Breadcrumb area */}
@@ -165,6 +241,40 @@ export default function App() {
                 <LogOut size={18} />
               </button>
             </div>
+
+            {/* Scan QR Button (Quick Receive Prompt) */}
+            <button
+              onClick={() => {
+                Swal.fire({
+                  title: 'วิธีรับพาเลทแบบรวดเร็ว (Quick Receive)',
+                  html: `
+                    <div class="text-left space-y-4">
+                      <div class="flex items-start gap-3">
+                        <div class="bg-blue-100 text-blue-600 p-2 rounded-lg font-bold">1</div>
+                        <p class="text-sm">ใช้มือถือสแกน <b>QR Code</b> ที่มุมบนของใบส่งคืนพาเลท</p>
+                      </div>
+                      <div class="flex items-start gap-3">
+                        <div class="bg-blue-100 text-blue-600 p-2 rounded-lg font-bold">2</div>
+                        <p class="text-sm">กดลิงก์ที่ปรากฏบนหน้าจอเพื่อเปิดแอป</p>
+                      </div>
+                      <div class="flex items-start gap-3">
+                        <div class="bg-blue-100 text-blue-600 p-2 rounded-lg font-bold">3</div>
+                        <p class="text-sm">ระบบจะแสดงปุ่ม <b>"ยืนยันการรับ"</b> ให้ทันทีโดยไม่ต้องค้นหาเลขที่เอกสาร</p>
+                      </div>
+                    </div>
+                  `,
+                  icon: 'info',
+                  confirmButtonText: 'เข้าใจแล้ว',
+                  confirmButtonColor: '#2563eb'
+                });
+              }}
+              className="hidden md:flex items-center gap-2 px-4 py-2 bg-blue-50 text-blue-600 rounded-full font-bold text-sm hover:bg-blue-100 transition-all border border-blue-100"
+            >
+              <div className="w-5 h-5 flex items-center justify-center bg-blue-600 text-white rounded-md">
+                <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><rect width="5" height="5" x="3" y="3" rx="1" /><rect width="5" height="5" x="16" y="3" rx="1" /><rect width="5" height="5" x="3" y="16" rx="1" /><path d="M21 16h-3a2 2 0 0 0-2 2v3" /><path d="M21 21v.01" /><path d="M12 7v3a2 2 0 0 1-2 2H7" /><path d="M3 12h.01" /><path d="M12 3h.01" /><path d="M12 16v.01" /><path d="M16 12h1" /><path d="M21 12v.01" /><path d="M12 21v-1" /></svg>
+              </div>
+              Scan QR
+            </button>
 
           </div>
         </header>
