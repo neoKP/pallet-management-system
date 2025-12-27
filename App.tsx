@@ -17,6 +17,7 @@ import { BRANCHES } from './constants';
 import SettingsTab from './components/settings/SettingsTab';
 // @ts-ignore
 import Swal from 'sweetalert2';
+import QRScannerModal from './components/common/QRScannerModal';
 
 export default function App() {
   const { currentUser, login, logout } = useAuth();
@@ -39,6 +40,9 @@ export default function App() {
     return 'hub_nw';
   });
 
+  const [isScannerOpen, setIsScannerOpen] = useState(false);
+  const [queuedReceiveDocNo, setQueuedReceiveDocNo] = useState<string | null>(null);
+
   useEffect(() => {
     if (currentUser) {
       // If user is restricted (not admin and not hub_nks), force their branch
@@ -56,20 +60,21 @@ export default function App() {
   const { confirmTransactionsBatch } = useStock();
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
-    const receiveDocNo = params.get('receive');
+    const docNo = queuedReceiveDocNo || params.get('receive');
 
-    if (receiveDocNo && currentUser) {
+    if (docNo && currentUser) {
       // Find transactions for this docNo that are PENDING and for the current branch
       const pendingTxs = transactions.filter(t =>
-        t.docNo === receiveDocNo &&
+        t.docNo === docNo &&
         t.status === 'PENDING' &&
         t.dest === currentUser.branchId
       );
 
       if (pendingTxs.length > 0) {
-        // Clear param from URL to prevent infinite loop/re-prompt
+        // Clear param from URL and state
         const newUrl = window.location.pathname;
         window.history.replaceState({}, '', newUrl);
+        setQueuedReceiveDocNo(null);
 
         const itemsDescription = pendingTxs.map(t =>
           `• ${t.palletId}: ${t.qty} ตัว`
@@ -77,7 +82,7 @@ export default function App() {
 
         Swal.fire({
           title: 'สแกนรับพาเลทด่วน',
-          html: `ยืนยันการรับพาเลทจากเอกสาร <b>${receiveDocNo}</b><br/><br/>` +
+          html: `ยืนยันการรับพาเลทจากเอกสาร <b>${docNo}</b><br/><br/>` +
             `<div class="text-left bg-slate-50 p-4 rounded-xl border border-slate-100 font-bold text-slate-700 whitespace-pre-line">${itemsDescription}</div>`,
           icon: 'question',
           showCancelButton: true,
@@ -101,16 +106,41 @@ export default function App() {
         });
       } else if (transactions.length > 0) {
         // If we have transactions but no pending ones found for this user/doc
-        const anyTx = transactions.find(t => t.docNo === receiveDocNo);
-        if (anyTx && anyTx.status === 'COMPLETED') {
-          // Already received
-          const newUrl = window.location.pathname;
-          window.history.replaceState({}, '', newUrl);
-          Swal.fire('แจ้งเตือน', 'เอกสารนี้ถูกบันทึกรับเข้าเรียบร้อยแล้ว', 'info');
+        const anyTx = transactions.find(t => t.docNo === docNo);
+        if (anyTx) {
+          if (anyTx.status === 'COMPLETED') {
+            const newUrl = window.location.pathname;
+            window.history.replaceState({}, '', newUrl);
+            setQueuedReceiveDocNo(null);
+            Swal.fire('แจ้งเตือน', 'เอกสารนี้ถูกบันทึกรับเข้าเรียบร้อยแล้ว', 'info');
+          } else if (anyTx.dest !== currentUser.branchId) {
+            // Not for this branch
+            const newUrl = window.location.pathname;
+            window.history.replaceState({}, '', newUrl);
+            setQueuedReceiveDocNo(null);
+            Swal.fire('ข้อผิดพลาด', 'เอกสารนี้ไม่ใช่ของสาขาคุณ', 'error');
+          }
         }
       }
     }
-  }, [currentUser, transactions, confirmTransactionsBatch]);
+  }, [currentUser, transactions, confirmTransactionsBatch, queuedReceiveDocNo]);
+
+  const handleScanSuccess = (decodedText: string) => {
+    setIsScannerOpen(false);
+
+    // Try to extract docNo from URL or use as is
+    let docNo = decodedText;
+    try {
+      if (decodedText.includes('?receive=')) {
+        const url = new URL(decodedText);
+        docNo = url.searchParams.get('receive') || decodedText;
+      }
+    } catch (e) {
+      // Not a valid URL, use as raw text
+    }
+
+    setQueuedReceiveDocNo(docNo);
+  };
 
   const handleLogout = () => {
     // @ts-ignore
@@ -171,17 +201,10 @@ export default function App() {
           <div className="flex items-center gap-2 md:hidden">
             <div className="font-black text-xl text-slate-800">Neo<span className="text-blue-600">Siam</span></div>
             <button
-              onClick={() => {
-                Swal.fire({
-                  title: 'วิธีสแกนรับของ',
-                  text: 'ใช้กล้องมือถือสแกน QR Code บนใบนำส่งเพื่อรับเข้าทันที',
-                  icon: 'info',
-                  confirmButtonText: 'รับทราบ'
-                });
-              }}
+              onClick={() => setIsScannerOpen(true)}
               className="p-1.5 bg-blue-50 text-blue-600 rounded-lg ml-2"
-              aria-label="How to scan QR"
-              title="วิธีสแกน QR"
+              aria-label="Open Scanner"
+              title="สแกน QR"
             >
               <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect width="5" height="5" x="3" y="3" rx="1" /><rect width="5" height="5" x="16" y="3" rx="1" /><rect width="5" height="5" x="3" y="16" rx="1" /><path d="M21 16h-3a2 2 0 0 0-2 2v3" /><path d="M21 21v.01" /><path d="M12 7v3a2 2 0 0 1-2 2H7" /><path d="M3 12h.01" /><path d="M12 3h.01" /><path d="M12 16v.01" /><path d="M16 12h1" /><path d="M21 12v.01" /><path d="M12 21v-1" /></svg>
             </button>
@@ -278,6 +301,12 @@ export default function App() {
 
           </div>
         </header>
+
+        <QRScannerModal
+          isOpen={isScannerOpen}
+          onClose={() => setIsScannerOpen(false)}
+          onScanSuccess={handleScanSuccess}
+        />
 
         {/* Content Area */}
         <main className="flex-1 p-4 md:p-8 overflow-y-auto w-full max-w-[1600px] mx-auto">
