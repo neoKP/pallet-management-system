@@ -175,8 +175,26 @@ const Dashboard: React.FC<DashboardProps> = ({ stock, selectedBranch, transactio
 
         // Process Data
         displayTransactions.forEach(t => {
-            const qtyIn = t.type === 'IN' || (t.type === 'ADJUST' && t.qty > 0) ? t.qty : 0;
-            const qtyOut = t.type === 'OUT' || (t.type === 'ADJUST' && t.qty < 0) ? Math.abs(t.qty) : 0;
+            const isAdjustment = t.type === 'ADJUST';
+            let qtyIn = 0;
+            let qtyOut = 0;
+
+            if (isAdjustment) {
+                const isSourceSystem = ['ADJUSTMENT', 'SYSTEM_ADJUST', 'SYSTEM'].includes(t.source);
+                if (isSourceSystem) qtyIn = t.qty; else qtyOut = t.qty;
+            } else if (selectedBranch !== 'ALL') {
+                if (t.dest === selectedBranch) qtyIn = t.qty;
+                if (t.source === selectedBranch) qtyOut = t.qty;
+            } else {
+                const isInternal = BRANCHES.some(b => b.id === t.source) && BRANCHES.some(b => b.id === t.dest);
+                if (isInternal) {
+                    qtyIn = t.qty;
+                    qtyOut = t.qty;
+                } else {
+                    qtyIn = t.type === 'IN' ? t.qty : 0;
+                    qtyOut = t.type === 'OUT' ? t.qty : 0;
+                }
+            }
 
             const row = worksheet.addRow({
                 date: t.date,
@@ -411,14 +429,24 @@ const Dashboard: React.FC<DashboardProps> = ({ stock, selectedBranch, transactio
                                     let qtyOut: any = '-';
 
                                     if (isAdjustment) {
-                                        if (tx.source === 'ADJUSTMENT' || tx.source === 'SYSTEM_ADJUST' || tx.source === 'SYSTEM') {
+                                        const isSourceSystem = ['ADJUSTMENT', 'SYSTEM_ADJUST', 'SYSTEM'].includes(tx.source);
+                                        if (isSourceSystem) {
                                             qtyIn = tx.qty;
                                         } else {
                                             qtyOut = tx.qty;
                                         }
+                                    } else if (selectedBranch !== 'ALL') {
+                                        if (tx.dest === selectedBranch) qtyIn = tx.qty;
+                                        if (tx.source === selectedBranch) qtyOut = tx.qty;
                                     } else {
-                                        qtyIn = (tx.type === 'IN') ? tx.qty : '-';
-                                        qtyOut = (tx.type === 'OUT') ? tx.qty : '-';
+                                        const isInternal = BRANCHES.some(b => b.id === tx.source) && BRANCHES.some(b => b.id === tx.dest);
+                                        if (isInternal) {
+                                            qtyIn = tx.qty;
+                                            qtyOut = tx.qty;
+                                        } else {
+                                            qtyIn = (tx.type === 'IN') ? tx.qty : '-';
+                                            qtyOut = (tx.type === 'OUT') ? tx.qty : '-';
+                                        }
                                     }
 
                                     const isCancelled = tx.status === 'CANCELLED';
@@ -466,12 +494,12 @@ const Dashboard: React.FC<DashboardProps> = ({ stock, selectedBranch, transactio
                                                         CANCELLED
                                                     </span>
                                                 ) : (
-                                                    <span className={`px-2 py-0.5 rounded-md text-[10px] ${tx.type === 'IN' ? 'bg-emerald-100 text-emerald-700' :
-                                                        tx.type === 'OUT' ? 'bg-orange-100 text-orange-700' :
-                                                            tx.type === 'ADJUST' ? 'bg-amber-100 text-amber-700' :
-                                                                'bg-slate-100 text-slate-600'
+                                                    <span className={`px-2 py-0.5 rounded-md text-[10px] ${(selectedBranch !== 'ALL' && tx.dest === selectedBranch) || tx.type === 'IN' ? 'bg-emerald-100 text-emerald-700' :
+                                                            (selectedBranch !== 'ALL' && tx.source === selectedBranch) || tx.type === 'OUT' ? 'bg-orange-100 text-orange-700' :
+                                                                tx.type === 'ADJUST' ? 'bg-amber-100 text-amber-700' :
+                                                                    'bg-slate-100 text-slate-600'
                                                         }`}>
-                                                        {tx.type}
+                                                        {selectedBranch === 'ALL' ? tx.type : (tx.dest === selectedBranch ? 'IN' : 'OUT')}
                                                     </span>
                                                 )}
                                             </td>
