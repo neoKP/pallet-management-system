@@ -104,8 +104,8 @@ const SettingsTab: React.FC = () => {
         if (result.isConfirmed) {
             try {
                 const { INITIAL_STOCK } = await import('../../constants');
-                await firebaseService.addMovementBatch([], INITIAL_STOCK);
-                Swal.fire('สำเร็จ', 'รีเซ็ตข้อมูลสต็อกเป็น Demo Data เรียบร้อยแล้ว', 'success');
+                await firebaseService.resetAllData(INITIAL_STOCK);
+                Swal.fire('สำเร็จ', 'รีเซ็ตข้อมูลสต็อกและประวัติรายการทั้งหมดเป็น 0 เรียบร้อยแล้ว', 'success');
             } catch (error) {
                 console.error(error);
                 Swal.fire('ผิดพลาด', 'ไม่สามารถรีเซ็ตข้อมูลได้', 'error');
@@ -113,9 +113,23 @@ const SettingsTab: React.FC = () => {
         }
     };
 
-    const handleRepairBranch = async (branchId: BranchId) => {
+    const handleRepairBranch = async (branchId?: BranchId) => {
+        const { INITIAL_STOCK, BRANCHES } = await import('../../constants');
+
+        if (!branchId) {
+            // Show selection if no specific branch
+            const { value: selected } = await Swal.fire({
+                title: 'เลือกสาขาที่ต้องการซ่อมแซม',
+                input: 'select',
+                inputOptions: BRANCHES.reduce((acc, b) => ({ ...acc, [b.id]: b.name }), {}),
+                showCancelButton: true,
+                confirmButtonText: 'ซ่อมแซมสาขานี้'
+            });
+
+            if (selected) branchId = selected as BranchId; else return;
+        }
+
         try {
-            const { INITIAL_STOCK } = await import('../../constants');
             const nextStock = { ...stock };
             nextStock[branchId] = INITIAL_STOCK[branchId];
             await firebaseService.addMovementBatch([], nextStock);
@@ -357,7 +371,7 @@ const SettingsTab: React.FC = () => {
                                             if (res?.ok) {
                                                 Swal.fire('สำเร็จ', 'ส่งข้อความทดสอบแล้ว กรุณาเช็คที่ Telegram', 'success');
                                             } else {
-                                                Swal.fire('ล้มเหลว', 'ไม่สามารถส่งได้ กรุณาเช็ค Chat ID อีกครั้ง', 'error');
+                                                Swal.fire('ล้มล้ว', 'ไม่สามารถส่งได้ กรุณาเช็ค Chat ID อีกครั้ง', 'error');
                                             }
                                         }}
                                         className="w-full py-4 bg-slate-100 text-slate-600 rounded-xl font-black text-sm hover:bg-slate-200 transition-all flex items-center justify-center gap-2 border border-slate-200"
@@ -400,16 +414,16 @@ const SettingsTab: React.FC = () => {
 
                                 <div className="p-6 bg-slate-50 rounded-2xl border border-slate-100 flex flex-col items-start gap-4 hover:border-amber-200 transition-all">
                                     <div className="w-10 h-10 bg-white rounded-lg shadow-sm flex items-center justify-center text-amber-600">
-                                        <Wrench size={20} />
+                                        <Building2 size={20} />
                                     </div>
                                     <div className="flex-1">
-                                        <h4 className="font-bold text-slate-800 mb-1">Repair Maintenance</h4>
-                                        <p className="text-xs text-slate-500 mb-4">ซ่อมแซมและเติมสต็อกคลังซ่อมบำรุง (Maintenance Stock)</p>
+                                        <h4 className="font-bold text-slate-800 mb-1">Repair Branch Stock</h4>
+                                        <p className="text-xs text-slate-500 mb-4">ซ่อมแซมและเติมสต็อกรายสาขา (เช่น สาย3, พีแอลเค)</p>
                                         <button
-                                            onClick={() => handleRepairBranch('maintenance_stock')}
+                                            onClick={() => handleRepairBranch()}
                                             className="w-full py-2 bg-white border border-slate-200 rounded-lg text-xs font-bold text-slate-700 hover:bg-slate-50 transition-all"
                                         >
-                                            Fix Maintenance Stock
+                                            Select Branch to Fix
                                         </button>
                                     </div>
                                 </div>

@@ -28,44 +28,16 @@ export const EXTERNAL_PARTNERS: Partner[] = [
 ];
 
 export const INITIAL_STOCK: Stock = {
-  hub_nw: { loscam_red: 1250, loscam_yellow: 450, loscam_blue: 320, hiq: 180, general: 2400, plastic_circular: 150 },
-  sai3: { loscam_red: 420, loscam_yellow: 150, loscam_blue: 90, hiq: 45, general: 850, plastic_circular: 30 },
-  kpp: { loscam_red: 280, loscam_yellow: 80, loscam_blue: 40, hiq: 20, general: 560, plastic_circular: 10 },
-  plk: { loscam_red: 310, loscam_yellow: 95, loscam_blue: 55, hiq: 25, general: 620, plastic_circular: 15 },
-  cm: { loscam_red: 195, loscam_yellow: 60, loscam_blue: 30, hiq: 15, general: 440, plastic_circular: 5 },
-  ekp: { loscam_red: 150, loscam_yellow: 40, loscam_blue: 20, hiq: 10, general: 320, plastic_circular: 0 },
-  maintenance_stock: { loscam_red: 85, loscam_yellow: 25, loscam_blue: 15, hiq: 10, general: 180, plastic_circular: 0 },
+  hub_nw: { loscam_red: 0, loscam_yellow: 0, loscam_blue: 0, hiq: 0, general: 0, plastic_circular: 0 },
+  sai3: { loscam_red: 0, loscam_yellow: 0, loscam_blue: 0, hiq: 0, general: 0, plastic_circular: 0 },
+  kpp: { loscam_red: 0, loscam_yellow: 0, loscam_blue: 0, hiq: 0, general: 0, plastic_circular: 0 },
+  plk: { loscam_red: 0, loscam_yellow: 0, loscam_blue: 0, hiq: 0, general: 0, plastic_circular: 0 },
+  cm: { loscam_red: 0, loscam_yellow: 0, loscam_blue: 0, hiq: 0, general: 0, plastic_circular: 0 },
+  ekp: { loscam_red: 0, loscam_yellow: 0, loscam_blue: 0, hiq: 0, general: 0, plastic_circular: 0 },
+  maintenance_stock: { loscam_red: 0, loscam_yellow: 0, loscam_blue: 0, hiq: 0, general: 0, plastic_circular: 0 },
 };
 
-export const INITIAL_TRANSACTIONS: Transaction[] = [
-  {
-    id: 1,
-    date: new Date().toISOString().split('T')[0],
-    docNo: 'INT-20240101-001',
-    type: 'OUT',
-    status: 'COMPLETED',
-    source: 'hub_nw',
-    dest: 'sai3',
-    palletId: 'loscam_red',
-    qty: 100,
-    driverName: 'สมชาย ขยันขับ',
-    carRegistration: '1กข 1234',
-    note: 'ส่งพาเลทประจำวัน'
-  },
-  {
-    id: 2,
-    date: new Date().toISOString().split('T')[0],
-    docNo: 'EXT-IN-20240101-002',
-    type: 'IN',
-    status: 'COMPLETED',
-    source: 'loscam_wangnoi',
-    dest: 'hub_nw',
-    palletId: 'loscam_red',
-    qty: 500,
-    referenceDocNo: 'LSC-998877',
-    note: 'รับพาเลทเช่าเพิ่ม'
-  }
-];
+export const INITIAL_TRANSACTIONS: Transaction[] = [];
 
 export const MOCK_USERS: User[] = [
   { username: 'admin', role: 'ADMIN', name: 'System Administrator' },

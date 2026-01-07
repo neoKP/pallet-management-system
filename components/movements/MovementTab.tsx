@@ -10,6 +10,19 @@ import { BRANCHES, EXTERNAL_PARTNERS, PALLET_TYPES, VEHICLE_TYPES } from '../../
 import { BranchId, Transaction, TransactionType, PalletId, Stock, User } from '../../types';
 import { useStock } from '../../contexts/StockContext';
 
+const formatDate = (dateStr: string) => {
+    try {
+        if (!dateStr) return '-';
+        return new Date(dateStr).toLocaleDateString('th-TH', {
+            year: 'numeric',
+            month: '2-digit',
+            day: '2-digit',
+        });
+    } catch (e) {
+        return dateStr;
+    }
+};
+
 interface MovementTabProps {
     selectedBranch: BranchId;
     transactions: Transaction[];
@@ -23,6 +36,7 @@ const MovementTab: React.FC<MovementTabProps> = ({ selectedBranch, transactions,
     const [subTab, setSubTab] = useState<'movement' | 'requests'>('movement');
     const [transactionType, setTransactionType] = useState<TransactionType>('IN');
     const [target, setTarget] = useState('');
+    const [transactionDate, setTransactionDate] = useState(new Date().toISOString().split('T')[0]);
     const [referenceDocNo, setReferenceDocNo] = useState('');
     const [items, setItems] = useState<{ palletId: PalletId | ''; qty: string }[]>([
         { palletId: '', qty: '' }
@@ -140,8 +154,7 @@ const MovementTab: React.FC<MovementTabProps> = ({ selectedBranch, transactions,
         }
 
         // Generate DocNo logic (simplified)
-        const dateStr = new Date().toISOString().split('T')[0];
-        const datePart = dateStr.replace(/-/g, '');
+        const datePart = transactionDate.replace(/-/g, '');
         const existingDocNos = Array.from(new Set(transactions
             .filter(t => t.docNo && t.docNo.includes(datePart))
             .map(t => t.docNo)));
@@ -158,7 +171,7 @@ const MovementTab: React.FC<MovementTabProps> = ({ selectedBranch, transactions,
                 qty: parseInt(i.qty)
             })),
             docNo,
-            date: new Date().toISOString(), // Use full ISO for data
+            date: transactionDate, // Use selected date
             referenceDocNo,
             ...transportInfo
         };
@@ -182,6 +195,7 @@ const MovementTab: React.FC<MovementTabProps> = ({ selectedBranch, transactions,
 
             // Reset form
             setTarget('');
+            setTransactionDate(new Date().toISOString().split('T')[0]);
             setReferenceDocNo('');
             setItems([{ palletId: '', qty: '' }]);
             setTransportInfo({
@@ -307,7 +321,7 @@ const MovementTab: React.FC<MovementTabProps> = ({ selectedBranch, transactions,
                                                         >
                                                             <Clock size={14} /> Timeline
                                                         </button>
-                                                        <span className="text-xs text-slate-400 font-medium">{mainTx.date}</span>
+                                                        <span className="text-xs text-slate-400 font-medium">{formatDate(mainTx.date)}</span>
                                                     </div>
                                                 </div>
                                                 <div className="space-y-2 mb-4 border-t border-slate-100 pt-2">
@@ -323,7 +337,7 @@ const MovementTab: React.FC<MovementTabProps> = ({ selectedBranch, transactions,
                                                     )}
                                                     {mainTx.referenceDocNo && (
                                                         <div className="text-xs font-mono text-slate-500 bg-blue-50 border border-blue-100 p-1.5 rounded flex items-center gap-1 my-2">
-                                                            <FileText size={10} /> Ref: {mainTx.referenceDocNo}
+                                                            <FileText size={10} /> ECD/Ref: {mainTx.referenceDocNo}
                                                         </div>
                                                     )}
 
@@ -432,17 +446,33 @@ const MovementTab: React.FC<MovementTabProps> = ({ selectedBranch, transactions,
                                     </select>
                                 </div>
 
-                                <div>
-                                    <label className="block text-sm font-bold text-slate-700 mb-2">
-                                        เลขที่เอกสารอ้างอิง (Reference Doc No.)
-                                    </label>
-                                    <input
-                                        type="text"
-                                        value={referenceDocNo}
-                                        onChange={(e) => setReferenceDocNo(e.target.value)}
-                                        className="w-full px-4 py-3 rounded-xl bg-slate-50 border border-slate-300 text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-500 font-mono"
-                                        placeholder="เช่น DO-2023-001 (ถ้ามี)"
-                                    />
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                    <div>
+                                        <label className="block text-sm font-bold text-slate-700 mb-2">วันเดือนปี (Date)</label>
+                                        <input
+                                            type="date"
+                                            value={transactionDate}
+                                            onChange={(e) => setTransactionDate(e.target.value)}
+                                            className="w-full px-4 py-3 rounded-xl bg-slate-50 border border-slate-300 text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                            title="เลือกวันที่ (Date)"
+                                            aria-label="Select transaction date"
+                                            required
+                                        />
+                                    </div>
+                                    <div>
+                                        <label className="block text-sm font-bold text-slate-700 mb-2">
+                                            เลขที่เอกสารอ้างอิง (เลขที่ใบคลุม พาเลท เลขที่ ECD)
+                                        </label>
+                                        <input
+                                            type="text"
+                                            value={referenceDocNo}
+                                            onChange={(e) => setReferenceDocNo(e.target.value)}
+                                            className="w-full px-4 py-3 rounded-xl bg-slate-50 border border-slate-300 text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-500 font-mono"
+                                            placeholder="เลขที่ใบคลุมพาเลท หรือ เลขที่ ECD"
+                                            title="เลขที่ใบคลุมพาเลท หรือ เลขที่ ECD"
+                                            aria-label="Enter reference document or ECD number"
+                                        />
+                                    </div>
                                 </div>
 
                                 {/* Transport Information Section */}
@@ -460,6 +490,8 @@ const MovementTab: React.FC<MovementTabProps> = ({ selectedBranch, transactions,
                                                 onChange={(e) => setTransportInfo({ ...transportInfo, carRegistration: e.target.value })}
                                                 className="w-full px-3 py-2 rounded-lg border border-slate-300 text-sm focus:ring-2 focus:ring-blue-500"
                                                 placeholder="เช่น 1กข-1234"
+                                                title="ทะเบียนรถ"
+                                                aria-label="Enter car registration"
                                             />
                                         </div>
                                         <div>
@@ -485,6 +517,8 @@ const MovementTab: React.FC<MovementTabProps> = ({ selectedBranch, transactions,
                                                 onChange={(e) => setTransportInfo({ ...transportInfo, driverName: e.target.value })}
                                                 className="w-full px-3 py-2 rounded-lg border border-slate-300 text-sm focus:ring-2 focus:ring-blue-500"
                                                 placeholder="ชื่อ-นามสกุล"
+                                                title="ชื่อคนขับ"
+                                                aria-label="Enter driver name"
                                             />
                                         </div>
                                         <div>
@@ -495,6 +529,8 @@ const MovementTab: React.FC<MovementTabProps> = ({ selectedBranch, transactions,
                                                 onChange={(e) => setTransportInfo({ ...transportInfo, transportCompany: e.target.value })}
                                                 className="w-full px-3 py-2 rounded-lg border border-slate-300 text-sm focus:ring-2 focus:ring-blue-500"
                                                 placeholder="ชื่อบริษัท"
+                                                title="บริษัทขนส่ง"
+                                                aria-label="Enter transport company"
                                             />
                                         </div>
                                     </div>
@@ -598,7 +634,7 @@ const MovementTab: React.FC<MovementTabProps> = ({ selectedBranch, transactions,
                                                     <span className="text-xs font-mono font-bold text-slate-500">{tx.docNo || '-'}</span>
                                                 </div>
                                                 <div className="flex flex-col items-end gap-1">
-                                                    <span className="text-xs text-slate-400">{tx.date}</span>
+                                                    <span className="text-xs text-slate-400">{formatDate(tx.date)}</span>
                                                     <button
                                                         onClick={() => handleViewTimeline(tx)}
                                                         className="text-xs flex items-center gap-1 text-slate-400 font-bold hover:text-blue-600 transition-colors"
@@ -619,7 +655,7 @@ const MovementTab: React.FC<MovementTabProps> = ({ selectedBranch, transactions,
                                                 )}
                                                 {tx.referenceDocNo && (
                                                     <div className="mb-2 text-xs font-mono text-slate-500 bg-blue-50 border border-blue-100 p-1.5 rounded flex items-center gap-1">
-                                                        <FileText size={10} /> Ref: {tx.referenceDocNo}
+                                                        <FileText size={10} /> ECD/Ref: {tx.referenceDocNo}
                                                     </div>
                                                 )}
                                                 <div className="bg-white rounded border border-slate-200 p-2 space-y-1">

@@ -218,15 +218,31 @@ export const StockProvider: React.FC<StockProviderProps> = ({ children }) => {
         confirmTransactionsBatch([txId]);
     }, [confirmTransactionsBatch]);
 
-    const deleteTransaction = useCallback((txId: number) => {
+    const deleteTransaction = useCallback(async (txId: number) => {
         const tx = transactions.find(t => t.id === txId);
-        if (!tx) return;
+        if (!tx || tx.status === 'CANCELLED') return;
 
-        // Status 'CANCELLED' might not be in TransactionType definition, 
-        // effectively handling it as a string or updating type definitions would be best.
-        // For now, assuming standard update handles arbitrary status strings for display.
+        const nextStock = { ...stock };
+
+        // --- ROLLBACK LOGIC ---
+        // 1. Return to Source (if it's a valid branch)
+        if (tx.source && BRANCHES.some(b => b.id === tx.source)) {
+            const bId = tx.source as BranchId;
+            const s = { ...nextStock[bId] } as Record<PalletId, number>;
+            s[tx.palletId] = (s[tx.palletId] || 0) + tx.qty;
+            nextStock[bId] = s;
+        }
+
+        // 2. Deduct from Dest (only if it was already COMPLETED and is a valid branch)
+        if (tx.status === 'COMPLETED' && tx.dest && BRANCHES.some(b => b.id === tx.dest)) {
+            const dId = tx.dest as BranchId;
+            const d = { ...nextStock[dId] } as Record<PalletId, number>;
+            d[tx.palletId] = Math.max(0, (d[tx.palletId] || 0) - tx.qty);
+            nextStock[dId] = d;
+        }
+
         const updatedTx = { ...tx, status: 'CANCELLED' as const };
-        firebaseService.addMovementBatch([updatedTx], stock);
+        await firebaseService.addMovementBatch([updatedTx], nextStock);
     }, [transactions, stock]);
 
     const addMovementBatch = useCallback(async (data: {

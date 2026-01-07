@@ -121,15 +121,31 @@ const Dashboard: React.FC<DashboardProps> = ({ stock, selectedBranch, transactio
     const currentStock = useMemo(() => {
         if (selectedBranch === 'ALL') {
             const total: Record<string, number> = {};
-            Object.values(stock).forEach(branchStock => {
-                Object.entries(branchStock).forEach(([pid, qty]) => {
-                    total[pid] = (total[pid] || 0) + (qty as number);
-                });
+            const activeBranchIds = BRANCHES.map(b => b.id);
+
+            // 1. Sum up ONLY active branches defined in constants (prevents ghost data)
+            activeBranchIds.forEach(branchId => {
+                const branchStock = stock[branchId];
+                if (branchStock) {
+                    Object.entries(branchStock).forEach(([pid, qty]) => {
+                        total[pid] = (total[pid] || 0) + (qty as number);
+                    });
+                }
             });
+
+            // 2. Add PENDING transactions (Assets in-transit)
+            // These pallets have been deducted from source but not yet added to dest.
+            // For "ALL" view, they should still be counted as company assets.
+            transactions.forEach(t => {
+                if (t.status === 'PENDING') {
+                    total[t.palletId] = (total[t.palletId] || 0) + (t.qty as number);
+                }
+            });
+
             return total;
         }
         return stock[selectedBranch as BranchId] || {};
-    }, [stock, selectedBranch]);
+    }, [stock, selectedBranch, transactions]);
 
     const stats = useMemo(() => {
         const totalStock = Object.values(currentStock).reduce((a: number, b) => a + (typeof b === 'number' ? b : 0), 0);
@@ -410,7 +426,7 @@ const Dashboard: React.FC<DashboardProps> = ({ stock, selectedBranch, transactio
                                 <th className="p-4">Date/Time</th>
                                 <th className="p-4">Doc No.</th>
                                 <th className="p-4">Type</th>
-                                <th className="p-4">Reference</th>
+                                <th className="p-4">Reference / ECD No.</th>
                                 <th className="p-4">Transport</th>
                                 <th className="p-4">Details</th>
                                 <th className="p-4 text-center">รับ (In)</th>
@@ -495,9 +511,9 @@ const Dashboard: React.FC<DashboardProps> = ({ stock, selectedBranch, transactio
                                                     </span>
                                                 ) : (
                                                     <span className={`px-2 py-0.5 rounded-md text-[10px] ${(selectedBranch !== 'ALL' && tx.dest === selectedBranch) || tx.type === 'IN' ? 'bg-emerald-100 text-emerald-700' :
-                                                            (selectedBranch !== 'ALL' && tx.source === selectedBranch) || tx.type === 'OUT' ? 'bg-orange-100 text-orange-700' :
-                                                                tx.type === 'ADJUST' ? 'bg-amber-100 text-amber-700' :
-                                                                    'bg-slate-100 text-slate-600'
+                                                        (selectedBranch !== 'ALL' && tx.source === selectedBranch) || tx.type === 'OUT' ? 'bg-orange-100 text-orange-700' :
+                                                            tx.type === 'ADJUST' ? 'bg-amber-100 text-amber-700' :
+                                                                'bg-slate-100 text-slate-600'
                                                         }`}>
                                                         {selectedBranch === 'ALL' ? tx.type : (tx.dest === selectedBranch ? 'IN' : 'OUT')}
                                                     </span>

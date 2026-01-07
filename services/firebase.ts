@@ -45,7 +45,7 @@ export const initializeData = async () => {
         const stockSnap = await get(stockRef);
 
         if (!stockSnap.exists()) {
-            console.log('Seeding initial stock data...');
+            console.log('Initializing empty stock structure...');
             await set(stockRef, INITIAL_STOCK);
         } else {
             let val = stockSnap.val() || {};
@@ -53,39 +53,18 @@ export const initializeData = async () => {
 
             // 1. Ensure all branches defined in constants exist in the stock object
             BRANCHES.forEach(branch => {
-                const branchStock = val[branch.id];
-                if (!branchStock) {
-                    console.log(`Adding missing branch structure for: ${branch.id}`);
-                    val[branch.id] = INITIAL_STOCK[branch.id] || { loscam_red: 0, loscam_yellow: 0, loscam_blue: 0, hiq: 0, general: 0, plastic_circular: 0 };
+                if (!val[branch.id]) {
+                    console.log(`Creating branch structure for: ${branch.id}`);
+                    val[branch.id] = { loscam_red: 0, loscam_yellow: 0, loscam_blue: 0, hiq: 0, general: 0, plastic_circular: 0 };
                     modified = true;
-                } else if (branch.id === 'maintenance_stock') {
-                    // Specific check for maintenance_stock: if all values are 0, force seed from INITIAL_STOCK
-                    const isEmpty = Object.values(branchStock).every(v => v === 0);
-                    if (isEmpty) {
-                        console.log('Maintenance Stock is empty. Seeding demo data...');
-                        val[branch.id] = INITIAL_STOCK[branch.id];
-                        modified = true;
-                    }
                 }
             });
 
-            // 2. Data Migration: hub_nks -> hub_nw (Force move if nks exists)
+            // 2. Data Migration: hub_nks -> hub_nw
             if (val.hub_nks) {
-                console.log('Migrating stock data from hub_nks to hub_nw (Force)...');
+                console.log('Migrating stock data from hub_nks to hub_nw...');
                 val.hub_nw = val.hub_nks;
                 delete val.hub_nks;
-                modified = true;
-            }
-
-            // 3. Check if stock is essentially empty (all values are 0 across all branches)
-            // This happens on first-run with a fresh DB or if data was cleared.
-            const isStockEmpty = Object.values(val).every((branchStock: any) =>
-                Object.values(branchStock).every((qty) => qty === 0)
-            );
-
-            if (isStockEmpty) {
-                console.log('Stock is empty. Seeding initial demo data...');
-                val = INITIAL_STOCK;
                 modified = true;
             }
 
@@ -453,6 +432,24 @@ export const updatePalletRequestsBatch = async (requests: any[]) => {
         await set(refPath, requests);
     } catch (error) {
         console.error("Error updating pallet requests batch:", error);
+        throw error;
+    }
+};
+
+export const resetAllData = async (initialStock: Stock) => {
+    try {
+        const db = getDb();
+        const { ref, set, update } = getUtils();
+
+        const updates: any = {};
+        updates['/stock'] = initialStock;
+        updates['/transactions'] = [];
+        updates['/palletRequests'] = []; // Also clear requests for a true deep reset
+
+        await update(ref(db, '/'), updates);
+        console.log('[Firebase] Deep reset completed. All stock and transactions cleared.');
+    } catch (error) {
+        console.error("Error performing deep reset:", error);
         throw error;
     }
 };

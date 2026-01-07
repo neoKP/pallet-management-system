@@ -3,6 +3,19 @@ import { X, Truck, Building2, CheckCircle, Clock, MapPin, PackageCheck, ArrowRig
 import { Transaction, BranchId } from '../../types';
 import { BRANCHES, EXTERNAL_PARTNERS } from '../../constants';
 
+const formatDate = (dateStr: string) => {
+    try {
+        if (!dateStr || dateStr === '-') return dateStr;
+        return new Date(dateStr).toLocaleDateString('th-TH', {
+            year: 'numeric',
+            month: '2-digit',
+            day: '2-digit',
+        });
+    } catch (e) {
+        return dateStr;
+    }
+};
+
 interface TransactionTimelineModalProps {
     isOpen: boolean;
     onClose: () => void;
@@ -28,7 +41,7 @@ const TransactionTimelineModal: React.FC<TransactionTimelineModalProps> = ({ isO
             title: 'สินค้าออกจากต้นทาง (Dispatched)',
             description: `ส่งออกจาก ${sourceName}`,
             detail: `Doc: ${transaction.docNo}`,
-            date: transaction.date,
+            date: formatDate(transaction.date),
             icon: Truck,
             status: 'completed',
             color: 'bg-emerald-500'
@@ -37,7 +50,7 @@ const TransactionTimelineModal: React.FC<TransactionTimelineModalProps> = ({ isO
             title: 'อยู่ระหว่างดำเนินการ (In Transit)',
             description: 'ระบบบันทึกการส่งและแจ้งเตือนปลายทาง',
             detail: 'รอปลายทางตรวจสอบ',
-            date: transaction.date, // Approximate
+            date: formatDate(transaction.date), // Approximate
             icon: MapPin,
             status: 'completed', // Always completed if record exists
             color: 'bg-blue-500'
@@ -46,7 +59,7 @@ const TransactionTimelineModal: React.FC<TransactionTimelineModalProps> = ({ isO
             title: 'การรับสินค้า (Receiving)',
             description: `รับเข้าที่ ${destName}`,
             detail: isCompleted ? 'ตรวจสอบและยืนยันแล้ว' : 'รอการตรวจสอบ (Action Required)',
-            date: isCompleted ? transaction.date : '-', // We don't have separate completedAt yet
+            date: isCompleted ? formatDate(transaction.date) : '-', // We don't have separate completedAt yet
             icon: PackageCheck,
             status: isCompleted ? 'completed' : 'current',
             color: isCompleted ? 'bg-emerald-500' : 'bg-amber-500'
