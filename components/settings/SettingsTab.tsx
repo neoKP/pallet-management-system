@@ -92,12 +92,12 @@ const SettingsTab: React.FC = () => {
 
     const handleSeedDemoData = async () => {
         const result = await Swal.fire({
-            title: 'ต้องการรีเซ็ตข้อมูลสต็อก?',
-            text: 'ยอดสต็อกปัจจุบันจะถูกแทนที่ด้วยข้อมูลทดสอบ (Demo Data) ตามมาตรฐานของระบบ',
+            title: 'ล้างข้อมูลทั้งหมดในระบบ?',
+            text: 'ยอดสต็อก ประวัติรายการ และรายการคำขอทั้งหมดจะถูกลบและเริ่มใหม่เป็น 0 (Clean Slate)',
             icon: 'warning',
             showCancelButton: true,
             confirmButtonColor: '#d33',
-            confirmButtonText: 'ยืนยันการรีเซ็ต',
+            confirmButtonText: 'ยืนยันการล้างข้อมูล',
             cancelButtonText: 'ยกเลิก'
         });
 
@@ -105,7 +105,7 @@ const SettingsTab: React.FC = () => {
             try {
                 const { INITIAL_STOCK } = await import('../../constants');
                 await firebaseService.resetAllData(INITIAL_STOCK);
-                Swal.fire('สำเร็จ', 'รีเซ็ตข้อมูลสต็อกและประวัติรายการทั้งหมดเป็น 0 เรียบร้อยแล้ว', 'success');
+                Swal.fire('สำเร็จ', 'ระบบถูกรีเซ็ตเป็น 0 และประวัติทั้งหมดถูกล้างเรียบร้อยแล้ว', 'success');
             } catch (error) {
                 console.error(error);
                 Swal.fire('ผิดพลาด', 'ไม่สามารถรีเซ็ตข้อมูลได้', 'error');
@@ -119,11 +119,11 @@ const SettingsTab: React.FC = () => {
         if (!branchId) {
             // Show selection if no specific branch
             const { value: selected } = await Swal.fire({
-                title: 'เลือกสาขาที่ต้องการซ่อมแซม',
+                title: 'เลือกสาขาที่ต้องการล้างยอดเป็น 0',
                 input: 'select',
                 inputOptions: BRANCHES.reduce((acc, b) => ({ ...acc, [b.id]: b.name }), {}),
                 showCancelButton: true,
-                confirmButtonText: 'ซ่อมแซมสาขานี้'
+                confirmButtonText: 'ยืนยันการรีเซ็ตสาขานี้'
             });
 
             if (selected) branchId = selected as BranchId; else return;
@@ -133,10 +133,10 @@ const SettingsTab: React.FC = () => {
             const nextStock = { ...stock };
             nextStock[branchId] = INITIAL_STOCK[branchId];
             await firebaseService.addMovementBatch([], nextStock);
-            Swal.fire('สำเร็จ', `ซ่อมแซมข้อมูล ${branchId} เรียบร้อยแล้ว`, 'success');
+            Swal.fire('สำเร็จ', `ยอดสต็อกของ ${branchId} ถูกรีเซ็ตเป็น 0 แล้ว`, 'success');
         } catch (error) {
             console.error(error);
-            Swal.fire('ผิดพลาด', 'ไม่สามารถซ่อมแซมได้', 'error');
+            Swal.fire('ผิดพลาด', 'ไม่สามารถดำเนินการได้', 'error');
         }
     };
 
@@ -401,13 +401,13 @@ const SettingsTab: React.FC = () => {
                                         <Package size={20} />
                                     </div>
                                     <div className="flex-1">
-                                        <h4 className="font-bold text-slate-800 mb-1">Reset All to Demo Data</h4>
-                                        <p className="text-xs text-slate-500 mb-4">แทนที่สต็อกทุกสาขาด้วยชุดข้อมูลทดสอบมาตรฐาน</p>
+                                        <h4 className="font-bold text-slate-800 mb-1">Deep Reset (Clear All Data)</h4>
+                                        <p className="text-xs text-slate-500 mb-4">ล้างยอดสต็อก ประวัติ และคำขอทั้งหมดเป็น 0 (เริ่มระบบใหม่)</p>
                                         <button
                                             onClick={handleSeedDemoData}
-                                            className="w-full py-2 bg-white border border-slate-200 rounded-lg text-xs font-bold text-slate-700 hover:bg-slate-50 transition-all"
+                                            className="w-full py-2 bg-white border border-slate-200 rounded-lg text-xs font-bold text-red-600 hover:bg-red-50 transition-all"
                                         >
-                                            Reset Entire Inventory
+                                            Reset Entire System (Zero)
                                         </button>
                                     </div>
                                 </div>
@@ -417,13 +417,13 @@ const SettingsTab: React.FC = () => {
                                         <Building2 size={20} />
                                     </div>
                                     <div className="flex-1">
-                                        <h4 className="font-bold text-slate-800 mb-1">Repair Branch Stock</h4>
-                                        <p className="text-xs text-slate-500 mb-4">ซ่อมแซมและเติมสต็อกรายสาขา (เช่น สาย3, พีแอลเค)</p>
+                                        <h4 className="font-bold text-slate-800 mb-1">Reset Branch Stock to 0</h4>
+                                        <p className="text-xs text-slate-500 mb-4">ล้างสต็อกรายสาขาให้เป็น 0 (กรณีข้อมูลผิดพลาดรุนแรง)</p>
                                         <button
                                             onClick={() => handleRepairBranch()}
                                             className="w-full py-2 bg-white border border-slate-200 rounded-lg text-xs font-bold text-slate-700 hover:bg-slate-50 transition-all"
                                         >
-                                            Select Branch to Fix
+                                            Select Branch to Reset
                                         </button>
                                     </div>
                                 </div>
