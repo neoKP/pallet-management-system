@@ -1,7 +1,7 @@
 import React from 'react';
 import { X, Printer, CheckCircle } from 'lucide-react';
 import { Transaction, Branch } from '../../types';
-import { BRANCHES } from '../../constants';
+import { BRANCHES, PALLET_TYPES } from '../../constants';
 // import { StockContext } from '../../contexts/StockContext';
 
 interface DocumentPreviewModalProps {
@@ -68,163 +68,184 @@ const DocumentPreviewModal: React.FC<DocumentPreviewModalProps> = ({ isOpen, onC
                             `}
                         </style>
 
-                        {/* Document Header */}
-                        {/* Document Header */}
-                        <div className="flex justify-between items-stretch mb-8 gap-12">
-                            {/* Boxed Company Info (Left) - Stretched to match height */}
-                            <div className="border border-slate-200 px-4 py-6 rounded-2xl flex flex-col items-center gap-5 shadow-xl shadow-slate-100/50 bg-white flex-1 min-w-0">
-                                <img src="/logo.png" alt="Company Logo" className="w-28 h-20 object-contain flex-shrink-0" />
-                                <div className="w-full text-center px-2">
-                                    <h1 className="text-[17px] font-black text-slate-900 whitespace-nowrap mb-1 tracking-tight">บริษัท นีโอสยาม โลจิสติกส์ แอนด์ ทรานสปอร์ต จำกัด</h1>
-                                    <h2 className="text-[11.5px] font-bold text-slate-700 whitespace-nowrap uppercase mb-2 tracking-wide">NEOSIAM LOGISTICS & TRANSPORT CO., LTD.</h2>
-                                    <div className="text-[10px] text-slate-500 space-y-1 font-medium leading-tight">
-                                        <p className="whitespace-nowrap">159/9-10 หมู่ 7 ตําบลบางม่วง อําเภอเมืองนครสวรรค์ จังหวัดนครสวรรค์ 60000</p>
-                                        <p className="whitespace-nowrap text-[9.5px]">159/9-10 Village No.7, Bang Muang, Muang Nakhon Sawan, Nakhon Sawan 60000</p>
+                        {/* Document Header (Letterhead Style) */}
+                        <div className="flex justify-between items-start mb-6">
+                            <div className="flex-1">
+                                <h1 className="text-[21px] font-black text-slate-900 mb-0.5 leading-tight whitespace-nowrap">บริษัท นีโอสยาม โลจิสติกส์ แอนด์ ทรานสปอร์ต จำกัด</h1>
+                                <h2 className="text-[12px] font-bold text-slate-700 uppercase mb-3 tracking-wide whitespace-nowrap">NEOSIAM LOGISTICS & TRANSPORT CO., LTD.</h2>
+                                <div className="text-[11.5px] text-slate-600 space-y-1 leading-tight font-medium">
+                                    <p>159/9-10 หมู่ 7 ตําบลบางม่วง อําเภอเมืองนครสวรรค์ จังหวัดนครสวรรค์ 60000</p>
+                                    <p>159/9-10 Village No.7, Bang Muang, Muang Nakhon Sawan, Nakhon Sawan 60000</p>
+                                    <div className="flex gap-4 mt-2 text-slate-800 font-bold border-t border-slate-100 pt-1">
+                                        <span>Tax ID: 0105552087673</span>
+                                    </div>
+                                    <div className="flex gap-6 text-slate-800">
+                                        <span><span className="font-black">Tel:</span> 056-275-841</span>
+                                        <span><span className="font-black">Email:</span> info_nw@neosiamlogistics.com</span>
                                     </div>
                                 </div>
                             </div>
+                            <div className="shrink-0 ml-8 text-right">
+                                <img src="/logo.png" alt="Company Logo" className="w-52 object-contain" />
+                            </div>
+                        </div>
 
-                            {/* Document Info (Right) */}
-                            <div className="text-right flex flex-col justify-between items-end min-w-[220px] pr-2 py-1">
-                                <div className="mb-3">
-                                    <h2 className="text-3xl font-black text-slate-900 leading-none mb-1">ใบส่งคืนพาเลท</h2>
-                                    <p className="text-[11px] font-bold text-slate-500 tracking-wider uppercase border-t border-slate-200 pt-1">Pallet Return Form</p>
+                        {/* Document Title & Identification Section */}
+                        <div className="flex justify-between items-end mb-8 border-b-4 border-slate-900 pb-4">
+                            <div className="flex-1">
+                                <h2 className="text-4xl font-black text-slate-900 leading-none mb-1">ใบส่งคืนพาเลท</h2>
+                                <div className="flex items-center gap-3">
+                                    <p className="text-sm font-bold text-slate-500 tracking-[0.2em] uppercase">Pallet Return Form</p>
+                                    <div className="h-4 w-1 bg-blue-600"></div>
+                                    <p className="text-xs font-bold text-blue-600 uppercase">Original (ต้นฉบับ)</p>
                                 </div>
-                                <div className="flex-1 flex flex-col justify-center mb-4">
-                                    <span className="text-[10px] font-bold text-slate-400 block uppercase">Document No.</span>
-                                    <span className="text-xl font-mono font-black text-blue-600 tracking-tight whitespace-nowrap">{data.docNo}</span>
+                            </div>
+                            <div className="flex items-center gap-6">
+                                <div className="text-right">
+                                    <span className="text-[10px] font-bold text-slate-400 block uppercase tracking-widest">Document No.</span>
+                                    <span className="text-2xl font-mono font-black text-slate-900 tracking-tight">{data.docNo}</span>
                                 </div>
-                                <div className="flex gap-4 items-center">
-                                    <div className="bg-white p-2 rounded-xl border border-slate-100 shadow-sm">
-                                        <img
-                                            src={`https://bwipjs-api.metafloor.com/?bcid=qrcode&text=${encodeURIComponent(window.location.origin + '?receive=' + data.docNo)}&scale=3`}
-                                            alt="QR Code Receive"
-                                            className="h-20 w-20"
-                                        />
-                                        <p className="text-[7px] text-blue-600 font-bold text-center mt-1 uppercase">Scan to Receive</p>
-                                    </div>
-                                    <div className="bg-white p-1 rounded-sm">
-                                        <img
-                                            src={`https://bwipjs-api.metafloor.com/?bcid=code128&text=${data.docNo}&scale=2&height=8&incltext=0&textxalign=center`}
-                                            alt="Barcode"
-                                            className="h-9 w-44"
-                                        />
-                                        <p className="text-[8px] text-slate-400 text-center font-mono mt-1 tracking-[0.5em]">{data.docNo}</p>
-                                    </div>
+                                <div className="bg-white p-1 rounded border border-slate-200">
+                                    <img
+                                        src={`https://bwipjs-api.metafloor.com/?bcid=qrcode&text=${encodeURIComponent(window.location.origin + '?receive=' + data.docNo)}&scale=3`}
+                                        alt="QR Code"
+                                        className="h-16 w-16"
+                                    />
                                 </div>
                             </div>
                         </div>
 
                         {/* Info Rows */}
-                        <div className="grid grid-cols-2 gap-8 mb-6 border-t border-b border-slate-200 py-4">
-                            <div>
-                                <h4 className="text-xs font-bold text-slate-400 uppercase mb-1">From (ต้นทาง)</h4>
-                                <p className="font-bold text-lg text-slate-900">{sourceBranch?.name || data.source}</p>
-                                <p className="text-sm text-slate-600">Branch Type: {sourceBranch?.type || 'Standard'}</p>
-                                <p className="text-sm text-slate-600">Date: {new Date(data.date).toLocaleDateString('th-TH')}</p>
-                            </div>
-                            <div>
-                                <h4 className="text-xs font-bold text-slate-400 uppercase mb-1">To (ปลายทาง)</h4>
-                                <p className="font-bold text-lg text-slate-900">{destBranch?.name || data.dest}</p>
-                                <p className="text-sm text-slate-600">Branch ID: {data.dest}</p>
-                                {data.referenceDocNo && (
-                                    <p className="text-sm text-blue-600 font-bold mt-1">Ref: {data.referenceDocNo}</p>
-                                )}
-                            </div>
-                        </div>
-
-                        {/* Transport Info */}
-                        <div className="mb-6 bg-slate-50 p-4 rounded border border-slate-100">
-                            <h4 className="text-xs font-bold text-slate-400 uppercase mb-2">Transport Details (ข้อมูลการขนส่ง)</h4>
-                            <div className="grid grid-cols-3 gap-4 text-sm">
-                                <div>
-                                    <span className="text-slate-500 block text-xs">Driver Name</span>
-                                    <span className="font-medium">{data.driverName || '-'}</span>
+                        {/* Info Sections: From & To */}
+                        <div className="grid grid-cols-2 gap-0 mb-8 border border-slate-900 overflow-hidden">
+                            <div className="p-5 border-r border-slate-900">
+                                <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] mb-3 border-b border-slate-100 pb-1">Shipper (ต้นทาง / ผู้ส่ง)</h4>
+                                <p className="font-black text-2xl text-slate-900 mb-1">{sourceBranch?.name || data.source}</p>
+                                <div className="text-[11px] text-slate-500 space-y-0.5 font-medium italic">
+                                    <p>Branch Type: {sourceBranch?.type || 'Standard'}</p>
+                                    <p>ID Code: {data.source.toUpperCase()}</p>
                                 </div>
-                                <div>
-                                    <span className="text-slate-500 block text-xs">Vehicle / Plate Info</span>
-                                    <span className="font-medium">{data.carRegistration || '-'} {data.carRegistration && `(${data.transportCompany || 'Own Fleet'})`}</span>
-                                </div>
-                                <div>
-                                    <span className="text-slate-500 block text-xs">Note</span>
-                                    <span className="font-medium">{data.note || '-'}</span>
+                            </div>
+                            <div className="p-5">
+                                <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] mb-3 border-b border-slate-100 pb-1">Ship To (ปลายทาง / ผู้รับ)</h4>
+                                <p className="font-black text-2xl text-slate-900 mb-1">{destBranch?.name || data.dest}</p>
+                                <div className="text-[11px] text-slate-500 space-y-0.5 font-medium">
+                                    <p>ID Code: {data.dest.toUpperCase()}</p>
+                                    {data.referenceDocNo && (
+                                        <div className="mt-2 py-1 px-2 border-l-4 border-blue-600 bg-blue-50">
+                                            <p className="text-blue-700 font-bold text-[10px] uppercase">ECD / Ref No.</p>
+                                            <p className="text-blue-900 font-black text-sm">{data.referenceDocNo}</p>
+                                        </div>
+                                    )}
                                 </div>
                             </div>
                         </div>
 
-                        {/* Items Table */}
-                        <div className="mb-8">
-                            <table className="w-full text-sm">
+                        {/* Quick Info Grid */}
+                        <div className="grid grid-cols-4 gap-6 mb-8 border-b-2 border-slate-200 pb-6">
+                            <div>
+                                <span className="text-[9px] font-black text-slate-400 block uppercase tracking-tighter">Transaction Date</span>
+                                <span className="font-bold text-slate-800">{new Date(data.date).toLocaleDateString('th-TH')}</span>
+                            </div>
+                            <div>
+                                <span className="text-[9px] font-black text-slate-400 block uppercase tracking-tighter">Vehicle Plate No.</span>
+                                <span className="font-bold text-slate-800">{data.carRegistration || '-'}</span>
+                            </div>
+                            <div>
+                                <span className="text-[9px] font-black text-slate-400 block uppercase tracking-tighter">Driver In Charge</span>
+                                <span className="font-bold text-slate-800">{data.driverName || '-'}</span>
+                            </div>
+                            <div>
+                                <span className="text-[9px] font-black text-slate-400 block uppercase tracking-tighter">Transport Company</span>
+                                <span className="font-bold text-slate-800">{data.transportCompany || '-'}</span>
+                            </div>
+                        </div>
+
+                        {/* Pallet Items Table */}
+                        <div className="mb-10 min-h-[280px]">
+                            <table className="w-full text-sm border-collapse">
                                 <thead>
-                                    <tr className="border-b-2 border-slate-800">
-                                        <th className="py-2 text-left w-12">No.</th>
-                                        <th className="py-2 text-left">Description (รายการ)</th>
-                                        <th className="py-2 text-center w-24">Type</th>
-                                        <th className="py-2 text-right w-24">Qty (จำนวน)</th>
-                                        <th className="py-2 text-right w-24">Unit (หน่วย)</th>
+                                    <tr className="bg-slate-900 text-white">
+                                        <th className="py-2.5 px-4 text-left font-black uppercase tracking-tighter text-[10px] border border-slate-900 w-12 text-center">No.</th>
+                                        <th className="py-2.5 px-4 text-left font-black uppercase tracking-tighter text-[10px] border border-slate-900">Description (รายการพาเลท)</th>
+                                        <th className="py-2.5 px-4 text-center font-black uppercase tracking-tighter text-[10px] border border-slate-900 w-28">Type (ประเภท)</th>
+                                        <th className="py-2.5 px-4 text-right font-black uppercase tracking-tighter text-[10px] border border-slate-900 w-28">Qty (จำนวน)</th>
+                                        <th className="py-2.5 px-4 text-right font-black uppercase tracking-tighter text-[10px] border border-slate-900 w-24">Unit</th>
                                     </tr>
                                 </thead>
-                                <tbody className="text-slate-700">
+                                <tbody>
                                     {data.items.map((item, index) => (
-                                        <tr key={index} className="border-b border-slate-100">
-                                            <td className="py-3 font-mono text-slate-400">{String(index + 1).padStart(2, '0')}</td>
-                                            <td className="py-3 font-bold">
-                                                Pallet - {item.palletId.replace(/_/g, ' ').toUpperCase()}
+                                        <tr key={index}>
+                                            <td className="py-3 px-4 text-center border border-slate-300 font-mono text-xs">{index + 1}</td>
+                                            <td className="py-3 px-4 border border-slate-300">
+                                                <div className="font-black text-slate-800">
+                                                    Pallet: {PALLET_TYPES.find(p => p.id === item.palletId)?.name || item.palletId}
+                                                </div>
+                                                <div className="text-[10px] text-slate-400 font-mono italic">#{item.palletId}</div>
                                             </td>
-                                            <td className="py-3 text-center text-xs bg-slate-50 rounded uppercase">
-                                                {item.palletId.includes('loscam') ? 'RENTAL' : 'OWN'}
+                                            <td className="py-3 px-4 text-center border border-slate-300">
+                                                <span className={`px-2 py-1 rounded text-[9px] font-black uppercase ${item.palletId.includes('loscam') ? 'bg-red-50 text-red-700 border border-red-100' : 'bg-slate-50 text-slate-700 border border-slate-200'}`}>
+                                                    {item.palletId.includes('loscam') ? 'Rental' : 'Owned'}
+                                                </span>
                                             </td>
-                                            <td className="py-3 text-right font-bold text-lg">{item.qty}</td>
-                                            <td className="py-3 text-right">PCS</td>
+                                            <td className="py-3 px-4 text-right border border-slate-300 text-xl font-black">{item.qty}</td>
+                                            <td className="py-3 px-4 text-right border border-slate-300 font-bold">PCS</td>
                                         </tr>
                                     ))}
-                                    {/* Empty rows filler */}
-                                    {Array.from({ length: Math.max(0, 5 - data.items.length) }).map((_, i) => (
-                                        <tr key={`empty-${i}`} className="border-b border-slate-50">
-                                            <td className="py-4">&nbsp;</td>
-                                            <td></td>
-                                            <td></td>
-                                            <td></td>
-                                            <td></td>
+                                    {Array.from({ length: Math.max(0, 4 - data.items.length) }).map((_, i) => (
+                                        <tr key={`empty-${i}`}>
+                                            <td className="py-6 border border-slate-200"></td>
+                                            <td className="py-6 border border-slate-200"></td>
+                                            <td className="py-6 border border-slate-200"></td>
+                                            <td className="py-6 border border-slate-200"></td>
+                                            <td className="py-6 border border-slate-200"></td>
                                         </tr>
                                     ))}
                                 </tbody>
                                 <tfoot>
-                                    <tr className="border-t-2 border-slate-800 bg-slate-50">
-                                        <td colSpan={3} className="py-3 text-right font-black text-slate-900 uppercase pr-4">Grand Total (รวมทั้งสิ้น)</td>
-                                        <td className="py-3 text-right font-black text-xl text-slate-900">
+                                    <tr className="bg-slate-900 text-white">
+                                        <td colSpan={3} className="py-3 px-4 text-right font-black text-[11px] uppercase border border-slate-900 tracking-widest">Total Pallets Transfered (จำนวนรวมทั้งสิ้น)</td>
+                                        <td className="py-3 px-4 text-right font-black text-2xl border border-slate-900">
                                             {data.items.reduce((sum, item) => sum + item.qty, 0)}
                                         </td>
-                                        <td className="py-3 text-right font-bold">PCS</td>
+                                        <td className="py-3 px-4 text-right font-black border border-slate-900">PCS</td>
                                     </tr>
                                 </tfoot>
                             </table>
                         </div>
 
-                        {/* Footer / Signatures */}
-                        <div className="mt-auto grid grid-cols-3 gap-8 text-center pt-12">
-                            <div className="flex flex-col gap-12">
-                                <div className="border-b border-dotted border-slate-400 pb-2"></div>
-                                <div>
-                                    <p className="font-bold text-sm">ผู้ส่งสินค้า (Sender)</p>
-                                    <p className="text-xs text-slate-400">Authorized Signature</p>
-                                    <p className="text-xs text-slate-400 mt-1">Date: ____/____/____</p>
+                        {/* Remarks Section */}
+                        <div className="mb-12">
+                            <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest block mb-1">Remarks / Note (หมายเหตุ):</span>
+                            <div className="p-3 border-2 border-slate-100 rounded-lg italic text-slate-600 text-sm min-h-[48px] bg-slate-50">
+                                {data.note || '-'}
+                            </div>
+                        </div>
+
+                        {/* Signature Section */}
+                        <div className="mt-auto grid grid-cols-3 gap-0 border-2 border-slate-900 rounded-lg overflow-hidden shrink-0">
+                            <div className="flex flex-col h-36 border-r-2 border-slate-900 bg-white">
+                                <div className="p-2 border-b-2 border-slate-900 text-center font-black text-[9px] uppercase tracking-widest bg-slate-50">Authorized Sender / ผู้ส่งสินค้า</div>
+                                <div className="flex-1"></div>
+                                <div className="p-4 text-center">
+                                    <div className="border-b border-slate-300 mx-2 mb-2"></div>
+                                    <p className="text-[8px] font-bold text-slate-400">( Signature & Date )</p>
                                 </div>
                             </div>
-                            <div className="flex flex-col gap-12">
-                                <div className="border-b border-dotted border-slate-400 pb-2"></div>
-                                <div>
-                                    <p className="font-bold text-sm">ผู้ขนส่ง (Carrier)</p>
-                                    <p className="text-xs text-slate-400">Driver Signature</p>
-                                    <p className="text-xs text-slate-400 mt-1">Date: ____/____/____</p>
+                            <div className="flex flex-col h-36 border-r-2 border-slate-900 bg-white text-center">
+                                <div className="p-2 border-b-2 border-slate-900 text-center font-black text-[9px] uppercase tracking-widest bg-slate-50">Logistics Carrier / ผู้ขนส่ง</div>
+                                <div className="flex-1"></div>
+                                <div className="p-4 text-center">
+                                    <div className="border-b border-slate-300 mx-2 mb-2"></div>
+                                    <p className="text-[8px] font-bold text-slate-400">({data.driverName || '..............................'})</p>
                                 </div>
                             </div>
-                            <div className="flex flex-col gap-12">
-                                <div className="border-b border-dotted border-slate-400 pb-2"></div>
-                                <div>
-                                    <p className="font-bold text-sm">ผู้รับสินค้า (Receiver)</p>
-                                    <p className="text-xs text-slate-400">Authorized Signature</p>
-                                    <p className="text-xs text-slate-400 mt-1">Date: ____/____/____</p>
+                            <div className="flex flex-col h-36 bg-white">
+                                <div className="p-2 border-b-2 border-slate-900 text-center font-black text-[9px] uppercase tracking-widest bg-slate-50">Received By / ผู้รับสินค้า</div>
+                                <div className="flex-1"></div>
+                                <div className="p-4 text-center">
+                                    <div className="border-b border-slate-300 mx-2 mb-2"></div>
+                                    <p className="text-[8px] font-bold text-slate-400">( Signature & Date )</p>
                                 </div>
                             </div>
                         </div>
