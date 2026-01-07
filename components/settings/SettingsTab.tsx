@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Settings, MapPin, Package, Plus, Trash2, Save, Building2, Truck, X, Send } from 'lucide-react';
+import { Settings, MapPin, Package, Plus, Trash2, Save, Building2, Truck, X, Send, Wrench } from 'lucide-react';
 import * as firebaseService from '../../services/firebase';
 import { PalletType, Branch, Partner, BranchId } from '../../types';
 import { useStock } from '../../contexts/StockContext';
@@ -7,13 +7,13 @@ import * as telegramService from '../../services/telegramService';
 import Swal from 'sweetalert2';
 
 const SettingsTab: React.FC = () => {
-    const [activeSection, setActiveSection] = useState<'pallets' | 'locations' | 'telegram'>('pallets');
+    const [activeSection, setActiveSection] = useState<'pallets' | 'locations' | 'telegram' | 'developer'>('pallets');
 
     // Real-time data from Firebase
     const [pallets, setPallets] = useState<PalletType[]>([]);
     const [branches, setBranches] = useState<Branch[]>([]);
     const [partners, setPartners] = useState<Partner[]>([]);
-    const { config, updateSystemConfig } = useStock();
+    const { config, updateSystemConfig, stock } = useStock();
     const [telegramChatId, setTelegramChatId] = useState(config.telegramChatId);
 
     useEffect(() => {
@@ -90,6 +90,42 @@ const SettingsTab: React.FC = () => {
         }
     };
 
+    const handleSeedDemoData = async () => {
+        const result = await Swal.fire({
+            title: 'ต้องการรีเซ็ตข้อมูลสต็อก?',
+            text: 'ยอดสต็อกปัจจุบันจะถูกแทนที่ด้วยข้อมูลทดสอบ (Demo Data) ตามมาตรฐานของระบบ',
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonColor: '#d33',
+            confirmButtonText: 'ยืนยันการรีเซ็ต',
+            cancelButtonText: 'ยกเลิก'
+        });
+
+        if (result.isConfirmed) {
+            try {
+                const { INITIAL_STOCK } = await import('../../constants');
+                await firebaseService.addMovementBatch([], INITIAL_STOCK);
+                Swal.fire('สำเร็จ', 'รีเซ็ตข้อมูลสต็อกเป็น Demo Data เรียบร้อยแล้ว', 'success');
+            } catch (error) {
+                console.error(error);
+                Swal.fire('ผิดพลาด', 'ไม่สามารถรีเซ็ตข้อมูลได้', 'error');
+            }
+        }
+    };
+
+    const handleRepairBranch = async (branchId: BranchId) => {
+        try {
+            const { INITIAL_STOCK } = await import('../../constants');
+            const nextStock = { ...stock };
+            nextStock[branchId] = INITIAL_STOCK[branchId];
+            await firebaseService.addMovementBatch([], nextStock);
+            Swal.fire('สำเร็จ', `ซ่อมแซมข้อมูล ${branchId} เรียบร้อยแล้ว`, 'success');
+        } catch (error) {
+            console.error(error);
+            Swal.fire('ผิดพลาด', 'ไม่สามารถซ่อมแซมได้', 'error');
+        }
+    };
+
     return (
         <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4">
 
@@ -106,7 +142,7 @@ const SettingsTab: React.FC = () => {
             </div>
 
             {/* Navigation Palls */}
-            <div className="flex gap-2 bg-white p-1.5 rounded-2xl shadow-sm border border-slate-100 w-fit">
+            <div className="flex gap-2 bg-white p-1.5 rounded-2xl shadow-sm border border-slate-100 w-fit flex-wrap">
                 <button
                     onClick={() => setActiveSection('pallets')}
                     className={`flex items-center gap-2 px-6 py-2.5 rounded-xl text-sm font-bold transition-all ${activeSection === 'pallets'
@@ -125,7 +161,7 @@ const SettingsTab: React.FC = () => {
                         }`}
                 >
                     <MapPin size={18} />
-                    Locations (Source/Dest)
+                    Locations
                 </button>
                 <button
                     onClick={() => setActiveSection('telegram')}
@@ -137,6 +173,16 @@ const SettingsTab: React.FC = () => {
                     <Send size={18} />
                     Telegram Bot
                 </button>
+                <button
+                    onClick={() => setActiveSection('developer')}
+                    className={`flex items-center gap-2 px-6 py-2.5 rounded-xl text-sm font-bold transition-all ${activeSection === 'developer'
+                        ? 'bg-red-600 text-white shadow-md'
+                        : 'text-slate-500 hover:bg-slate-50'
+                        }`}
+                >
+                    <Wrench size={18} />
+                    Developer & Recovery
+                </button>
             </div>
 
             {/* Content Area */}
@@ -145,15 +191,16 @@ const SettingsTab: React.FC = () => {
                     <div>
                         <h2 className="text-lg font-black text-slate-800">
                             {activeSection === 'pallets' ? 'Registered Pallet Types' :
-                                activeSection === 'locations' ? 'Registered Locations' : 'Telegram Integration'}
+                                activeSection === 'locations' ? 'Registered Locations' :
+                                    activeSection === 'telegram' ? 'Telegram Integration' : 'Developer & Recovery Operations'}
                         </h2>
                         <p className="text-sm text-slate-500">
                             {activeSection === 'pallets' ? 'Manage types of pallets tracked in the system.' :
                                 activeSection === 'locations' ? 'Manage internal branches and external partners.' :
-                                    'ตั้งค่าการแจ้งเตือนผ่าน Telegram Group หรือ Chat'}
+                                    activeSection === 'telegram' ? 'ตั้งค่าการแจ้งเตือนผ่าน Telegram Group หรือ Chat' : 'Advanced system maintenance and data recovery tools.'}
                         </p>
                     </div>
-                    {activeSection !== 'telegram' && (
+                    {activeSection !== 'telegram' && activeSection !== 'developer' && (
                         <button
                             onClick={() => setIsAddModalOpen(true)}
                             className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white text-sm font-bold rounded-xl hover:bg-blue-700 transition-colors shadow-lg shadow-blue-200"
@@ -263,7 +310,7 @@ const SettingsTab: React.FC = () => {
                                 ))}
                             </tbody>
                         </table>
-                    ) : (
+                    ) : activeSection === 'telegram' ? (
                         <div className="p-8 max-w-2xl">
                             <div className="bg-blue-50 rounded-2xl p-6 border border-blue-100 flex items-start gap-4 mb-8">
                                 <div className="p-3 bg-white rounded-xl shadow-sm">
@@ -317,6 +364,54 @@ const SettingsTab: React.FC = () => {
                                     >
                                         <Send size={16} /> ส่งข้อความทดสอบ (Test Notification)
                                     </button>
+                                </div>
+                            </div>
+                        </div>
+                    ) : (
+                        <div className="p-8 max-w-2xl space-y-8">
+                            <div className="bg-red-50 rounded-2xl p-6 border border-red-100 flex items-start gap-4">
+                                <div className="p-3 bg-white rounded-xl shadow-sm">
+                                    <Wrench className="text-red-600" />
+                                </div>
+                                <div>
+                                    <h3 className="font-black text-red-900 mb-1">Stock Data Recovery</h3>
+                                    <p className="text-sm text-red-700 leading-relaxed">
+                                        ใช้เครื่องมือเหล่านี้เพื่อแก้ไขปัญหาข้อมูลไม่ถูกต้อง หรือสต็อกแสดงผลเป็น 0 ทั้งที่ควรมีข้อมูล
+                                    </p>
+                                </div>
+                            </div>
+
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <div className="p-6 bg-slate-50 rounded-2xl border border-slate-100 flex flex-col items-start gap-4 hover:border-blue-200 transition-all">
+                                    <div className="w-10 h-10 bg-white rounded-lg shadow-sm flex items-center justify-center text-blue-600">
+                                        <Package size={20} />
+                                    </div>
+                                    <div className="flex-1">
+                                        <h4 className="font-bold text-slate-800 mb-1">Reset All to Demo Data</h4>
+                                        <p className="text-xs text-slate-500 mb-4">แทนที่สต็อกทุกสาขาด้วยชุดข้อมูลทดสอบมาตรฐาน</p>
+                                        <button
+                                            onClick={handleSeedDemoData}
+                                            className="w-full py-2 bg-white border border-slate-200 rounded-lg text-xs font-bold text-slate-700 hover:bg-slate-50 transition-all"
+                                        >
+                                            Reset Entire Inventory
+                                        </button>
+                                    </div>
+                                </div>
+
+                                <div className="p-6 bg-slate-50 rounded-2xl border border-slate-100 flex flex-col items-start gap-4 hover:border-amber-200 transition-all">
+                                    <div className="w-10 h-10 bg-white rounded-lg shadow-sm flex items-center justify-center text-amber-600">
+                                        <Wrench size={20} />
+                                    </div>
+                                    <div className="flex-1">
+                                        <h4 className="font-bold text-slate-800 mb-1">Repair Maintenance</h4>
+                                        <p className="text-xs text-slate-500 mb-4">ซ่อมแซมและเติมสต็อกคลังซ่อมบำรุง (Maintenance Stock)</p>
+                                        <button
+                                            onClick={() => handleRepairBranch('maintenance_stock')}
+                                            className="w-full py-2 bg-white border border-slate-200 rounded-lg text-xs font-bold text-slate-700 hover:bg-slate-50 transition-all"
+                                        >
+                                            Fix Maintenance Stock
+                                        </button>
+                                    </div>
                                 </div>
                             </div>
                         </div>
