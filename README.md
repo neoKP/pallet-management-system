@@ -23,7 +23,7 @@
 
 ---
 
-## 🎯 ภาพรวมระบบ
+## ภาพรวมระบบ
 
 ระบบ Pallet Management ถูกออกแบบมาเพื่อ:
 
@@ -39,7 +39,7 @@
 
 ---
 
-## ✨ คุณสมบัติหลัก
+## คุณสมบัติหลัก
 
 ### 📊 Dashboard
 
@@ -69,7 +69,7 @@
 
 ---
 
-## 🛠️ เทคโนโลยีที่ใช้
+## เทคโนโลยีที่ใช้
 
 ### Frontend
 
@@ -91,7 +91,7 @@
 
 ---
 
-## 📦 การติดตั้ง
+## การติดตั้ง
 
 ### ข้อกำหนดระบบ
 
@@ -131,13 +131,13 @@ npm run dev
 
 1. **เปิดเบราว์เซอร์**
 
-```
+```text
 http://localhost:3000
 ```
 
 ---
 
-## 💻 การใช้งาน
+## การใช้งาน
 
 ### การ Login
 
@@ -170,9 +170,9 @@ http://localhost:3000
 
 ---
 
-## 📁 โครงสร้างโปรเจค
+## โครงสร้างโปรเจค
 
-```
+```text
 neo-siam-logistics---pallet-management-system/
 ├── components/
 │   ├── common/           # Shared components
@@ -203,7 +203,7 @@ neo-siam-logistics---pallet-management-system/
 
 ---
 
-## 🔧 การพัฒนา
+## การพัฒนา
 
 ### Available Scripts
 
@@ -241,7 +241,7 @@ git push origin feature/your-feature-name
 
 ---
 
-## 🚀 การ Deploy
+## การ Deploy
 
 ### Build Production
 
@@ -338,7 +338,7 @@ netlify deploy
 
 ---
 
-## 📄 License
+## License
 
 This project is licensed under the MIT License.
 
@@ -346,7 +346,7 @@ This project is licensed under the MIT License.
 
 ## 👥 Team
 
-**Neo Siam Logistics Development Team**
+### Neo Siam Logistics Development Team
 
 ---
 
@@ -370,6 +370,6 @@ This project is licensed under the MIT License.
 
 ---
 
-**Made with ❤️ by Neo Siam Development Team**
-#   p a l l e t - m a n a g e m e n t - s y s t e m  
- 
+## ❤️ Made with Love
+
+### Neo Siam Development Team

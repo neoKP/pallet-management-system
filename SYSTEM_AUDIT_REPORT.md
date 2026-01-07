@@ -13,7 +13,7 @@
 ### คะแนนภาพรวม: 7.5/10
 
 | หมวดหมู่ | คะแนน | สถานะ |
-|---------|-------|-------|
+| :--- | :--- | :--- |
 | **Functionality (การทำงาน)** | 8/10 | ✅ ดี |
 | **Stability (ความเสถียร)** | 6/10 | ⚠️ ต้องปรับปรุง |
 | **Code Quality (คุณภาพโค้ด)** | 7/10 | ⚠️ ต้องปรับปรุง |
@@ -127,7 +127,7 @@
 
 #### 1.1 Backend Integration
 
-```
+```markdown
 ✓ สร้าง Backend API (แนะนำ: Node.js + Express หรือ Firebase)
 ✓ ย้ายข้อมูล User ไปเก็บใน Database
 ✓ เพิ่ม JWT Authentication
@@ -136,7 +136,7 @@
 
 #### 1.2 Security Enhancement
 
-```
+```markdown
 ✓ ลบรหัสผ่านออกจาก Source Code
 ✓ ใช้ bcrypt สำหรับ Hash รหัสผ่าน
 ✓ ย้าย API Key ไปฝั่ง Server
@@ -147,7 +147,7 @@
 
 #### 1.3 Data Persistence
 
-```
+```markdown
 ✓ เชื่อมต่อ Firebase Firestore หรือ MongoDB
 ✓ Migration Script สำหรับ Initial Data
 ✓ Real-time Sync (Optional)
@@ -157,7 +157,7 @@
 
 #### 2.1 Code Refactoring
 
-```
+```markdown
 ✓ แยก Components:
   - components/auth/LoginScreen.tsx
   - components/dashboard/Dashboard.tsx
@@ -183,7 +183,7 @@
 
 #### 2.2 State Management
 
-```
+```markdown
 ✓ ติดตั้ง Zustand หรือ Redux Toolkit
 ✓ สร้าง Stores:
   - stores/authStore.ts
@@ -193,7 +193,7 @@
 
 #### 2.3 TypeScript Improvements
 
-```
+```markdown
 ✓ เปิด Strict Mode
 ✓ เพิ่ม Type Definitions ให้ครบ
 ✓ ลบ `any` Types ทั้งหมด
@@ -204,7 +204,7 @@
 
 #### 3.1 Testing Setup
 
-```
+```markdown
 ✓ ติดตั้ง Vitest + React Testing Library
 ✓ เขียน Unit Tests สำหรับ:
   - Utility Functions
@@ -221,7 +221,7 @@
 
 #### 3.2 Error Handling
 
-```
+```markdown
 ✓ สร้าง Error Boundary Component
 ✓ เพิ่ม Toast Notifications (react-hot-toast)
 ✓ Centralized Error Logging
@@ -232,7 +232,7 @@
 
 #### 4.1 Performance
 
-```
+```markdown
 ✓ Code Splitting
 ✓ Lazy Loading Components
 ✓ Memoization (useMemo, useCallback)
@@ -241,7 +241,7 @@
 
 #### 4.2 Build Optimization
 
-```
+```markdown
 ✓ ย้ายจาก Tailwind CDN เป็น NPM
 ✓ PostCSS Configuration
 ✓ Asset Optimization
@@ -252,7 +252,7 @@
 
 #### 5.1 New Features
 
-```
+```markdown
 ✓ Export to Excel/PDF
 ✓ Advanced Filtering
 ✓ Date Range Selection
@@ -263,7 +263,7 @@
 
 #### 5.2 UX Improvements
 
-```
+```markdown
 ✓ Loading States ทุกที่
 ✓ Skeleton Screens
 ✓ Better Form Feedback

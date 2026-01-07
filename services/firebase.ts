@@ -48,17 +48,50 @@ export const initializeData = async () => {
             console.log('Seeding initial stock data...');
             await set(stockRef, INITIAL_STOCK);
         } else {
-            // Data Migration: hub_nks -> hub_nw (Force move if nks exists)
-            let val = stockSnap.val();
+            let val = stockSnap.val() || {};
+            let modified = false;
+
+            // 1. Ensure all branches defined in constants exist in the stock object
+            BRANCHES.forEach(branch => {
+                const branchStock = val[branch.id];
+                if (!branchStock) {
+                    console.log(`Adding missing branch structure for: ${branch.id}`);
+                    val[branch.id] = INITIAL_STOCK[branch.id] || { loscam_red: 0, loscam_yellow: 0, loscam_blue: 0, hiq: 0, general: 0, plastic_circular: 0 };
+                    modified = true;
+                } else if (branch.id === 'maintenance_stock') {
+                    // Specific check for maintenance_stock: if all values are 0, force seed from INITIAL_STOCK
+                    const isEmpty = Object.values(branchStock).every(v => v === 0);
+                    if (isEmpty) {
+                        console.log('Maintenance Stock is empty. Seeding demo data...');
+                        val[branch.id] = INITIAL_STOCK[branch.id];
+                        modified = true;
+                    }
+                }
+            });
+
+            // 2. Data Migration: hub_nks -> hub_nw (Force move if nks exists)
             if (val.hub_nks) {
                 console.log('Migrating stock data from hub_nks to hub_nw (Force)...');
-                // Move data to hub_nw, potentially merging or overwriting if nw is empty
                 val.hub_nw = val.hub_nks;
                 delete val.hub_nks;
-                await set(stockRef, val);
+                modified = true;
             }
 
-            // Legacy migration logic only, removed dangerous auto-clear
+            // 3. Check if stock is essentially empty (all values are 0 across all branches)
+            // This happens on first-run with a fresh DB or if data was cleared.
+            const isStockEmpty = Object.values(val).every((branchStock: any) =>
+                Object.values(branchStock).every((qty) => qty === 0)
+            );
+
+            if (isStockEmpty) {
+                console.log('Stock is empty. Seeding initial demo data...');
+                val = INITIAL_STOCK;
+                modified = true;
+            }
+
+            if (modified) {
+                await set(stockRef, val);
+            }
         }
 
         // Check transactions

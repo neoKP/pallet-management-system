@@ -22,7 +22,7 @@
 
 #### สร้างโฟลเดอร์และไฟล์ใหม่
 
-```
+```markdown
 ✓ components/
   ✓ common/BrandLogo.tsx           - โลโก้แบรนด์
   ✓ common/LoadingSpinner.tsx      - Loading indicator
@@ -188,7 +188,7 @@ const { stock, transactions, addTransaction, processBatchMaintenance } = useStoc
 
 #### `.env.example`
 
-```
+```env
 GEMINI_API_KEY=your_gemini_api_key_here
 VITE_APP_NAME="Neo Siam Logistics - Pallet Management"
 VITE_APP_VERSION=1.0.0
@@ -261,7 +261,7 @@ NODE_ENV=development
 
 ### ก่อนปรับปรุง
 
-```
+```text
 neo-siam-logistics---pallet-management-system/
 ├── App.tsx              (588 บรรทัด - ทุกอย่างอยู่ในนี้!)
 ├── index.tsx            (17 บรรทัด)
@@ -280,7 +280,7 @@ neo-siam-logistics---pallet-management-system/
 
 ### หลังปรับปรุง Phase 1
 
-```
+```text
 neo-siam-logistics---pallet-management-system/
 ├── components/
 │   ├── common/
@@ -580,4 +580,4 @@ const isValid = validateQuantity(qty); // true/false
 
 ---
 
-**Happy Coding! 💻✨**
+### Happy Coding! 💻✨
