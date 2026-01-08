@@ -41,7 +41,7 @@ const PalletRequestTab: React.FC<PalletRequestTabProps> = ({ selectedBranch, cur
 
             <PalletRequestForm
                 isOpen={logic.isModalOpen}
-                onClose={() => logic.setIsModalOpen(false)}
+                onClose={logic.handleCloseModal}
                 onSubmit={logic.handleCreateRequest}
                 requestItems={logic.requestItems}
                 handleAddItem={logic.handleAddItem}
@@ -49,6 +49,7 @@ const PalletRequestTab: React.FC<PalletRequestTabProps> = ({ selectedBranch, cur
                 handleItemChange={logic.handleItemChange}
                 newRequestMeta={logic.newRequestMeta}
                 setNewRequestMeta={logic.setNewRequestMeta}
+                isEditing={!!logic.editingRequestId}
             />
         </div>
     );

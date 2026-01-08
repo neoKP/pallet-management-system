@@ -19,6 +19,7 @@ export function usePalletRequestLogic(selectedBranch: BranchId, currentUser?: Us
         note: '',
         branchId: selectedBranch // Keep track for the form
     });
+    const [editingRequestId, setEditingRequestId] = useState<string | null>(null);
 
     useEffect(() => {
         setNewRequestMeta(prev => ({ ...prev, branchId: selectedBranch }));
@@ -77,7 +78,7 @@ export function usePalletRequestLogic(selectedBranch: BranchId, currentUser?: Us
             return;
         }
 
-        const newReq: any = {
+        const reqData: any = {
             branchId: selectedBranch,
             items: validItems.map(i => ({ palletId: i.palletId as PalletId, qty: parseInt(i.qty) })),
             purpose: newRequestMeta.purpose,
@@ -87,9 +88,29 @@ export function usePalletRequestLogic(selectedBranch: BranchId, currentUser?: Us
             note: newRequestMeta.note,
         };
 
-        createPalletRequest(newReq);
+        if (editingRequestId) {
+            const original = palletRequests.find(r => r.id === editingRequestId);
+            if (original) {
+                updatePalletRequest({ ...original, ...reqData });
+                Swal.fire('สำเร็จ!', 'แก้ไขคำขอเรียบร้อยแล้ว', 'success');
+            }
+        } else {
+            createPalletRequest(reqData);
+            Swal.fire({
+                icon: 'success',
+                title: 'ส่งคำขอแล้ว',
+                text: 'รายการคำขอของคุณถูกบันทึกลงระบบแล้ว',
+                timer: 2000,
+                showConfirmButton: false
+            });
+        }
 
+        handleCloseModal();
+    };
+
+    const handleCloseModal = () => {
         setIsModalOpen(false);
+        setEditingRequestId(null);
         setRequestItems([{ palletId: '', qty: '' }]);
         setNewRequestMeta({
             purpose: '',
@@ -99,21 +120,11 @@ export function usePalletRequestLogic(selectedBranch: BranchId, currentUser?: Us
             note: '',
             branchId: selectedBranch
         });
-
-        Swal.fire({
-            icon: 'success',
-            title: 'ส่งคำขอแล้ว',
-            text: 'รายการคำขอของคุณถูกบันทึกลงระบบแล้ว',
-            timer: 2000,
-            showConfirmButton: false
-        });
     };
 
     const handleApprove = (req: PalletRequest) => {
-        // Source depends on Request Type
         const sourceBranchId = req.requestType === 'PULL' ? (req.targetBranchId as BranchId) : req.branchId;
 
-        // Check if requested items exceed Source branch stock
         const insufficientItems = req.items.filter(item => {
             const available = stock[sourceBranchId]?.[item.palletId] || 0;
             return item.qty > available;
@@ -131,7 +142,7 @@ export function usePalletRequestLogic(selectedBranch: BranchId, currentUser?: Us
             Swal.fire({
                 icon: 'error',
                 title: 'สต๊อกต้นทางไม่เพียงพอ!',
-                text: `ไม่สามารถอนุมัติได้เนื่องจากยอดในสต๊อกของ ${sourceBranchName} ต่ำกว่าที่จะส่ง:\n${details}\n\nกรุณา "แก้ไข" ยอดพาเลทก่อนอนุมัติ`,
+                text: `ไม่สามารถอนุมัติได้เนื่องจากยอดในสต๊อกของ ${sourceBranchName} ต่ำกว่าที่จะส่ง:\n${details}\n\nกรุณา "แก้ไข" ยอดพาเลท หรือ "เปลี่ยนประเภท (Push/Pull)" ให้ถูกต้อง`,
                 confirmButtonText: 'ตกลง',
                 confirmButtonColor: '#d33',
             });
@@ -170,41 +181,20 @@ export function usePalletRequestLogic(selectedBranch: BranchId, currentUser?: Us
     };
 
     const handleEdit = (req: PalletRequest) => {
-        if (req.items.length === 0) return;
-
-        const sourceBranchId = req.requestType === 'PULL' ? (req.targetBranchId as BranchId) : req.branchId;
-        const firstItem = req.items[0];
-        const palletName = PALLET_TYPES.find(p => p.id === firstItem.palletId)?.name || firstItem.palletId;
-        const available = stock[sourceBranchId]?.[firstItem.palletId] || 0;
-
-        Swal.fire({
-            title: 'แก้ไขจำนวนพาเลท',
-            text: `${palletName} (สต๊อกต้นทาง ${sourceBranchId} มี ${available})`,
-            input: 'number',
-            inputValue: firstItem.qty,
-            showCancelButton: true,
-            confirmButtonText: 'บันทึกการแก้ไข',
-            inputValidator: (value: string) => {
-                if (!value || parseInt(value) <= 0) {
-                    return 'กรุณาระบุจำนวนที่ถูกต้อง';
-                }
-                return null;
-            }
-        }).then((result: any) => {
-            if (result.isConfirmed) {
-                const newItems = [...req.items];
-                newItems[0] = { ...newItems[0], qty: parseInt(result.value) };
-                updatePalletRequest({ ...req, items: newItems });
-                Swal.fire('แก้ไขแล้ว!', 'ปรับการขอพาเลทเรียบร้อยแล้ว', 'success');
-            }
+        setEditingRequestId(req.id);
+        setRequestItems(req.items.map(i => ({ palletId: i.palletId, qty: i.qty.toString() })));
+        setNewRequestMeta({
+            purpose: req.purpose,
+            priority: req.priority,
+            targetBranchId: req.targetBranchId || '',
+            requestType: req.requestType || 'PUSH',
+            note: req.note || '',
+            branchId: req.branchId
         });
+        setIsModalOpen(true);
     };
 
     const handleShip = (req: PalletRequest) => {
-        // Logic for PUSH vs PULL
-        // PUSH: Requester (branchId) -> Target (targetBranchId) [Standard Return]
-        // PULL: Target (targetBranchId) -> Requester (branchId) [Collection from Hub]
-
         const sourceId = req.requestType === 'PULL' ? (req.targetBranchId as BranchId) : req.branchId;
         const destId = req.requestType === 'PULL' ? req.branchId : (req.targetBranchId || 'hub_nw' as BranchId);
 
@@ -268,10 +258,12 @@ export function usePalletRequestLogic(selectedBranch: BranchId, currentUser?: Us
         isModalOpen, setIsModalOpen,
         requestItems, setRequestItems,
         newRequestMeta, setNewRequestMeta,
+        editingRequestId,
         isHub,
         ALL_DESTINATIONS,
         handleAddItem, handleRemoveItem, handleItemChange,
         handleCreateRequest, handleApprove, handleReject, handleShip, handleEdit,
+        handleCloseModal,
         displayRequests
     };
 }

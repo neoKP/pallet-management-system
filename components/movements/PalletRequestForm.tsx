@@ -13,6 +13,7 @@ interface PalletRequestFormProps {
     handleItemChange: (index: number, field: 'palletId' | 'qty', value: string) => void;
     newRequestMeta: any;
     setNewRequestMeta: (meta: any) => void;
+    isEditing?: boolean;
 }
 
 const PalletRequestForm: React.FC<PalletRequestFormProps> = ({
@@ -24,7 +25,8 @@ const PalletRequestForm: React.FC<PalletRequestFormProps> = ({
     handleRemoveItem,
     handleItemChange,
     newRequestMeta,
-    setNewRequestMeta
+    setNewRequestMeta,
+    isEditing = false
 }) => {
     if (!isOpen) return null;
 
@@ -32,7 +34,9 @@ const PalletRequestForm: React.FC<PalletRequestFormProps> = ({
         <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-50 flex items-center justify-center p-4">
             <div className="bg-white rounded-[2rem] w-full max-w-lg shadow-2xl overflow-hidden animate-in fade-in zoom-in duration-300">
                 <div className="p-6 border-b border-slate-100 flex justify-between items-center bg-slate-50">
-                    <h3 className="text-xl font-black text-slate-900">สร้างคำขอรับพาเลท</h3>
+                    <h3 className="text-xl font-black text-slate-900">
+                        {isEditing ? 'แก้ไขคำขอพาเลท' : 'สร้างคำขอรับพาเลท'}
+                    </h3>
                     <button
                         onClick={onClose}
                         className="p-2 hover:bg-slate-200 rounded-full transition-colors"
@@ -42,7 +46,10 @@ const PalletRequestForm: React.FC<PalletRequestFormProps> = ({
                         <Plus size={24} className="rotate-45 text-slate-400" />
                     </button>
                 </div>
+                {/* ... existing form fields ... */}
+                {/* (I will replace the whole form block to ensure consistency) */}
                 <form onSubmit={onSubmit} className="p-8 space-y-6 max-h-[80vh] overflow-y-auto">
+                    {/* Items Section */}
                     <div className="space-y-4">
                         <div className="flex justify-between items-center">
                             <label className="block text-sm font-bold text-slate-700">รายการพาเลท <span className="text-red-500">*</span></label>
@@ -189,9 +196,10 @@ const PalletRequestForm: React.FC<PalletRequestFormProps> = ({
 
                     <button
                         type="submit"
-                        className="w-full py-5 bg-blue-600 text-white rounded-[2rem] font-black text-lg hover:bg-blue-700 transition-all shadow-xl shadow-blue-200 flex items-center justify-center gap-3"
+                        className={`w-full py-5 text-white rounded-[2rem] font-black text-lg transition-all shadow-xl flex items-center justify-center gap-3 ${isEditing ? 'bg-emerald-600 hover:bg-emerald-700 shadow-emerald-100' : 'bg-blue-600 hover:bg-blue-700 shadow-blue-100'}`}
                     >
-                        <Send size={24} /> ส่งคำขอ (Submit Request)
+                        <Send size={24} />
+                        {isEditing ? 'บันทึกการแก้ไข (Update Request)' : 'ส่งคำขอ (Submit Request)'}
                     </button>
                 </form>
             </div>
