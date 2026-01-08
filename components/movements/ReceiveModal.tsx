@@ -11,136 +11,202 @@ interface ReceiveModalProps {
 }
 
 const ReceiveModal: React.FC<ReceiveModalProps> = ({ isOpen, onClose, group, onConfirm }) => {
-    const [inputs, setInputs] = useState<Record<string, string>>({});
+    // Local state for items being verified, allowing adjustments and splits
+    const [adjustedItems, setAdjustedItems] = useState<Transaction[]>([]);
     const [error, setError] = useState<string | null>(null);
-
-    // Group items by palletId (in case multiple lines of same pallet)
-    const consolidatedItems = group.reduce((acc, tx) => {
-        if (!acc[tx.palletId]) {
-            acc[tx.palletId] = { ...tx, qty: 0 };
-        }
-        acc[tx.palletId].qty += tx.qty;
-        return acc;
-    }, {} as Record<string, Transaction>);
-
-    const items = Object.values(consolidatedItems);
 
     useEffect(() => {
         if (isOpen) {
-            setInputs({});
+            // Clone the group to allow local adjustments
+            setAdjustedItems(group.map(tx => ({ ...tx })));
             setError(null);
         }
-    }, [isOpen]);
+    }, [isOpen, group]);
 
     if (!isOpen) return null;
 
     const sourceBranch = group[0]?.source || '?';
     const docNo = group[0]?.docNo || '?';
 
-    const handleInputChange = (palletId: string, value: string) => {
-        setInputs(prev => ({ ...prev, [palletId]: value }));
+    const handlePalletChange = (index: number, newPalletId: PalletId) => {
+        const newItems = [...adjustedItems];
+        newItems[index] = { ...newItems[index], palletId: newPalletId };
+        setAdjustedItems(newItems);
         setError(null);
     };
 
+    const handleQtyChange = (index: number, value: string) => {
+        const newItems = [...adjustedItems];
+        newItems[index] = { ...newItems[index], qty: parseInt(value) || 0 };
+        setAdjustedItems(newItems);
+        setError(null);
+    };
+
+    const handleSplit = (index: number) => {
+        const itemToSplit = adjustedItems[index];
+        const newItem: Transaction = {
+            ...itemToSplit,
+            id: Date.now() + Math.floor(Math.random() * 1000), // New temp ID
+            qty: 0, // Let user specify the split qty
+        };
+        const newItems = [...adjustedItems];
+        newItems.splice(index + 1, 0, newItem);
+        setAdjustedItems(newItems);
+    };
+
+    const handleRemoveSplit = (index: number) => {
+        if (adjustedItems.length <= 1) return;
+        setAdjustedItems(adjustedItems.filter((_, i) => i !== index));
+    };
+
     const handleConfirm = () => {
-        // Validate
-        for (const item of items) {
-            const inputQty = parseInt(inputs[item.palletId] || '0');
-            if (inputQty !== item.qty) {
-                setError(`จำนวนยอดรับไม่ถูกต้องสำหรับ ${PALLET_TYPES.find(p => p.id === item.palletId)?.name} (แจ้งมา: ${item.qty}, นับได้: ${inputQty})`);
+        const totalQtyReceived = adjustedItems.reduce((sum, item) => sum + item.qty, 0);
+        const totalQtySent = group.reduce((sum, item) => sum + item.qty, 0);
+
+        // Validation
+        if (totalQtyReceived === 0) {
+            setError('กรุณาระบุจำนวนสินค้าที่ได้รับ');
+            return;
+        }
+
+        for (const item of adjustedItems) {
+            if (item.qty < 0) {
+                setError('จำนวนสินค้าไม่สามารถติดลบได้');
                 return;
             }
         }
 
-        onConfirm(group);
+        onConfirm(adjustedItems);
         onClose();
     };
 
-    const isAllMatched = items.every(item => parseInt(inputs[item.palletId] || '0') === item.qty);
-
     return (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-in fade-in duration-200">
-            <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg overflow-hidden animate-in zoom-in-95 duration-200">
-                <div className="bg-slate-50 p-6 border-b border-slate-100 flex justify-between items-center">
+            <div className="bg-white rounded-3xl shadow-2xl w-full max-w-xl overflow-hidden animate-in zoom-in-95 duration-200 flex flex-col max-h-[90vh]">
+                <div className="bg-white p-6 border-b border-slate-100 flex justify-between items-center shrink-0">
                     <div>
-                        <h3 className="text-xl font-bold text-slate-900 flex items-center gap-2">
-                            <Package className="text-blue-600" />
-                            ตรวจสอบการรับเข้า (Verify Inbound)
+                        <h3 className="text-xl font-black text-slate-900 flex items-center gap-2">
+                            <div className="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center">
+                                <Package className="text-white" size={18} />
+                            </div>
+                            ตรวจสอบการรับเข้า
                         </h3>
-                        <p className="text-sm text-slate-500 mt-1">Doc No: <span className="font-mono text-slate-700">{docNo}</span> | From: <span className="font-bold text-slate-700">{sourceBranch}</span></p>
+                        <div className="flex items-center gap-3 mt-1">
+                            <span className="text-xs font-bold text-slate-400 bg-slate-50 px-2 py-0.5 rounded uppercase tracking-wider">DOC: {docNo}</span>
+                            <span className="text-xs font-bold text-slate-400 bg-slate-50 px-2 py-0.5 rounded uppercase tracking-wider">FROM: {sourceBranch}</span>
+                        </div>
                     </div>
-                    <button onClick={onClose} className="p-2 hover:bg-slate-200 rounded-full transition-colors" aria-label="Close">
-                        <X size={20} className="text-slate-500" />
+                    <button onClick={onClose} className="p-2 hover:bg-slate-100 rounded-full transition-colors" title="ปิดหน้าต่าง">
+                        <X size={20} className="text-slate-400" />
                     </button>
                 </div>
 
-                <div className="p-6 space-y-4">
-                    <div className="bg-blue-50 border border-blue-100 rounded-xl p-4 flex gap-3 text-sm text-blue-900">
-                        <AlertTriangle size={20} className="shrink-0 text-blue-600" />
-                        <p>กรุณานับจำนวนสินค้าจริงที่ได้รับ และกรอกลงในช่อง "จำนวนที่นับได้" เพื่อยืนยันความถูกต้อง</p>
+                <div className="p-6 space-y-6 overflow-y-auto bg-slate-50/50">
+                    <div className="bg-blue-600 rounded-2xl p-4 text-white shadow-lg shadow-blue-100 flex gap-4">
+                        <AlertTriangle className="shrink-0" size={24} />
+                        <div className="text-sm">
+                            <p className="font-bold mb-1">คำแนะนำการรับสินค้า</p>
+                            <p className="opacity-90">หากพบสินค้าไม่ตรงประเภท สามารถกด "แยกรายการ" เพื่อระบุจำนวนตามประเภทที่ได้รับจริงได้</p>
+                        </div>
                     </div>
 
-                    <div className="space-y-3">
-                        {items.map((item) => {
+                    <div className="space-y-4">
+                        {adjustedItems.map((item, idx) => {
                             const pallet = PALLET_TYPES.find(p => p.id === item.palletId);
-                            const inputVal = inputs[item.palletId] || '';
-                            const isMatch = parseInt(inputVal) === item.qty;
-                            const isFilled = inputVal !== '';
+                            const isNewSplit = !group.some(g => g.id === item.id);
 
                             return (
-                                <div key={item.palletId} className={`p-4 rounded-xl border-2 transition-all ${isMatch ? 'border-green-500 bg-green-50' : 'border-slate-100 bg-white'}`}>
-                                    <div className="flex justify-between items-center mb-2">
-                                        <div className="font-bold text-slate-900">{pallet?.name}</div>
-                                        <div className="text-sm font-bold text-slate-600 bg-slate-100 px-3 py-1 rounded-lg">ยอดส่งมา: <span className="text-lg text-slate-900">{item.qty}</span></div>
-                                    </div>
-                                    <div className="flex items-center gap-3">
-                                        <div className="grow">
+                                <div key={item.id} className={`group relative bg-white p-5 rounded-3xl border-2 transition-all duration-300 hover:shadow-xl hover:shadow-slate-200/50 ${isNewSplit ? 'border-blue-200 ring-4 ring-blue-50' : 'border-white shadow-sm'}`}>
+                                    <div className="grid grid-cols-12 gap-4 items-end">
+                                        <div className="col-span-7">
+                                            <label className="block text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] mb-2 px-1">ประเภทพาเลท</label>
+                                            <div className="relative">
+                                                <select
+                                                    value={item.palletId}
+                                                    onChange={(e) => handlePalletChange(idx, e.target.value as PalletId)}
+                                                    className="w-full bg-slate-50 border-none rounded-2xl px-4 py-3 font-bold text-slate-900 appearance-none focus:ring-2 focus:ring-blue-500 transition-all cursor-pointer"
+                                                    title="เลือกประเภทพาเลท"
+                                                    aria-label="เลือกประเภทพาเลท"
+                                                >
+                                                    {PALLET_TYPES.map(p => (
+                                                        <option key={p.id} value={p.id}>{p.name}</option>
+                                                    ))}
+                                                </select>
+                                                <div className="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none">
+                                                    <div className="w-1.5 h-1.5 bg-blue-500 rounded-full" />
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        <div className="col-span-4">
+                                            <label className="block text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] mb-2 px-1 text-center">จำนวนที่รับ</label>
                                             <input
                                                 type="number"
-                                                placeholder="ระบุนวนที่นับได้..."
-                                                className={`w-full px-4 py-2 rounded-lg border focus:ring-2 focus:outline-none transition-all ${isFilled && !isMatch ? 'border-red-300 focus:ring-red-200' : 'border-slate-300 focus:ring-blue-200'}`}
-                                                value={inputVal}
-                                                onChange={(e) => handleInputChange(item.palletId, e.target.value)}
+                                                className="w-full bg-slate-50 border-none rounded-2xl px-4 py-3 font-black text-xl text-center text-slate-900 focus:ring-2 focus:ring-blue-500 transition-all"
+                                                value={item.qty || ''}
+                                                placeholder="0"
+                                                onChange={(e) => handleQtyChange(idx, e.target.value)}
+                                                title="จำนวนที่รับจริง"
+                                                aria-label="จำนวนที่รับจริง"
                                             />
                                         </div>
-                                        <div className="shrink-0 w-8 flex justify-center">
-                                            {isMatch ? (
-                                                <Check className="text-green-600 animate-in zoom-in" />
-                                            ) : isFilled ? (
-                                                <X className="text-red-500 animate-in zoom-in" />
-                                            ) : (
-                                                <div className="w-2 h-2 rounded-full bg-slate-300" />
+
+                                        <div className="col-span-1 flex flex-col gap-2">
+                                            <button
+                                                onClick={() => handleSplit(idx)}
+                                                className="p-2 bg-slate-50 hover:bg-blue-50 hover:text-blue-600 rounded-xl transition-all"
+                                                title="แยกรายการ"
+                                            >
+                                                <AlertTriangle size={18} />
+                                            </button>
+                                            {adjustedItems.length > 1 && (
+                                                <button
+                                                    onClick={() => handleRemoveSplit(idx)}
+                                                    className="p-2 bg-slate-50 hover:bg-red-50 hover:text-red-600 rounded-xl transition-all"
+                                                    title="ลบรายการ"
+                                                >
+                                                    <X size={18} />
+                                                </button>
                                             )}
                                         </div>
                                     </div>
+                                    {isNewSplit && (
+                                        <div className="absolute -top-3 left-6 px-3 py-1 bg-blue-600 text-white text-[10px] font-black rounded-full shadow-lg shadow-blue-200 uppercase tracking-widest">
+                                            รายการแยก
+                                        </div>
+                                    )}
                                 </div>
                             );
                         })}
                     </div>
 
                     {error && (
-                        <div className="p-3 bg-red-50 text-red-600 text-sm font-bold rounded-lg flex items-center gap-2 animate-in slide-in-from-top-1">
-                            <AlertTriangle size={16} />
+                        <div className="p-4 bg-red-50 text-red-600 text-sm font-bold rounded-2xl flex items-center gap-3 border border-red-100 animate-in shake-2">
+                            <AlertTriangle size={20} />
                             {error}
                         </div>
                     )}
                 </div>
 
-                <div className="p-6 bg-slate-50 border-t border-slate-100 flex justify-end gap-3">
-                    <button
-                        onClick={onClose}
-                        className="px-6 py-2 rounded-xl font-bold text-slate-600 hover:bg-slate-200 transition-colors"
-                    >
-                        ยกเลิก
-                    </button>
-                    <button
-                        onClick={handleConfirm}
-                        disabled={!isAllMatched}
-                        className={`px-6 py-2 rounded-xl font-bold text-white shadow-lg transition-all flex items-center gap-2 ${isAllMatched ? 'bg-green-600 hover:bg-green-700 shadow-green-200' : 'bg-slate-300 cursor-not-allowed'}`}
-                    >
-                        <Check size={18} />
-                        ยืนยันการรับ
-                    </button>
+                <div className="p-6 bg-white border-t border-slate-100 flex items-center justify-between shrink-0">
+                    <div className="text-slate-400 text-sm font-bold">
+                        ยอดรับรวม: <span className="text-slate-900 text-lg font-black">{adjustedItems.reduce((s, i) => s + i.qty, 0)}</span>
+                    </div>
+                    <div className="flex gap-3">
+                        <button
+                            onClick={onClose}
+                            className="px-6 py-3 rounded-2xl font-black text-slate-400 hover:bg-slate-50 transition-colors"
+                        >
+                            ยกเลิก
+                        </button>
+                        <button
+                            onClick={handleConfirm}
+                            className="px-10 py-3 bg-blue-600 text-white rounded-2xl font-black shadow-xl shadow-blue-200 hover:bg-blue-700 hover:scale-[1.02] active:scale-95 transition-all flex items-center gap-2"
+                        >
+                            <Check size={20} />
+                            ยืนยันการรับเข้า
+                        </button>
+                    </div>
                 </div>
             </div>
         </div>

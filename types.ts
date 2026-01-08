@@ -101,6 +101,7 @@ export interface Transaction {
   driverName?: string;
   transportCompany?: string;
   referenceDocNo?: string;
+  receivedAt?: string;
 }
 
 /**

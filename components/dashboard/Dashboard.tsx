@@ -5,12 +5,6 @@ import {
     Flame,
     Box,
     Layers,
-    BarChart3,
-    History as HistoryIcon,
-    Download,
-    Clock,
-    Trash2,
-    Printer,
     ShieldCheck,
     Recycle
 } from 'lucide-react';
@@ -20,8 +14,13 @@ import StatsCard from './StatsCard';
 import StockAdjustmentModal from './StockAdjustmentModal';
 import TransactionTimelineModal from '../movements/TransactionTimelineModal';
 import DocumentPreviewModal from '../movements/DocumentPreviewModal';
-import ExcelJS from 'exceljs';
-import { BRANCHES, PALLET_TYPES, VEHICLE_TYPES } from '../../constants';
+import StockVisualizer from './StockVisualizer';
+import RecentTransactionsTable from './RecentTransactionsTable';
+import { handleExportToExcel } from '../../utils/excelExport';
+import { BRANCHES } from '../../constants';
+// @ts-ignore
+import Swal from 'sweetalert2';
+
 interface DashboardProps {
     stock: Stock;
     selectedBranch: BranchId | 'ALL';
@@ -29,28 +28,6 @@ interface DashboardProps {
     addTransaction: (transaction: Partial<Transaction>) => void;
     currentUser: User | null;
 }
-
-interface StockBarProps {
-    width: number;
-    color: string;
-}
-
-const StockBar: React.FC<StockBarProps> = ({ width, color }) => {
-    const barRef = React.useRef<HTMLDivElement>(null);
-
-    React.useEffect(() => {
-        if (barRef.current) {
-            barRef.current.style.width = `${width}%`;
-        }
-    }, [width]);
-
-    return (
-        <div
-            ref={barRef}
-            className={`h-full ${color} rounded-full transition-all duration-1000`}
-        />
-    );
-};
 
 const Dashboard: React.FC<DashboardProps> = ({ stock, selectedBranch, transactions, addTransaction, currentUser }) => {
     const { deleteTransaction } = useStock();
@@ -70,8 +47,6 @@ const Dashboard: React.FC<DashboardProps> = ({ stock, selectedBranch, transactio
     };
 
     const handleDelete = (txId: number) => {
-        // @ts-ignore
-        const Swal = window.Swal;
         if (Swal) {
             Swal.fire({
                 title: 'ยืนยันการลบรายการ?',
@@ -92,15 +67,10 @@ const Dashboard: React.FC<DashboardProps> = ({ stock, selectedBranch, transactio
                     );
                 }
             });
-        } else {
-            if (confirm('ยืนยันการลบรายการ?')) {
-                deleteTransaction(txId);
-            }
         }
     };
 
     const handlePrintDoc = (mainTx: Transaction) => {
-        // Group all items with the same Doc No.
         const group = transactions.filter(t => t.docNo === mainTx.docNo);
         const data = {
             source: mainTx.source,
@@ -123,7 +93,6 @@ const Dashboard: React.FC<DashboardProps> = ({ stock, selectedBranch, transactio
             const total: Record<string, number> = {};
             const activeBranchIds = BRANCHES.map(b => b.id);
 
-            // 1. Sum up ONLY active branches defined in constants (prevents ghost data)
             activeBranchIds.forEach(branchId => {
                 const branchStock = stock[branchId];
                 if (branchStock) {
@@ -133,9 +102,6 @@ const Dashboard: React.FC<DashboardProps> = ({ stock, selectedBranch, transactio
                 }
             });
 
-            // 2. Add PENDING transactions (Assets in-transit)
-            // These pallets have been deducted from source but not yet added to dest.
-            // For "ALL" view, they should still be counted as company assets.
             transactions.forEach(t => {
                 if (t.status === 'PENDING') {
                     total[t.palletId] = (total[t.palletId] || 0) + (t.qty as number);
@@ -168,120 +134,39 @@ const Dashboard: React.FC<DashboardProps> = ({ stock, selectedBranch, transactio
 
     const isRedAlert = stats.loscamRed > 500;
 
-    const handleExport = async () => {
-        const workbook = new ExcelJS.Workbook();
-        const worksheet = workbook.addWorksheet('Inventory Log');
-
-        // Define Columns
-        worksheet.columns = [
-            { header: 'วันที่ (Date)', key: 'date', width: 15 },
-            { header: 'เลขที่เอกสาร (Doc No)', key: 'docNo', width: 20 },
-            { header: 'ประเภท (Type)', key: 'type', width: 10 },
-            { header: 'ต้นทาง (Source)', key: 'source', width: 15 },
-            { header: 'ปลายทาง (Dest)', key: 'dest', width: 15 },
-            { header: 'พาเลท (Pallet)', key: 'palletId', width: 15 },
-            { header: 'รับเข้า (In)', key: 'qtyIn', width: 10 },
-            { header: 'จ่ายออก (Out)', key: 'qtyOut', width: 10 },
-            { header: 'เอกสารอ้างอิง (Ref Doc)', key: 'referenceDocNo', width: 20 },
-            { header: 'ทะเบียนรถ (Vehicle)', key: 'carRegistration', width: 15 },
-            { header: 'คนขับ (Driver)', key: 'driverName', width: 20 },
-            { header: 'บริษัทขนส่ง (Transit Co)', key: 'transportCompany', width: 20 },
-            { header: 'หมายเหตุ (Note)', key: 'note', width: 30 }
-        ];
-
-        // Process Data
-        displayTransactions.forEach(t => {
-            const isAdjustment = t.type === 'ADJUST';
-            let qtyIn = 0;
-            let qtyOut = 0;
-
-            if (isAdjustment) {
-                const isSourceSystem = ['ADJUSTMENT', 'SYSTEM_ADJUST', 'SYSTEM'].includes(t.source);
-                if (isSourceSystem) qtyIn = t.qty; else qtyOut = t.qty;
-            } else if (selectedBranch !== 'ALL') {
-                if (t.dest === selectedBranch) qtyIn = t.qty;
-                if (t.source === selectedBranch) qtyOut = t.qty;
-            } else {
-                const isInternal = BRANCHES.some(b => b.id === t.source) && BRANCHES.some(b => b.id === t.dest);
-                if (isInternal) {
-                    qtyIn = t.qty;
-                    qtyOut = t.qty;
-                } else {
-                    qtyIn = t.type === 'IN' ? t.qty : 0;
-                    qtyOut = t.type === 'OUT' ? t.qty : 0;
-                }
-            }
-
-            const row = worksheet.addRow({
-                date: t.date,
-                docNo: t.docNo,
-                type: t.status === 'CANCELLED' ? 'CANCELLED' : t.type,
-                source: t.source,
-                dest: t.dest,
-                palletId: t.palletId,
-                qtyIn: qtyIn || '-',
-                qtyOut: qtyOut || '-',
-                referenceDocNo: t.referenceDocNo || '-',
-                carRegistration: t.carRegistration || '-',
-                driverName: t.driverName || '-',
-                transportCompany: t.transportCompany || '-',
-                note: t.note || '-'
-            });
-
-            // If cancelled, make row look subtle
-            if (t.status === 'CANCELLED') {
-                row.font = { color: { argb: 'FFAAAAAA' }, strike: true };
-            }
-        });
-
-        // Styling Header
-        const headerRow = worksheet.getRow(1);
-        headerRow.font = { bold: true, color: { argb: 'FFFFFFFF' } };
-        headerRow.fill = {
-            type: 'pattern',
-            pattern: 'solid',
-            fgColor: { argb: 'FF1E293B' } // slate-800
-        };
-        headerRow.alignment = { vertical: 'middle', horizontal: 'center' };
-
-        // Add borders to all cells
-        worksheet.eachRow((row, rowNumber) => {
-            row.eachCell(cell => {
-                cell.border = {
-                    top: { style: 'thin' },
-                    left: { style: 'thin' },
-                    bottom: { style: 'thin' },
-                    right: { style: 'thin' }
-                };
-            });
-        });
-
-        // Generate and Download
-        const buffer = await workbook.xlsx.writeBuffer();
-        const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
-        const url = window.URL.createObjectURL(blob);
-        const anchor = document.createElement('a');
-        anchor.href = url;
-        anchor.download = `inventory_log_${new Date().toISOString().split('T')[0]}.xlsx`;
-        anchor.click();
-        window.URL.revokeObjectURL(url);
-    };
-
     const handleAdjustmentSubmit = async (data: { type: 'IN' | 'OUT'; branchId: string; palletId: PalletId; qty: number; note: string }) => {
-        await addTransaction({
-            type: 'ADJUST',
-            source: data.type === 'IN' ? 'ADJUSTMENT' : data.branchId,
-            dest: data.type === 'IN' ? data.branchId : 'ADJUSTMENT',
-            palletId: data.palletId,
-            qty: data.qty,
-            note: data.note,
-            status: 'COMPLETED'
-        });
+        try {
+            await (addTransaction({
+                type: 'ADJUST',
+                source: data.type === 'IN' ? 'ADJUSTMENT' : data.branchId,
+                dest: data.type === 'IN' ? data.branchId : 'ADJUSTMENT',
+                palletId: data.palletId,
+                qty: data.qty,
+                note: data.note,
+                status: 'COMPLETED'
+            }) as any);
+
+            setIsAdjModalOpen(false);
+            Swal.fire({
+                icon: 'success',
+                title: 'สำเร็จ',
+                text: 'ปรับปรุงสต็อกเรียบร้อยแล้ว',
+                timer: 1500,
+                showConfirmButton: false
+            });
+        } catch (error: any) {
+            Swal.fire({
+                icon: 'error',
+                title: 'ไม่สามารถปรับปรุงสต็อกได้!',
+                text: error.message || 'เกิดข้อผิดพลาดในการบันทึกข้อมูล',
+                confirmButtonText: 'ตกลง',
+                confirmButtonColor: '#d33',
+            });
+        }
     };
 
     return (
         <div className="space-y-6">
-            {/* Modal */}
             <StockAdjustmentModal
                 isOpen={isAdjModalOpen}
                 onClose={() => setIsAdjModalOpen(false)}
@@ -289,7 +174,6 @@ const Dashboard: React.FC<DashboardProps> = ({ stock, selectedBranch, transactio
                 currentBranch={selectedBranch}
             />
 
-            {/* 1. Alert Banner (Top Priority) */}
             {isRedAlert && (
                 <div className="bg-red-50 border border-red-200 rounded-2xl p-4 flex items-start gap-3 shadow-sm animate-in fade-in slide-in-from-top-2">
                     <AlertCircle className="text-red-600 shrink-0 mt-0.5" />
@@ -302,7 +186,6 @@ const Dashboard: React.FC<DashboardProps> = ({ stock, selectedBranch, transactio
                 </div>
             )}
 
-            {/* 2. Stats Grid */}
             <div className="grid grid-cols-2 lg:grid-cols-4 xl:grid-cols-4 gap-4">
                 <StatsCard
                     title="ยอดรวมทั้งสิ้น"
@@ -363,193 +246,21 @@ const Dashboard: React.FC<DashboardProps> = ({ stock, selectedBranch, transactio
                 />
             </div>
 
-            {/* 3. Stock Visualizer (Chart) - Simplified Bar */}
-            <div className="bg-white p-6 rounded-3xl shadow-sm border border-slate-100">
-                <div className="flex items-center gap-2 mb-6">
-                    <BarChart3 className="text-slate-400" size={20} />
-                    <h2 className="text-lg font-black text-slate-800">ภาพรวมสต็อก (Stock Visualizer)</h2>
-                </div>
+            <StockVisualizer
+                currentStock={currentStock}
+                totalStock={stats.totalStock}
+            />
 
-                {/* Visual Bars */}
-                <div className="space-y-4">
-                    {PALLET_TYPES.map(pallet => {
-                        const qty = currentStock[pallet.id] || 0;
-                        const barWidth = stats.totalStock > 0 ? (qty / stats.totalStock) * 100 : 0;
-
-                        return (
-                            <div key={pallet.id} className={qty === 0 ? 'opacity-40' : ''}>
-                                <div className="flex justify-between text-sm font-bold mb-1">
-                                    <span className="text-slate-600 flex items-center gap-2">
-                                        <span className={`w-2.5 h-2.5 rounded-full ${pallet.color}`}></span>
-                                        {pallet.name}
-                                    </span>
-                                    <span className="text-slate-900">{qty}</span>
-                                </div>
-                                <div className="h-2.5 bg-slate-100 rounded-full overflow-hidden">
-                                    <StockBar width={barWidth} color={pallet.color} />
-                                </div>
-                            </div>
-                        );
-                    })}
-                </div>
-            </div>
-
-            {/* 4. Transactions List (Inventory Tracking) */}
-            <div className="bg-white rounded-3xl shadow-sm border border-slate-100 flex flex-col overflow-hidden">
-                <div className="p-6 border-b border-slate-100 flex justify-between items-center">
-                    <div className="flex items-center gap-2">
-                        <HistoryIcon className="text-slate-400" size={20} />
-                        <h2 className="text-lg font-black text-slate-800">Inventory Tracking System</h2>
-                    </div>
-                    <div className="flex gap-2">
-                        {currentUser?.role === 'ADMIN' && (
-                            <button
-                                onClick={() => setIsAdjModalOpen(true)}
-                                className="px-3 py-1.5 text-xs font-bold bg-amber-50 text-amber-600 rounded-lg hover:bg-amber-100 transition-colors"
-                            >
-                                ปรับปรุงยอด (Adj)
-                            </button>
-                        )}
-                        <button
-                            onClick={handleExport}
-                            className="flex items-center gap-1 px-3 py-1.5 text-xs font-bold bg-green-50 text-green-700 rounded-lg hover:bg-green-100 transition-colors"
-                        >
-                            <Download size={14} /> Export Excel
-                        </button>
-                    </div>
-                </div>
-
-                <div className="overflow-x-auto">
-                    <table className="w-full text-left text-sm">
-                        <thead className="bg-slate-50 text-slate-500 font-bold border-b border-slate-100">
-                            <tr>
-                                <th className="p-4">Date/Time</th>
-                                <th className="p-4">Doc No.</th>
-                                <th className="p-4">Type</th>
-                                <th className="p-4">Reference / ECD No.</th>
-                                <th className="p-4">Transport</th>
-                                <th className="p-4">Details</th>
-                                <th className="p-4 text-center">รับ (In)</th>
-                                <th className="p-4 text-center">จ่าย (Out)</th>
-                            </tr>
-                        </thead>
-                        <tbody className="divide-y divide-slate-50">
-                            {displayTransactions.length === 0 ? (
-                                <tr>
-                                    <td colSpan={8} className="p-8 text-center text-slate-400">No transactions found.</td>
-                                </tr>
-                            ) : (
-                                displayTransactions.map((tx) => {
-                                    const isAdjustment = tx.type === 'ADJUST';
-                                    let qtyIn: any = '-';
-                                    let qtyOut: any = '-';
-
-                                    if (isAdjustment) {
-                                        const isSourceSystem = ['ADJUSTMENT', 'SYSTEM_ADJUST', 'SYSTEM'].includes(tx.source);
-                                        if (isSourceSystem) {
-                                            qtyIn = tx.qty;
-                                        } else {
-                                            qtyOut = tx.qty;
-                                        }
-                                    } else if (selectedBranch !== 'ALL') {
-                                        if (tx.dest === selectedBranch) qtyIn = tx.qty;
-                                        if (tx.source === selectedBranch) qtyOut = tx.qty;
-                                    } else {
-                                        const isInternal = BRANCHES.some(b => b.id === tx.source) && BRANCHES.some(b => b.id === tx.dest);
-                                        if (isInternal) {
-                                            qtyIn = tx.qty;
-                                            qtyOut = tx.qty;
-                                        } else {
-                                            qtyIn = (tx.type === 'IN') ? tx.qty : '-';
-                                            qtyOut = (tx.type === 'OUT') ? tx.qty : '-';
-                                        }
-                                    }
-
-                                    const isCancelled = tx.status === 'CANCELLED';
-
-                                    return (
-                                        <tr key={`${tx.id}-${tx.docNo}`} className={`transition-colors ${isCancelled ? 'bg-red-50/30' : 'hover:bg-slate-50/50'}`}>
-                                            <td className={`p-4 text-slate-500 whitespace-nowrap ${isCancelled ? 'line-through decoration-red-300 opacity-60' : ''}`}>
-                                                {new Date(tx.date).toLocaleDateString('th-TH')}
-                                            </td>
-                                            <td className="p-4 whitespace-nowrap">
-                                                <div className="flex flex-col items-start gap-1">
-                                                    <span className={`font-mono font-medium ${isCancelled ? 'text-slate-400 line-through decoration-red-300' : 'text-blue-600'}`}>
-                                                        {tx.docNo}
-                                                    </span>
-                                                    <div className="flex items-center gap-1">
-                                                        <button
-                                                            onClick={() => handleViewTimeline(tx)}
-                                                            className="px-2 py-0.5 bg-slate-100 hover:bg-blue-50 text-slate-500 hover:text-blue-600 rounded border border-slate-200 hover:border-blue-200 text-[10px] font-bold transition-all flex items-center gap-1"
-                                                            title="View Timeline"
-                                                        >
-                                                            <Clock size={10} /> Timeline
-                                                        </button>
-                                                        <button
-                                                            onClick={() => handlePrintDoc(tx)}
-                                                            className="p-1 px-1.5 bg-slate-100 hover:bg-slate-200 text-slate-500 hover:text-slate-800 rounded border border-slate-200 transition-all flex items-center gap-1"
-                                                            title="Print PDF"
-                                                        >
-                                                            <Printer size={10} />
-                                                        </button>
-                                                        {currentUser?.role === 'ADMIN' && !isCancelled && (
-                                                            <button
-                                                                onClick={() => handleDelete(tx.id)}
-                                                                className="p-1 bg-white hover:bg-red-50 text-slate-400 hover:text-red-500 rounded border border-slate-200 hover:border-red-200 transition-colors"
-                                                                title="Delete Transaction"
-                                                            >
-                                                                <Trash2 size={12} />
-                                                            </button>
-                                                        )}
-                                                    </div>
-                                                </div>
-                                            </td>
-                                            <td className={`p-4 text-slate-900 font-bold whitespace-nowrap ${isCancelled ? 'opacity-50' : ''}`}>
-                                                {isCancelled ? (
-                                                    <span className="px-2 py-0.5 rounded-md text-[10px] bg-red-100 text-red-600 font-black">
-                                                        CANCELLED
-                                                    </span>
-                                                ) : (
-                                                    <span className={`px-2 py-0.5 rounded-md text-[10px] ${(selectedBranch !== 'ALL' && tx.dest === selectedBranch) || tx.type === 'IN' ? 'bg-emerald-100 text-emerald-700' :
-                                                        (selectedBranch !== 'ALL' && tx.source === selectedBranch) || tx.type === 'OUT' ? 'bg-orange-100 text-orange-700' :
-                                                            tx.type === 'ADJUST' ? 'bg-amber-100 text-amber-700' :
-                                                                'bg-slate-100 text-slate-600'
-                                                        }`}>
-                                                        {selectedBranch === 'ALL' ? tx.type : (tx.dest === selectedBranch ? 'IN' : 'OUT')}
-                                                    </span>
-                                                )}
-                                            </td>
-                                            <td className={`p-4 text-slate-600 ${isCancelled ? 'line-through opacity-50' : ''}`}>
-                                                {tx.referenceDocNo || '-'}
-                                            </td>
-                                            <td className={`p-4 text-slate-600 text-xs ${isCancelled ? 'line-through opacity-50' : ''}`}>
-                                                <div className="flex flex-col gap-0.5">
-                                                    {tx.carRegistration && <div className="flex items-center gap-1"><span className="font-bold">{tx.carRegistration}</span> {(tx.vehicleType) ? `(${VEHICLE_TYPES.find(v => v.id === tx.vehicleType)?.name || tx.vehicleType})` : ''}</div>}
-                                                    {tx.driverName && <span>{tx.driverName}</span>}
-                                                    {tx.transportCompany && <span className="text-[10px] text-slate-400">{tx.transportCompany}</span>}
-                                                </div>
-                                            </td>
-                                            <td className={`p-4 text-slate-600 ${isCancelled ? 'line-through opacity-50' : ''}`}>
-                                                <div className="font-medium text-slate-800">{tx.palletId}</div>
-                                                <div className="text-xs text-slate-400">
-                                                    {tx.source} <span className="mx-1">→</span> {tx.dest}
-                                                </div>
-                                                {tx.note && <div className="text-[10px] text-slate-400 mt-1 italic">"{tx.note}"</div>}
-                                            </td>
-                                            <td className={`p-4 text-center font-black ${isCancelled ? 'text-slate-400 line-through opacity-50' : 'text-emerald-600 bg-emerald-50/30'}`}>
-                                                {qtyIn}
-                                            </td>
-                                            <td className={`p-4 text-center font-black ${isCancelled ? 'text-slate-400 line-through opacity-50' : 'text-red-600 bg-red-50/30'}`}>
-                                                {qtyOut}
-                                            </td>
-                                        </tr>
-                                    );
-                                })
-                            )}
-                        </tbody>
-                    </table>
-                </div>
-            </div>
+            <RecentTransactionsTable
+                displayTransactions={displayTransactions}
+                selectedBranch={selectedBranch}
+                currentUser={currentUser}
+                onViewTimeline={handleViewTimeline}
+                onPrintDoc={handlePrintDoc}
+                onDelete={handleDelete}
+                onExport={() => handleExportToExcel(displayTransactions, selectedBranch)}
+                onOpenAdjModal={() => setIsAdjModalOpen(true)}
+            />
 
             {timelineTx && (
                 <TransactionTimelineModal
@@ -566,7 +277,6 @@ const Dashboard: React.FC<DashboardProps> = ({ stock, selectedBranch, transactio
                     setPrintData(null);
                 }}
                 onConfirm={() => {
-                    // Reuse confirm as just close in context of History view
                     setIsPrintOpen(false);
                     setPrintData(null);
                 }}
