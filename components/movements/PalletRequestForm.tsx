@@ -94,23 +94,53 @@ const PalletRequestForm: React.FC<PalletRequestFormProps> = ({
                         ))}
                     </div>
 
-                    <div className="grid grid-cols-1 gap-4">
+                    <div className="grid grid-cols-1 gap-6">
+                        {/* Request Type Toggle (Only for Hub) */}
+                        {newRequestMeta.branchId === 'hub_nw' && (
+                            <div>
+                                <label className="block text-sm font-bold text-slate-700 mb-2">ประเภทการดำเนินการ</label>
+                                <div className="flex gap-2 p-1 bg-slate-100 rounded-2xl">
+                                    <button
+                                        type="button"
+                                        onClick={() => setNewRequestMeta({ ...newRequestMeta, requestType: 'PUSH' })}
+                                        className={`flex-1 py-3 rounded-xl font-black text-xs transition-all ${newRequestMeta.requestType === 'PUSH' ? 'bg-white text-blue-600 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
+                                    >
+                                        ส่งพาเลทให้ (Push)
+                                    </button>
+                                    <button
+                                        type="button"
+                                        onClick={() => setNewRequestMeta({ ...newRequestMeta, requestType: 'PULL' })}
+                                        className={`flex-1 py-3 rounded-xl font-black text-xs transition-all ${newRequestMeta.requestType === 'PULL' ? 'bg-white text-orange-600 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
+                                    >
+                                        เรียกเก็บคืน (Pull)
+                                    </button>
+                                </div>
+                            </div>
+                        )}
+
                         <div>
-                            <label className="block text-sm font-bold text-slate-700 mb-2 text-blue-600">ปลายทางส่งคืน (ลูกค้า/ผู้ให้บริการ)</label>
+                            <label className="block text-sm font-bold text-slate-700 mb-2 text-blue-600">
+                                {newRequestMeta.requestType === 'PULL' ? 'สาขาต้นทาง (ที่จะเรียกเก็บ)' : 'ปลายทางส่งคืน (ลูกค้า/ผู้ให้บริการ/สาขา)'}
+                            </label>
                             <select
-                                className="w-full bg-blue-50 border border-blue-100 rounded-xl p-4 font-black text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all cursor-pointer"
+                                className={`w-full border rounded-xl p-4 font-black transition-all cursor-pointer ${newRequestMeta.requestType === 'PULL' ? 'bg-orange-50 border-orange-100 text-slate-900' : 'bg-blue-50 border-blue-100 text-slate-900'}`}
                                 value={newRequestMeta.targetBranchId}
                                 onChange={(e) => setNewRequestMeta({ ...newRequestMeta, targetBranchId: e.target.value })}
-                                title="เลือกปลายทาง"
-                                aria-label="Select destination"
+                                title="เลือกสาขา"
+                                aria-label="Select target branch"
+                                required
                             >
-                                <option value="">เลือกปลายทาง...</option>
+                                <option value="">เลือกสาขา/พาร์ทเนอร์...</option>
                                 <optgroup label="สาขา/Hub">
-                                    {BRANCHES.map(b => <option key={b.id} value={b.id}>{b.name}</option>)}
+                                    {BRANCHES.filter(b => b.id !== newRequestMeta.branchId).map(b => (
+                                        <option key={b.id} value={b.id}>{b.name}</option>
+                                    ))}
                                 </optgroup>
-                                <optgroup label="บริษัทลูกค้า / ผู้ให้บริการ">
-                                    {EXTERNAL_PARTNERS.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
-                                </optgroup>
+                                {newRequestMeta.requestType === 'PUSH' && (
+                                    <optgroup label="บริษัทลูกค้า / ผู้ให้บริการ">
+                                        {EXTERNAL_PARTNERS.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
+                                    </optgroup>
+                                )}
                             </select>
                         </div>
 

@@ -51,6 +51,11 @@ const PalletRequestList: React.FC<PalletRequestListProps> = ({
                             <div className="flex items-center gap-2 mb-1">
                                 <span className="text-xs font-mono font-bold text-slate-400">{req.requestNo}</span>
                                 {statusBadge(req.status)}
+                                {req.requestType === 'PULL' ? (
+                                    <span className="px-1.5 py-0.5 bg-orange-100 text-orange-700 rounded text-[8px] font-black uppercase">Collection (PULL)</span>
+                                ) : (
+                                    <span className="px-1.5 py-0.5 bg-blue-100 text-blue-700 rounded text-[8px] font-black uppercase">Shipment (PUSH)</span>
+                                )}
                             </div>
                             <h3 className="font-black text-slate-900">{BRANCHES.find(b => b.id === req.branchId)?.name}</h3>
                         </div>

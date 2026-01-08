@@ -182,6 +182,13 @@ export interface AppError {
 export type PalletRequestStatus = 'PENDING' | 'APPROVED' | 'SHIPPED' | 'REJECTED';
 
 /**
+ * Pallet Request Type
+ * PUSH: Requester sends pallets to Target
+ * PULL: Requester requests pallets FROM Target
+ */
+export type PalletRequestType = 'PUSH' | 'PULL';
+
+/**
  * Pallet Request Interface
  */
 export interface PalletRequest {
@@ -193,6 +200,7 @@ export interface PalletRequest {
   purpose: string; // e.g., "ส่งคืนลำสูง"
   priority: 'NORMAL' | 'URGENT';
   status: PalletRequestStatus;
+  requestType: PalletRequestType;
   targetBranchId?: string; // Specify destination (e.g., Lum Soon, Sino, CM)
   note?: string;
   processDocNo?: string; // Links to the OUT transaction once processed

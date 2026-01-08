@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { BranchId, PalletId, PalletRequest, User } from '../types';
+import React, { useState, useEffect } from 'react';
+import { BranchId, PalletId, PalletRequest, User, PalletRequestType } from '../types';
 import { useStock } from '../contexts/StockContext';
 import { BRANCHES, EXTERNAL_PARTNERS, PALLET_TYPES } from '../constants';
 // @ts-ignore
@@ -15,10 +15,16 @@ export function usePalletRequestLogic(selectedBranch: BranchId, currentUser?: Us
         purpose: '',
         priority: 'NORMAL' as 'NORMAL' | 'URGENT',
         targetBranchId: '',
-        note: ''
+        requestType: 'PUSH' as PalletRequestType,
+        note: '',
+        branchId: selectedBranch // Keep track for the form
     });
 
-    const isHub = selectedBranch === 'hub_nw' || currentUser?.branchId === 'hub_nw';
+    useEffect(() => {
+        setNewRequestMeta(prev => ({ ...prev, branchId: selectedBranch }));
+    }, [selectedBranch]);
+
+    const isHub = selectedBranch === 'hub_nw' || currentUser?.role === 'ADMIN';
 
     const ALL_DESTINATIONS = [
         ...BRANCHES.map(b => ({ id: b.id, name: b.name })),
@@ -59,62 +65,72 @@ export function usePalletRequestLogic(selectedBranch: BranchId, currentUser?: Us
             return;
         }
 
-        // If not hub, default destination is hub. If hub, must select destination.
+        // If not hub, default destination is hub.
         const finalTarget = newRequestMeta.targetBranchId || (isHub ? '' : 'hub_nw');
 
         if (!finalTarget) {
             Swal.fire({
                 icon: 'warning',
-                title: 'กรุณาระบุปลายทาง',
-                text: 'สำหรับสาขา NW กรุณาระบุปลายทางที่จะส่งพาเลทไป',
+                title: 'กรุณาระบุสาขา',
+                text: 'กรุณาระบุสาขาที่เกี่ยวข้องกับการดำเนินการนี้',
             });
             return;
         }
 
-        const newReq = {
+        const newReq: any = {
             branchId: selectedBranch,
             items: validItems.map(i => ({ palletId: i.palletId as PalletId, qty: parseInt(i.qty) })),
             purpose: newRequestMeta.purpose,
             priority: newRequestMeta.priority,
+            requestType: newRequestMeta.requestType,
             targetBranchId: finalTarget,
             note: newRequestMeta.note,
-            requestNo: ''
         };
 
         createPalletRequest(newReq);
 
         setIsModalOpen(false);
         setRequestItems([{ palletId: '', qty: '' }]);
-        setNewRequestMeta({ purpose: '', priority: 'NORMAL', targetBranchId: '', note: '' });
+        setNewRequestMeta({
+            purpose: '',
+            priority: 'NORMAL',
+            targetBranchId: '',
+            requestType: 'PUSH',
+            note: '',
+            branchId: selectedBranch
+        });
 
         Swal.fire({
             icon: 'success',
             title: 'ส่งคำขอแล้ว',
-            text: isHub ? 'บันทึกรายการส่งมอบแล้ว' : 'คำขอของคุณถูกส่งไปยังสาขา NW แล้ว',
+            text: 'รายการคำขอของคุณถูกบันทึกลงระบบแล้ว',
             timer: 2000,
             showConfirmButton: false
         });
     };
 
     const handleApprove = (req: PalletRequest) => {
-        // Check if requested items exceed Source branch stock (the requester)
+        // Source depends on Request Type
+        const sourceBranchId = req.requestType === 'PULL' ? (req.targetBranchId as BranchId) : req.branchId;
+
+        // Check if requested items exceed Source branch stock
         const insufficientItems = req.items.filter(item => {
-            const available = stock[req.branchId]?.[item.palletId] || 0;
+            const available = stock[sourceBranchId]?.[item.palletId] || 0;
             return item.qty > available;
         });
 
         if (insufficientItems.length > 0) {
             const details = insufficientItems.map(i => {
                 const name = PALLET_TYPES.find(p => p.id === i.palletId)?.name || i.palletId;
-                const have = stock[req.branchId]?.[i.palletId] || 0;
-                return `${name}: มีในสต๊อก ${have} (ขอมา ${i.qty})`;
+                const have = stock[sourceBranchId]?.[i.palletId] || 0;
+                return `${name}: มีในสต๊อก ${have} (ต้องการ ${i.qty})`;
             }).join('\n');
 
-            const sourceBranchName = BRANCHES.find(b => b.id === req.branchId)?.name || req.branchId;
+            const sourceBranchName = BRANCHES.find(b => b.id === sourceBranchId)?.name || sourceBranchId;
 
             Swal.fire({
                 icon: 'error',
-                title: 'สต๊อกสาขาต้นทางไม่เพียงพอ!',
+                title: 'สต๊อกต้นทางไม่เพียงพอ!',
                 text: `ไม่สามารถอนุมัติได้เนื่องจากยอดในสต๊อกของ ${sourceBranchName} ต่ำกว่าที่จะส่ง:\n${details}\n\nกรุณา "แก้ไข" ยอดพาเลทก่อนอนุมัติ`,
                 confirmButtonText: 'ตกลง',
                 confirmButtonColor: '#d33',
@@ -124,7 +140,7 @@ export function usePalletRequestLogic(selectedBranch: BranchId, currentUser?: Us
 
         Swal.fire({
             title: 'ยืนยันการอนุมัติ?',
-            text: `อนุมัติคำขอ ${req.requestNo} จาก ${BRANCHES.find(b => b.id === req.branchId)?.name}`,
+            text: `อนุมัติคำขอ ${req.requestNo} (${req.requestType})`,
             icon: 'question',
             showCancelButton: true,
             confirmButtonText: 'อนุมัติ',
@@ -156,13 +172,14 @@ export function usePalletRequestLogic(selectedBranch: BranchId, currentUser?: Us
     const handleEdit = (req: PalletRequest) => {
         if (req.items.length === 0) return;
 
+        const sourceBranchId = req.requestType === 'PULL' ? (req.targetBranchId as BranchId) : req.branchId;
         const firstItem = req.items[0];
         const palletName = PALLET_TYPES.find(p => p.id === firstItem.palletId)?.name || firstItem.palletId;
-        const available = stock[req.branchId]?.[firstItem.palletId] || 0;
+        const available = stock[sourceBranchId]?.[firstItem.palletId] || 0;
 
         Swal.fire({
             title: 'แก้ไขจำนวนพาเลท',
-            text: `${palletName} (สต๊อกต้นทางมี ${available})`,
+            text: `${palletName} (สต๊อกต้นทาง ${sourceBranchId} มี ${available})`,
             input: 'number',
             inputValue: firstItem.qty,
             showCancelButton: true,
@@ -184,8 +201,15 @@ export function usePalletRequestLogic(selectedBranch: BranchId, currentUser?: Us
     };
 
     const handleShip = (req: PalletRequest) => {
-        const sourceName = BRANCHES.find(b => b.id === req.branchId)?.name || req.branchId;
-        const destName = ALL_DESTINATIONS.find(d => d.id === req.targetBranchId)?.name || 'ไม่ระบุ';
+        // Logic for PUSH vs PULL
+        // PUSH: Requester (branchId) -> Target (targetBranchId) [Standard Return]
+        // PULL: Target (targetBranchId) -> Requester (branchId) [Collection from Hub]
+
+        const sourceId = req.requestType === 'PULL' ? (req.targetBranchId as BranchId) : req.branchId;
+        const destId = req.requestType === 'PULL' ? req.branchId : (req.targetBranchId || 'hub_nw' as BranchId);
+
+        const sourceName = BRANCHES.find(b => b.id === sourceId)?.name || sourceId;
+        const destName = ALL_DESTINATIONS.find(d => d.id === destId)?.name || destId;
 
         Swal.fire({
             title: 'ดำเนินการส่งมอบ?',
@@ -199,17 +223,20 @@ export function usePalletRequestLogic(selectedBranch: BranchId, currentUser?: Us
             if (result.isConfirmed) {
                 try {
                     const datePart = new Date().toISOString().split('T')[0].replace(/-/g, '');
-                    const docType = req.branchId === 'hub_nw' ? 'DIST' : 'RET';
-                    const docNo = `${docType}-OUT-${datePart}-${req.requestNo.split('-').pop()}`;
+                    let docPrefix = 'RET';
+                    if (req.requestType === 'PULL') docPrefix = 'COLL';
+                    else if (req.branchId === 'hub_nw') docPrefix = 'DIST';
+
+                    const docNo = `${docPrefix}-OUT-${datePart}-${req.requestNo.split('-').pop()}`;
 
                     await addMovementBatch({
                         type: 'OUT',
-                        source: req.branchId,
-                        dest: req.targetBranchId || 'hub_nw',
+                        source: sourceId,
+                        dest: destId,
                         items: req.items,
                         docNo,
                         referenceDocNo: req.requestNo,
-                        note: `Processed from ${req.branchId === 'hub_nw' ? 'Distribution' : 'Return'} Request ${req.requestNo} - ${req.purpose}`
+                        note: `Processed from ${req.requestType} Request ${req.requestNo} - ${req.purpose}`
                     });
 
                     await updatePalletRequest({ ...req, status: 'SHIPPED', processDocNo: docNo });
@@ -235,7 +262,7 @@ export function usePalletRequestLogic(selectedBranch: BranchId, currentUser?: Us
 
     const displayRequests = isHub
         ? [...palletRequests].sort((a, b) => b.id.localeCompare(a.id))
-        : palletRequests.filter(r => r.branchId === selectedBranch).sort((a, b) => b.id.localeCompare(a.id));
+        : palletRequests.filter(r => r.branchId === selectedBranch || r.targetBranchId === selectedBranch).sort((a, b) => b.id.localeCompare(a.id));
 
     return {
         isModalOpen, setIsModalOpen,
