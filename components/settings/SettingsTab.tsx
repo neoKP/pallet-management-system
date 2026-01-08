@@ -91,17 +91,23 @@ const SettingsTab: React.FC = () => {
     };
 
     const handleSeedDemoData = async () => {
-        const result = await Swal.fire({
-            title: 'ล้างข้อมูลทั้งหมดในระบบ?',
-            text: 'ยอดสต็อก ประวัติรายการ และรายการคำขอทั้งหมดจะถูกลบและเริ่มใหม่เป็น 0 (Clean Slate)',
-            icon: 'warning',
+        const { value: password } = await Swal.fire({
+            title: 'ยืนยันการล้างข้อมูลผ่านระบบ (Deep Reset)',
+            text: 'ข้อมูลสต็อก ประวัติ และคำขอทั้งหมดจะถูกลบถาวร กรุณาใส่รหัสผ่านเพื่อดำเนินการ',
+            input: 'password',
+            inputLabel: 'Password',
+            inputPlaceholder: 'ใส่รหัสผ่านเพื่อยืนยัน',
             showCancelButton: true,
             confirmButtonColor: '#d33',
-            confirmButtonText: 'ยืนยันการล้างข้อมูล',
-            cancelButtonText: 'ยกเลิก'
+            confirmButtonText: 'ยืนยันและล้างข้อมูลทั้งหมด',
+            cancelButtonText: 'ยกเลิก',
+            inputAttributes: {
+                autocapitalize: 'off',
+                autocorrect: 'off'
+            }
         });
 
-        if (result.isConfirmed) {
+        if (password === 'sansan856') {
             try {
                 const { INITIAL_STOCK } = await import('../../constants');
                 await firebaseService.resetAllData(INITIAL_STOCK);
@@ -110,10 +116,28 @@ const SettingsTab: React.FC = () => {
                 console.error(error);
                 Swal.fire('ผิดพลาด', 'ไม่สามารถรีเซ็ตข้อมูลได้', 'error');
             }
+        } else if (password) {
+            Swal.fire('รหัสผ่านไม่ถูกต้อง', 'ไม่สามารถดำเนินการล้างข้อมูลได้เนื่องจากรหัสผ่านผิด', 'error');
         }
     };
 
     const handleRepairBranch = async (branchId?: BranchId) => {
+        const { value: password } = await Swal.fire({
+            title: 'ยืนยันการรีเซ็ตสต๊อกรายสาขา',
+            text: 'กรุณาใส่รหัสผ่านเพื่อดำเนินการ (เพื่อความปลอดภัย)',
+            input: 'password',
+            inputLabel: 'Password',
+            inputPlaceholder: 'ใส่รหัสผ่าน',
+            showCancelButton: true,
+            confirmButtonText: 'ตกลง',
+            cancelButtonText: 'ยกเลิก'
+        });
+
+        if (password !== 'sansan856') {
+            if (password) Swal.fire('รหัสผ่านไม่ถูกต้อง', 'ไม่สามารถดำเนินการได้', 'error');
+            return;
+        }
+
         const { INITIAL_STOCK, BRANCHES } = await import('../../constants');
 
         if (!branchId) {
@@ -133,10 +157,35 @@ const SettingsTab: React.FC = () => {
             const nextStock = { ...stock };
             nextStock[branchId] = INITIAL_STOCK[branchId];
             await firebaseService.addMovementBatch([], nextStock);
-            Swal.fire('สำเร็จ', `ยอดสต็อกของ ${branchId} ถูกรีเซ็ตเป็น 0 แล้ว`, 'success');
+            const branchName = BRANCHES.find(b => b.id === branchId)?.name || branchId;
+            Swal.fire('สำเร็จ', `ยอดสต็อกของ ${branchName} ถูกรีเซ็ตเป็น 0 แล้ว`, 'success');
         } catch (error) {
             console.error(error);
             Swal.fire('ผิดพลาด', 'ไม่สามารถดำเนินการได้', 'error');
+        }
+    };
+
+    const handleSectionChange = async (section: 'pallets' | 'locations' | 'telegram' | 'developer') => {
+        if (activeSection === section) return;
+
+        if (section === 'telegram' || section === 'developer') {
+            const { value: password } = await Swal.fire({
+                title: 'การเข้าถึงส่วนที่จำกัด',
+                text: `กรุณาใส่รหัสผ่านเพื่อเข้าใช้งานส่วน ${section === 'telegram' ? 'ตั้งค่า Telegram' : 'Developer & Recovery'}`,
+                input: 'password',
+                inputPlaceholder: 'ใส่รหัสผ่าน',
+                showCancelButton: true,
+                confirmButtonText: 'ตกลง',
+                cancelButtonText: 'ยกเลิก'
+            });
+
+            if (password === 'sansan856') {
+                setActiveSection(section);
+            } else if (password) {
+                Swal.fire('รหัสผ่านไม่ถูกต้อง', '', 'error');
+            }
+        } else {
+            setActiveSection(section);
         }
     };
 
@@ -158,7 +207,7 @@ const SettingsTab: React.FC = () => {
             {/* Navigation Palls */}
             <div className="flex gap-2 bg-white p-1.5 rounded-2xl shadow-sm border border-slate-100 w-fit flex-wrap">
                 <button
-                    onClick={() => setActiveSection('pallets')}
+                    onClick={() => handleSectionChange('pallets')}
                     className={`flex items-center gap-2 px-6 py-2.5 rounded-xl text-sm font-bold transition-all ${activeSection === 'pallets'
                         ? 'bg-slate-900 text-white shadow-md'
                         : 'text-slate-500 hover:bg-slate-50'
@@ -168,7 +217,7 @@ const SettingsTab: React.FC = () => {
                     Pallet Types
                 </button>
                 <button
-                    onClick={() => setActiveSection('locations')}
+                    onClick={() => handleSectionChange('locations')}
                     className={`flex items-center gap-2 px-6 py-2.5 rounded-xl text-sm font-bold transition-all ${activeSection === 'locations'
                         ? 'bg-slate-900 text-white shadow-md'
                         : 'text-slate-500 hover:bg-slate-50'
@@ -178,7 +227,7 @@ const SettingsTab: React.FC = () => {
                     Locations
                 </button>
                 <button
-                    onClick={() => setActiveSection('telegram')}
+                    onClick={() => handleSectionChange('telegram')}
                     className={`flex items-center gap-2 px-6 py-2.5 rounded-xl text-sm font-bold transition-all ${activeSection === 'telegram'
                         ? 'bg-blue-600 text-white shadow-md'
                         : 'text-slate-500 hover:bg-slate-50'
@@ -188,7 +237,7 @@ const SettingsTab: React.FC = () => {
                     Telegram Bot
                 </button>
                 <button
-                    onClick={() => setActiveSection('developer')}
+                    onClick={() => handleSectionChange('developer')}
                     className={`flex items-center gap-2 px-6 py-2.5 rounded-xl text-sm font-bold transition-all ${activeSection === 'developer'
                         ? 'bg-red-600 text-white shadow-md'
                         : 'text-slate-500 hover:bg-slate-50'
