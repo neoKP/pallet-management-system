@@ -20,14 +20,12 @@ const PalletRequestTab: React.FC<PalletRequestTabProps> = ({ selectedBranch, cur
                     <h2 className="text-xl font-black text-slate-900">Pallet Return Requests</h2>
                     <p className="text-sm text-slate-500">ระบบร้องขอการส่งคืนพาเลทจากสาขา NW</p>
                 </div>
-                {!logic.isHub && (
-                    <button
-                        onClick={() => logic.setIsModalOpen(true)}
-                        className="bg-blue-600 text-white px-4 py-2 rounded-xl font-bold flex items-center gap-2 shadow-lg shadow-blue-200 hover:bg-blue-700 transition-all"
-                    >
-                        <Plus size={18} /> สร้างคำขอใหม่
-                    </button>
-                )}
+                <button
+                    onClick={() => logic.setIsModalOpen(true)}
+                    className="bg-blue-600 text-white px-4 py-2 rounded-xl font-bold flex items-center gap-2 shadow-lg shadow-blue-200 hover:bg-blue-700 transition-all"
+                >
+                    <Plus size={18} /> สร้างคำขอใหม่
+                </button>
             </div>
 
             <PalletRequestList
