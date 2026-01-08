@@ -102,6 +102,8 @@ export interface Transaction {
   transportCompany?: string;
   referenceDocNo?: string;
   receivedAt?: string;
+  originalPalletId?: PalletId;
+  originalQty?: number;
 }
 
 /**

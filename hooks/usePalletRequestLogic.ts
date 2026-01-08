@@ -1,12 +1,12 @@
 import React, { useState } from 'react';
 import { BranchId, PalletId, PalletRequest, User } from '../types';
 import { useStock } from '../contexts/StockContext';
-import { BRANCHES, EXTERNAL_PARTNERS } from '../constants';
+import { BRANCHES, EXTERNAL_PARTNERS, PALLET_TYPES } from '../constants';
 // @ts-ignore
 import Swal from 'sweetalert2';
 
 export function usePalletRequestLogic(selectedBranch: BranchId, currentUser?: User) {
-    const { palletRequests, createPalletRequest, updatePalletRequestStatus, addMovementBatch } = useStock();
+    const { palletRequests, createPalletRequest, updatePalletRequest, addMovementBatch, stock } = useStock();
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [requestItems, setRequestItems] = useState<{ palletId: PalletId | ''; qty: string }[]>([
         { palletId: '', qty: '' }
@@ -85,6 +85,29 @@ export function usePalletRequestLogic(selectedBranch: BranchId, currentUser?: Us
     };
 
     const handleApprove = (req: PalletRequest) => {
+        // Check if requested items exceed Hub stock
+        const insufficientItems = req.items.filter(item => {
+            const available = stock['hub_nw']?.[item.palletId] || 0;
+            return item.qty > available;
+        });
+
+        if (insufficientItems.length > 0) {
+            const details = insufficientItems.map(i => {
+                const name = PALLET_TYPES.find(p => p.id === i.palletId)?.name || i.palletId;
+                const have = stock['hub_nw']?.[i.palletId] || 0;
+                return `${name}: มีในสต๊อก ${have} (ขอมา ${i.qty})`;
+            }).join('\n');
+
+            Swal.fire({
+                icon: 'error',
+                title: 'สต๊อกคลัง Hub ไม่เพียงพอ!',
+                text: `ไม่สามารถอนุมัติได้เนื่องจากยอดในสต๊อกต่ำกว่าที่ขอมา:\n${details}\n\nกรุณา "แก้ไข" ยอดพาเลทก่อนอนุมัติ`,
+                confirmButtonText: 'ตกลง',
+                confirmButtonColor: '#d33',
+            });
+            return;
+        }
+
         Swal.fire({
             title: 'ยืนยันการอนุมัติ?',
             text: `อนุมัติคำขอ ${req.requestNo} จาก ${BRANCHES.find(b => b.id === req.branchId)?.name}`,
@@ -94,7 +117,7 @@ export function usePalletRequestLogic(selectedBranch: BranchId, currentUser?: Us
             cancelButtonText: 'ยกเลิก'
         }).then((result: any) => {
             if (result.isConfirmed) {
-                updatePalletRequestStatus(req.id, 'APPROVED');
+                updatePalletRequest({ ...req, status: 'APPROVED' });
                 Swal.fire('สำเร็จ!', 'อนุมัติคำขอเรียบร้อยแล้ว', 'success');
             }
         });
@@ -110,8 +133,40 @@ export function usePalletRequestLogic(selectedBranch: BranchId, currentUser?: Us
             confirmButtonColor: '#d33',
         }).then((result: any) => {
             if (result.isConfirmed) {
-                updatePalletRequestStatus(req.id, 'REJECTED', result.value);
+                updatePalletRequest({ ...req, status: 'REJECTED', note: result.value ? `REJECT REASON: ${result.value}` : req.note });
                 Swal.fire('บันทึกแล้ว', 'ปฏิเสธคำขอเรียบร้อยแล้ว', 'info');
+            }
+        });
+    };
+
+    const handleEdit = (req: PalletRequest) => {
+        // Simplified Edit for demonstration: Edit first item's quantity
+        // In a real app, this would open a specific modal for multi-editing
+        if (req.items.length === 0) return;
+
+        const firstItem = req.items[0];
+        const palletName = PALLET_TYPES.find(p => p.id === firstItem.palletId)?.name || firstItem.palletId;
+        const available = stock['hub_nw']?.[firstItem.palletId] || 0;
+
+        Swal.fire({
+            title: 'แก้ไขจำนวนพาเลท',
+            text: `${palletName} (สต๊อก Hub มี ${available})`,
+            input: 'number',
+            inputValue: firstItem.qty,
+            showCancelButton: true,
+            confirmButtonText: 'บันทึกการแก้ไข',
+            inputValidator: (value: string) => {
+                if (!value || parseInt(value) <= 0) {
+                    return 'กรุณาระบุจำนวนที่ถูกต้อง';
+                }
+                return null;
+            }
+        }).then((result: any) => {
+            if (result.isConfirmed) {
+                const newItems = [...req.items];
+                newItems[0] = { ...newItems[0], qty: parseInt(result.value) };
+                updatePalletRequest({ ...req, items: newItems });
+                Swal.fire('แก้ไขแล้ว!', 'ปรับการขอพาเลทเรียบร้อยแล้ว', 'success');
             }
         });
     };
@@ -123,24 +178,42 @@ export function usePalletRequestLogic(selectedBranch: BranchId, currentUser?: Us
             icon: 'info',
             showCancelButton: true,
             confirmButtonText: 'ส่งมอบทันที',
-        }).then((result: any) => {
+            cancelButtonText: 'ยกเลิก',
+            confirmButtonColor: '#3b82f6',
+        }).then(async (result: any) => {
             if (result.isConfirmed) {
-                const datePart = new Date().toISOString().split('T')[0].replace(/-/g, '');
-                const docNo = `REQ-OUT-${datePart}-${req.requestNo.split('-').pop()}`;
-                const targetName = ALL_DESTINATIONS.find(d => d.id === req.targetBranchId)?.name || 'ไม่ระบุ';
+                try {
+                    const datePart = new Date().toISOString().split('T')[0].replace(/-/g, '');
+                    const docNo = `REQ-OUT-${datePart}-${req.requestNo.split('-').pop()}`;
+                    const targetName = ALL_DESTINATIONS.find(d => d.id === req.targetBranchId)?.name || 'ไม่ระบุ';
 
-                addMovementBatch({
-                    type: 'OUT',
-                    source: 'hub_nw',
-                    dest: req.branchId,
-                    items: req.items,
-                    docNo,
-                    referenceDocNo: req.requestNo,
-                    note: `Processed from request ${req.requestNo} [To: ${targetName}] - ${req.purpose}`
-                });
+                    await addMovementBatch({
+                        type: 'OUT',
+                        source: 'hub_nw',
+                        dest: req.branchId,
+                        items: req.items,
+                        docNo,
+                        referenceDocNo: req.requestNo,
+                        note: `Processed from request ${req.requestNo} [To: ${targetName}] - ${req.purpose}`
+                    });
 
-                updatePalletRequestStatus(req.id, 'SHIPPED', docNo);
-                Swal.fire('จัดส่งแล้ว!', `สร้างเลขที่เอกสาร ${docNo}`, 'success');
+                    await updatePalletRequest({ ...req, status: 'SHIPPED', processDocNo: docNo });
+                    Swal.fire({
+                        icon: 'success',
+                        title: 'จัดส่งแล้ว!',
+                        text: `สร้างเลขที่เอกสาร ${docNo}`,
+                        confirmButtonText: 'ตกลง',
+                        confirmButtonColor: '#10b981',
+                    });
+                } catch (error: any) {
+                    Swal.fire({
+                        icon: 'error',
+                        title: 'ไม่สามารถดำเนินการได้!',
+                        text: error.message || 'เกิดข้อผิดพลาดในการจ่ายพาเลท',
+                        confirmButtonText: 'ตกลง',
+                        confirmButtonColor: '#d33',
+                    });
+                }
             }
         });
     };
@@ -156,7 +229,7 @@ export function usePalletRequestLogic(selectedBranch: BranchId, currentUser?: Us
         isHub,
         ALL_DESTINATIONS,
         handleAddItem, handleRemoveItem, handleItemChange,
-        handleCreateRequest, handleApprove, handleReject, handleShip,
+        handleCreateRequest, handleApprove, handleReject, handleShip, handleEdit,
         displayRequests
     };
 }

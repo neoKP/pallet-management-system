@@ -34,8 +34,8 @@ interface StockContextType {
     }) => void;
     getStockForBranch: (branchId: BranchId) => Record<PalletId, number>;
     palletRequests: PalletRequest[];
-    createPalletRequest: (data: Partial<PalletRequest>) => void;
-    updatePalletRequestStatus: (requestId: string, status: PalletRequest['status'], docNo?: string) => void;
+    createPalletRequest: (data: Partial<PalletRequest>) => Promise<void>;
+    updatePalletRequest: (req: PalletRequest) => Promise<void>;
     config: { telegramChatId: string };
     updateSystemConfig: (newConfig: Partial<{ telegramChatId: string }>) => Promise<void>;
 }
@@ -139,13 +139,21 @@ export const StockProvider: React.FC<StockProviderProps> = ({ children }) => {
         const status = isInternalTransfer ? 'PENDING' : 'COMPLETED';
 
         const newTx: Transaction = {
-            ...txData,
             id: Date.now() + Math.floor(Math.random() * 1000),
             date: dateStr,
             docNo,
+            type: txData.type,
             status,
-            palletId: txData.palletId || 'unknown',
+            source: txData.source,
+            dest: txData.dest,
+            palletId: txData.palletId || 'unknown' as PalletId,
             qty: txData.qty || 0,
+            note: txData.note,
+            carRegistration: txData.carRegistration,
+            vehicleType: txData.vehicleType,
+            driverName: txData.driverName,
+            transportCompany: txData.transportCompany,
+            referenceDocNo: txData.referenceDocNo,
         } as Transaction;
 
         const nextStock = { ...stock };
@@ -183,9 +191,15 @@ export const StockProvider: React.FC<StockProviderProps> = ({ children }) => {
             const isNew = !originalTx;
 
             let correctionNote = item.note || '';
+            let originalPalletId: PalletId | undefined;
+            let originalQty: number | undefined;
+
             if (!isNew && (item.palletId !== originalTx.palletId || item.qty !== originalTx.qty)) {
                 const oldPalletName = PALLET_TYPES.find(p => p.id === originalTx.palletId)?.name || originalTx.palletId;
                 const newPalletName = PALLET_TYPES.find(p => p.id === item.palletId)?.name || item.palletId;
+
+                originalPalletId = originalTx.palletId;
+                originalQty = originalTx.qty;
 
                 const parts = [];
                 if (item.palletId !== originalTx.palletId) parts.push(`เปลี่ยนประเภท: ${oldPalletName} -> ${newPalletName}`);
@@ -200,19 +214,25 @@ export const StockProvider: React.FC<StockProviderProps> = ({ children }) => {
                 ...item,
                 status: 'COMPLETED' as const,
                 receivedAt: new Date().toISOString(),
-                note: correctionNote
+                note: correctionNote,
+                originalPalletId,
+                originalQty
             };
             finalTxs.push(updatedTx);
 
+            // Reconcile Source Stock if Pallet Type or Qty was changed during verification
             if (!isNew && (item.palletId !== originalTx.palletId || item.qty !== originalTx.qty)) {
                 if (updatedTx.source && nextStock[updatedTx.source as BranchId]) {
                     const sId = updatedTx.source as BranchId;
                     const s = { ...nextStock[sId] } as Record<PalletId, number>;
+                    // Rollback original deduction
                     s[originalTx.palletId] = (s[originalTx.palletId] || 0) + originalTx.qty;
+                    // Apply actual deduction
                     s[item.palletId] = (s[item.palletId] || 0) - item.qty;
                     nextStock[sId] = s;
                 }
             } else if (isNew) {
+                // For new split items, deduct from source
                 if (updatedTx.source && nextStock[updatedTx.source as BranchId]) {
                     const sId = updatedTx.source as BranchId;
                     const s = { ...nextStock[sId] } as Record<PalletId, number>;
@@ -221,6 +241,7 @@ export const StockProvider: React.FC<StockProviderProps> = ({ children }) => {
                 }
             }
 
+            // Always add to destination stock
             if (updatedTx.dest && nextStock[updatedTx.dest as BranchId]) {
                 const dId = updatedTx.dest as BranchId;
                 const d = { ...nextStock[dId] } as Record<PalletId, number>;
@@ -382,7 +403,7 @@ export const StockProvider: React.FC<StockProviderProps> = ({ children }) => {
         }
     }, [stock, generateDocNo, config]);
 
-    const processBatchMaintenance = useCallback((data: {
+    const processBatchMaintenance = useCallback(async (data: {
         items: { palletId: PalletId; qty: number }[];
         fixedQty: number;
         scrappedQty: number;
@@ -423,7 +444,7 @@ export const StockProvider: React.FC<StockProviderProps> = ({ children }) => {
             noteExtended: `Batch: ${data.items.map((i) => `${i.palletId} ${i.qty}`).join(', ')} | Fixed: ${data.fixedQty}, Scrap: ${data.scrappedQty}`,
             qtyRepaired: data.fixedQty,
             targetPallet: 'general',
-        };
+        } as Transaction;
 
         const nextStock = { ...stock };
         if (nextStock[data.branchId]) {
@@ -439,10 +460,10 @@ export const StockProvider: React.FC<StockProviderProps> = ({ children }) => {
             nextStock[targetBranch] = t;
         }
 
-        firebaseService.addMovementBatch([newTx], nextStock);
+        await firebaseService.addMovementBatch([newTx], nextStock);
     }, [stock, transactions]);
 
-    const createPalletRequest = useCallback((reqData: Partial<PalletRequest>) => {
+    const createPalletRequest = useCallback(async (reqData: Partial<PalletRequest>) => {
         const dateStr = new Date().toISOString().split('T')[0];
         const requestNo = generateRequestNo(dateStr);
 
@@ -459,7 +480,7 @@ export const StockProvider: React.FC<StockProviderProps> = ({ children }) => {
             note: reqData.note || '',
         };
 
-        firebaseService.updatePalletRequest(newReq);
+        await firebaseService.updatePalletRequest(newReq);
 
         if (config?.telegramChatId) {
             const branchName = BRANCHES.find(b => b.id === newReq.branchId)?.name || 'Unknown';
@@ -470,11 +491,9 @@ export const StockProvider: React.FC<StockProviderProps> = ({ children }) => {
         }
     }, [generateRequestNo, config]);
 
-    const updatePalletRequestStatus = useCallback((requestId: string, status: PalletRequest['status'], docNo?: string) => {
-        const req = palletRequests.find(r => r.id === requestId);
-        if (!req) return;
-        firebaseService.updatePalletRequest({ ...req, status, processDocNo: docNo });
-    }, [palletRequests]);
+    const updatePalletRequest = useCallback(async (req: PalletRequest) => {
+        await firebaseService.updatePalletRequest(req);
+    }, []);
 
     const getStockForBranch = useCallback((branchId: BranchId) => stock[branchId] || {}, [stock]);
 
@@ -496,7 +515,7 @@ export const StockProvider: React.FC<StockProviderProps> = ({ children }) => {
                 getStockForBranch,
                 palletRequests,
                 createPalletRequest,
-                updatePalletRequestStatus,
+                updatePalletRequest: updatePalletRequest,
                 config,
                 updateSystemConfig
             }}

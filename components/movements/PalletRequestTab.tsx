@@ -37,6 +37,7 @@ const PalletRequestTab: React.FC<PalletRequestTabProps> = ({ selectedBranch, cur
                 onApprove={logic.handleApprove}
                 onReject={logic.handleReject}
                 onShip={logic.handleShip}
+                onEdit={logic.handleEdit}
             />
 
             <PalletRequestForm

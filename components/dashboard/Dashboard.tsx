@@ -34,16 +34,15 @@ const Dashboard: React.FC<DashboardProps> = ({ stock, selectedBranch, transactio
     const [isAdjModalOpen, setIsAdjModalOpen] = useState(false);
 
     // Timeline State
-    const [timelineTx, setTimelineTx] = useState<Transaction | null>(null);
-    const [isTimelineOpen, setIsTimelineOpen] = useState(false);
+    const [timelineTxs, setTimelineTxs] = useState<Transaction[] | null>(null);
 
     // Print State
     const [isPrintOpen, setIsPrintOpen] = useState(false);
     const [printData, setPrintData] = useState<any>(null);
 
     const handleViewTimeline = (tx: Transaction) => {
-        setTimelineTx(tx);
-        setIsTimelineOpen(true);
+        const group = transactions.filter(t => t.docNo === tx.docNo);
+        setTimelineTxs(group.length > 0 ? group : [tx]);
     };
 
     const handleDelete = (txId: number) => {
@@ -262,11 +261,11 @@ const Dashboard: React.FC<DashboardProps> = ({ stock, selectedBranch, transactio
                 onOpenAdjModal={() => setIsAdjModalOpen(true)}
             />
 
-            {timelineTx && (
+            {timelineTxs && (
                 <TransactionTimelineModal
-                    isOpen={isTimelineOpen}
-                    onClose={() => setIsTimelineOpen(false)}
-                    transaction={timelineTx}
+                    isOpen={!!timelineTxs}
+                    onClose={() => setTimelineTxs(null)}
+                    transactions={timelineTxs}
                 />
             )}
 

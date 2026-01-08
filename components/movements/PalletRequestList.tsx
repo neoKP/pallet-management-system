@@ -1,5 +1,5 @@
 import React from 'react';
-import { ClipboardList, AlertCircle, Send, XCircle } from 'lucide-react';
+import { ClipboardList, AlertCircle, Send, XCircle, Edit } from 'lucide-react';
 import { PalletRequest } from '../../types';
 import { PALLET_TYPES, BRANCHES } from '../../constants';
 
@@ -10,6 +10,7 @@ interface PalletRequestListProps {
     onApprove: (req: PalletRequest) => void;
     onReject: (req: PalletRequest) => void;
     onShip: (req: PalletRequest) => void;
+    onEdit: (req: PalletRequest) => void;
 }
 
 const statusBadge = (status: PalletRequest['status']) => {
@@ -28,7 +29,8 @@ const PalletRequestList: React.FC<PalletRequestListProps> = ({
     allDestinations,
     onApprove,
     onReject,
-    onShip
+    onShip,
+    onEdit
 }) => {
     if (requests.length === 0) {
         return (
@@ -96,6 +98,14 @@ const PalletRequestList: React.FC<PalletRequestListProps> = ({
                                     className="flex-1 py-2 bg-blue-50 text-blue-600 rounded-xl font-bold text-xs hover:bg-blue-100 transition-all border border-blue-100"
                                 >
                                     อนุมัติ
+                                </button>
+                                <button
+                                    onClick={() => onEdit(req)}
+                                    className="p-2 bg-amber-50 text-amber-600 rounded-xl hover:bg-amber-100 transition-all border border-amber-100"
+                                    title="แก้ไขจำนวนพาเลท"
+                                    aria-label="Edit request"
+                                >
+                                    <Edit size={16} />
                                 </button>
                                 <button
                                     onClick={() => onReject(req)}
