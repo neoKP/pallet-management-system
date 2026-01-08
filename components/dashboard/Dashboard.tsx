@@ -87,41 +87,77 @@ const Dashboard: React.FC<DashboardProps> = ({ stock, selectedBranch, transactio
         setIsPrintOpen(true);
     };
 
-    const currentStock = useMemo(() => {
-        if (selectedBranch === 'ALL') {
-            const total: Record<string, number> = {};
-            const activeBranchIds = BRANCHES.map(b => b.id);
+    const stockOverview = useMemo(() => {
+        const confirmed: Record<string, number> = {};
+        const pending: Record<string, number> = {};
 
+        const activeBranchIds = BRANCHES.map(b => b.id);
+
+        if (selectedBranch === 'ALL') {
+            // Calculate Sum of All Branch Stocks
             activeBranchIds.forEach(branchId => {
                 const branchStock = stock[branchId];
                 if (branchStock) {
                     Object.entries(branchStock).forEach(([pid, qty]) => {
-                        total[pid] = (total[pid] || 0) + (qty as number);
+                        confirmed[pid] = (confirmed[pid] || 0) + (qty as number);
                     });
                 }
             });
 
+            // Calculate Sum of All PENDING transactions (In-Transit)
             transactions.forEach(t => {
                 if (t.status === 'PENDING') {
-                    total[t.palletId] = (total[t.palletId] || 0) + (t.qty as number);
+                    pending[t.palletId] = (pending[t.palletId] || 0) + (t.qty as number);
                 }
             });
+        } else {
+            // Specific Branch Confirmed Stock
+            const branchStock = stock[selectedBranch as BranchId] || {};
+            Object.entries(branchStock).forEach(([pid, qty]) => {
+                confirmed[pid] = qty as number;
+            });
 
-            return total;
+            // Pending items specifically FOR this branch (Incoming)
+            transactions.forEach(t => {
+                if (t.dest === selectedBranch && t.status === 'PENDING') {
+                    pending[t.palletId] = (pending[t.palletId] || 0) + (t.qty as number);
+                }
+            });
         }
-        return stock[selectedBranch as BranchId] || {};
+
+        return { confirmed, pending };
     }, [stock, selectedBranch, transactions]);
 
     const stats = useMemo(() => {
-        const totalStock = Object.values(currentStock).reduce((a: number, b) => a + (typeof b === 'number' ? b : 0), 0);
-        const loscamRed = (currentStock['loscam_red'] as number) || 0;
-        const loscamYellow = (currentStock['loscam_yellow'] as number) || 0;
-        const loscamBlue = (currentStock['loscam_blue'] as number) || 0;
-        const hiq = (currentStock['hiq'] as number) || 0;
-        const general = (currentStock['general'] as number) || 0;
-        const plastic = (currentStock['plastic_circular'] as number) || 0;
-        return { totalStock, loscamRed, loscamYellow, loscamBlue, hiq, general, plastic };
-    }, [currentStock]);
+        const getVal = (pid: string) => ({
+            confirmed: stockOverview.confirmed[pid] || 0,
+            pending: stockOverview.pending[pid] || 0,
+            total: (stockOverview.confirmed[pid] || 0) + (stockOverview.pending[pid] || 0)
+        });
+
+        const palletIds = ['loscam_red', 'loscam_yellow', 'loscam_blue', 'hiq', 'general', 'plastic_circular'];
+        const result: any = {};
+        let grandTotal = 0;
+        let grandPending = 0;
+
+        palletIds.forEach(pid => {
+            const v = getVal(pid);
+            result[pid] = v;
+            grandTotal += v.total;
+            grandPending += v.pending;
+        });
+
+        return {
+            totalStock: grandTotal,
+            totalPending: grandPending,
+            loscamRed: result['loscam_red'],
+            loscamYellow: result['loscam_yellow'],
+            loscamBlue: result['loscam_blue'],
+            hiq: result['hiq'],
+            general: result['general'],
+            plastic: result['plastic_circular']
+        };
+    }, [stockOverview]);
 
     const displayTransactions = useMemo(() => {
         let filtered = [...transactions];
@@ -131,7 +167,7 @@ const Dashboard: React.FC<DashboardProps> = ({ stock, selectedBranch, transactio
         return filtered.sort((a, b) => b.id - a.id);
     }, [transactions, selectedBranch]);
 
-    const isRedAlert = stats.loscamRed > 500;
+    const isRedAlert = stats.loscamRed.total > 500;
 
     const handleAdjustmentSubmit = async (data: { type: 'IN' | 'OUT'; branchId: string; palletId: PalletId; qty: number; note: string }) => {
         try {
@@ -179,7 +215,7 @@ const Dashboard: React.FC<DashboardProps> = ({ stock, selectedBranch, transactio
                     <div>
                         <h3 className="text-red-900 font-bold">แจ้งเตือนระดับสต็อก (Alert)</h3>
                         <p className="text-red-700 text-sm mt-1">
-                            พาเลท Loscam Red มีจำนวนสูงเกินมาตรฐาน ({stats.loscamRed} units). กรุณาตรวจสอบหรือระบายออก
+                            พาเลท Loscam Red มีจำนวนสูงเกินมาตรฐาน ({stats.loscamRed.total} units). กรุณาตรวจสอบหรือระบายออก
                         </p>
                     </div>
                 </div>
@@ -189,6 +225,8 @@ const Dashboard: React.FC<DashboardProps> = ({ stock, selectedBranch, transactio
                 <StatsCard
                     title="ยอดรวมทั้งสิ้น"
                     value={stats.totalStock}
+                    confirmedValue={stats.totalStock - stats.totalPending}
+                    pendingValue={stats.totalPending}
                     icon={Package}
                     color="bg-slate-900"
                     textColor="text-slate-900"
@@ -196,7 +234,9 @@ const Dashboard: React.FC<DashboardProps> = ({ stock, selectedBranch, transactio
                 />
                 <StatsCard
                     title="Loscam Red"
-                    value={stats.loscamRed}
+                    value={stats.loscamRed.total}
+                    confirmedValue={stats.loscamRed.confirmed}
+                    pendingValue={stats.loscamRed.pending}
                     icon={Flame}
                     color="bg-red-600"
                     textColor="text-red-600"
@@ -205,7 +245,9 @@ const Dashboard: React.FC<DashboardProps> = ({ stock, selectedBranch, transactio
                 />
                 <StatsCard
                     title="Loscam Blue"
-                    value={stats.loscamBlue}
+                    value={stats.loscamBlue.total}
+                    confirmedValue={stats.loscamBlue.confirmed}
+                    pendingValue={stats.loscamBlue.pending}
                     icon={Box}
                     color="bg-blue-600"
                     textColor="text-blue-600"
@@ -213,7 +255,9 @@ const Dashboard: React.FC<DashboardProps> = ({ stock, selectedBranch, transactio
                 />
                 <StatsCard
                     title="Loscam Yellow"
-                    value={stats.loscamYellow}
+                    value={stats.loscamYellow.total}
+                    confirmedValue={stats.loscamYellow.confirmed}
+                    pendingValue={stats.loscamYellow.pending}
                     icon={Layers}
                     color="bg-amber-400"
                     textColor="text-amber-600"
@@ -221,7 +265,9 @@ const Dashboard: React.FC<DashboardProps> = ({ stock, selectedBranch, transactio
                 />
                 <StatsCard
                     title="HI-Q"
-                    value={stats.hiq}
+                    value={stats.hiq.total}
+                    confirmedValue={stats.hiq.confirmed}
+                    pendingValue={stats.hiq.pending}
                     icon={ShieldCheck}
                     color="bg-orange-500"
                     textColor="text-orange-600"
@@ -229,7 +275,9 @@ const Dashboard: React.FC<DashboardProps> = ({ stock, selectedBranch, transactio
                 />
                 <StatsCard
                     title="พาเลทหมุนเวียน (ไม้/คละสี)"
-                    value={stats.general}
+                    value={stats.general.total}
+                    confirmedValue={stats.general.confirmed}
+                    pendingValue={stats.general.pending}
                     icon={Package}
                     color="bg-gray-400"
                     textColor="text-gray-600"
@@ -237,7 +285,9 @@ const Dashboard: React.FC<DashboardProps> = ({ stock, selectedBranch, transactio
                 />
                 <StatsCard
                     title="พาเลทพลาสติก"
-                    value={stats.plastic}
+                    value={stats.plastic.total}
+                    confirmedValue={stats.plastic.confirmed}
+                    pendingValue={stats.plastic.pending}
                     icon={Recycle}
                     color="bg-teal-500"
                     textColor="text-teal-600"
@@ -246,7 +296,9 @@ const Dashboard: React.FC<DashboardProps> = ({ stock, selectedBranch, transactio
             </div>
 
             <StockVisualizer
-                currentStock={currentStock}
+                currentStock={Object.fromEntries(
+                    Object.entries(stockOverview.confirmed).map(([k, v]) => [k, v + (stockOverview.pending[k] || 0)])
+                )}
                 totalStock={stats.totalStock}
             />
 
