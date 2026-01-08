@@ -1,7 +1,7 @@
 import React from 'react';
 import { History as HistoryIcon, Download, Clock, Printer, Trash2 } from 'lucide-react';
 import { Transaction, BranchId, User } from '../../types';
-import { BRANCHES, VEHICLE_TYPES } from '../../constants';
+import { BRANCHES, VEHICLE_TYPES, PALLET_TYPES, EXTERNAL_PARTNERS } from '../../constants';
 
 interface RecentTransactionsTableProps {
     displayTransactions: Transaction[];
@@ -152,7 +152,7 @@ const RecentTransactionsTable: React.FC<RecentTransactionsTableProps> = ({
                                         <td className={`p-4 text-slate-600 ${isCancelled ? 'line-through opacity-50' : ''}`}>
                                             {tx.referenceDocNo || '-'}
                                         </td>
-                                        <td className={`p-4 text-slate-600 text-xs ${isCancelled ? 'line-through opacity-50' : ''}`}>
+                                        <td className={`p-4 text-slate-600 ${isCancelled ? 'line-through opacity-50' : ''}`}>
                                             <div className="flex flex-col gap-0.5">
                                                 {tx.carRegistration && <div className="flex items-center gap-1"><span className="font-bold">{tx.carRegistration}</span> {(tx.vehicleType) ? `(${VEHICLE_TYPES.find(v => v.id === tx.vehicleType)?.name || tx.vehicleType})` : ''}</div>}
                                                 {tx.driverName && <span>{tx.driverName}</span>}
@@ -160,11 +160,33 @@ const RecentTransactionsTable: React.FC<RecentTransactionsTableProps> = ({
                                             </div>
                                         </td>
                                         <td className={`p-4 text-slate-600 ${isCancelled ? 'line-through opacity-50' : ''}`}>
-                                            <div className="font-medium text-slate-800">{tx.palletId}</div>
-                                            <div className="text-xs text-slate-400">
-                                                {tx.source} <span className="mx-1">→</span> {tx.dest}
+                                            <div className="flex flex-col gap-1">
+                                                <div className="flex items-center gap-2">
+                                                    <span className="font-black text-slate-800">
+                                                        {PALLET_TYPES.find(p => p.id === tx.palletId)?.name || tx.palletId}
+                                                    </span>
+                                                    {tx.note?.includes('[แก้ไขการรับ]') && (
+                                                        <span className="px-1.5 py-0.5 bg-amber-100 text-amber-700 text-[9px] font-black rounded uppercase">แก้ไขแล้ว</span>
+                                                    )}
+                                                    {tx.note?.includes('[รายการแยก]') && (
+                                                        <span className="px-1.5 py-0.5 bg-blue-100 text-blue-700 text-[9px] font-black rounded uppercase">รายการแยก</span>
+                                                    )}
+                                                </div>
+                                                <div className="text-[11px] text-slate-400 flex items-center gap-1">
+                                                    <span className="font-bold text-slate-500">
+                                                        {[...BRANCHES, ...EXTERNAL_PARTNERS].find(b => b.id === tx.source)?.name || tx.source}
+                                                    </span>
+                                                    <span className="text-slate-300">→</span>
+                                                    <span className="font-bold text-slate-500">
+                                                        {[...BRANCHES, ...EXTERNAL_PARTNERS].find(b => b.id === tx.dest)?.name || tx.dest}
+                                                    </span>
+                                                </div>
+                                                {tx.note && (
+                                                    <div className="text-[10px] text-blue-500/70 font-medium italic mt-0.5 leading-tight">
+                                                        {tx.note.replace('[แก้ไขการรับ] ', '').replace('[รายการแยก] ', '')}
+                                                    </div>
+                                                )}
                                             </div>
-                                            {tx.note && <div className="text-[10px] text-slate-400 mt-1 italic">"{tx.note}"</div>}
                                         </td>
                                         <td className={`p-4 text-center font-black ${isCancelled ? 'text-slate-400 line-through opacity-50' : 'text-emerald-600 bg-emerald-50/30'}`}>
                                             {qtyIn}

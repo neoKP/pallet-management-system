@@ -182,10 +182,25 @@ export const StockProvider: React.FC<StockProviderProps> = ({ children }) => {
             const originalTx = transactions.find(t => t.id === item.id);
             const isNew = !originalTx;
 
+            let correctionNote = item.note || '';
+            if (!isNew && (item.palletId !== originalTx.palletId || item.qty !== originalTx.qty)) {
+                const oldPalletName = PALLET_TYPES.find(p => p.id === originalTx.palletId)?.name || originalTx.palletId;
+                const newPalletName = PALLET_TYPES.find(p => p.id === item.palletId)?.name || item.palletId;
+
+                const parts = [];
+                if (item.palletId !== originalTx.palletId) parts.push(`เปลี่ยนประเภท: ${oldPalletName} -> ${newPalletName}`);
+                if (item.qty !== originalTx.qty) parts.push(`แก้จำนวน: ${originalTx.qty} -> ${item.qty}`);
+
+                correctionNote = `[แก้ไขการรับ] ${parts.join(', ')}` + (item.note ? ` | ${item.note}` : '');
+            } else if (isNew) {
+                correctionNote = `[รายการแยก] ` + (item.note || '');
+            }
+
             const updatedTx: Transaction = {
                 ...item,
                 status: 'COMPLETED' as const,
-                receivedAt: new Date().toISOString()
+                receivedAt: new Date().toISOString(),
+                note: correctionNote
             };
             finalTxs.push(updatedTx);
 
