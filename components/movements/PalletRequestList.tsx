@@ -49,7 +49,7 @@ const PalletRequestList: React.FC<PalletRequestListProps> = ({
                 const isPull = req.requestType === 'PULL';
                 const themeColor = isPull ? 'orange' : 'blue';
                 const Icon = isPull ? ArrowDownCircle : ArrowUpCircle;
-                const isTargetOfPull = isPull && req.targetBranchId === currentBranchId;
+                const isTargetInvolved = req.targetBranchId === currentBranchId;
 
                 return (
                     <div key={req.id} className={`group relative bg-white rounded-[2.5rem] border-2 transition-all duration-500 overflow-hidden hover:shadow-2xl hover:-translate-y-1 ${isPull ? 'border-orange-100 hover:border-orange-300' : 'border-blue-100 hover:border-blue-300'
@@ -116,7 +116,9 @@ const PalletRequestList: React.FC<PalletRequestListProps> = ({
 
                                     <div className="flex gap-2">
                                         <div className="p-2 bg-white/40 rounded-xl">
-                                            <Info size={14} className="text-slate-400" />
+                                            <div className="p-2 bg-white/40 rounded-xl">
+                                                <Info size={14} className="text-slate-400" />
+                                            </div>
                                         </div>
                                         <div>
                                             <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-1">วัตถุประสงค์:</span>
@@ -137,7 +139,7 @@ const PalletRequestList: React.FC<PalletRequestListProps> = ({
                                     )}
                                 </div>
 
-                                {(isHub || isTargetOfPull) && req.status === 'PENDING' && (
+                                {(isHub || isTargetInvolved) && req.status === 'PENDING' && (
                                     <div className="flex gap-2.5 mt-2">
                                         <button
                                             onClick={() => onApprove(req)}
