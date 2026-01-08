@@ -31,6 +31,7 @@ const PalletRequestTab: React.FC<PalletRequestTabProps> = ({ selectedBranch, cur
             <PalletRequestList
                 requests={logic.displayRequests}
                 isHub={logic.isHub}
+                currentBranchId={selectedBranch}
                 allDestinations={logic.ALL_DESTINATIONS}
                 onApprove={logic.handleApprove}
                 onReject={logic.handleReject}

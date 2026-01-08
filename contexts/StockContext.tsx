@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useState, useCallback, ReactNode, useEffect } from 'react';
-import { Stock, Transaction, BranchId, PalletId, TransactionType, PalletRequest } from '../types';
+import { Stock, Transaction, BranchId, PalletId, TransactionType, PalletRequest, PalletRequestType } from '../types';
 import { INITIAL_STOCK, INITIAL_TRANSACTIONS, BRANCHES, EXTERNAL_PARTNERS, PALLET_TYPES } from '../constants';
 import * as firebaseService from '../services/firebase';
 import * as telegramService from '../services/telegramService';
@@ -107,11 +107,12 @@ export const StockProvider: React.FC<StockProviderProps> = ({ children }) => {
         return `${prefix}-${datePart}-${running}`;
     }, [transactions]);
 
-    const generateRequestNo = useCallback((dateStr: string) => {
+    const generateRequestNo = useCallback((dateStr: string, requestType: PalletRequestType = 'PUSH') => {
         const datePart = dateStr.replace(/-/g, '');
-        const existingReqs = palletRequests.filter(r => r.requestNo.startsWith(`REQ-${datePart}`));
+        const prefix = requestType === 'PULL' ? 'REQ-PULL' : 'REQ-PUSH';
+        const existingReqs = palletRequests.filter(r => r.requestNo.startsWith(`${prefix}-${datePart}`));
         const running = (existingReqs.length + 1).toString().padStart(3, '0');
-        return `REQ-${datePart}-${running}`;
+        return `${prefix}-${datePart}-${running}`;
     }, [palletRequests]);
 
     const addTransaction = useCallback(async (txData: Partial<Transaction>) => {
@@ -204,15 +205,12 @@ export const StockProvider: React.FC<StockProviderProps> = ({ children }) => {
                 const parts = [];
                 if (item.palletId !== originalTx.palletId) parts.push(`เปลี่ยนประเภท: ${oldPalletName} -> ${newPalletName}`);
                 if (item.qty !== originalTx.qty) parts.push(`แก้จำนวน: ${originalTx.qty} -> ${item.qty}`);
-
-                correctionNote = `[แก้ไขการรับ] ${parts.join(', ')}` + (item.note ? ` | ${item.note}` : '');
-            } else if (isNew) {
-                correctionNote = `[รายการแยก] ` + (item.note || '');
+                correctionNote = `[แก้ไข] ${parts.join(', ')} ${item.note ? `| หมายเหตุ: ${item.note}` : ''}`;
             }
 
             const updatedTx: Transaction = {
                 ...item,
-                status: 'COMPLETED' as const,
+                status: 'COMPLETED',
                 receivedAt: new Date().toISOString(),
                 note: correctionNote,
                 originalPalletId,
@@ -220,101 +218,24 @@ export const StockProvider: React.FC<StockProviderProps> = ({ children }) => {
             };
             finalTxs.push(updatedTx);
 
-            // Reconcile Source Stock if Pallet Type or Qty was changed during verification
-            if (!isNew && (item.palletId !== originalTx.palletId || item.qty !== originalTx.qty)) {
-                if (updatedTx.source && nextStock[updatedTx.source as BranchId]) {
-                    const sId = updatedTx.source as BranchId;
-                    const s = { ...nextStock[sId] } as Record<PalletId, number>;
-                    // Rollback original deduction
-                    s[originalTx.palletId] = (s[originalTx.palletId] || 0) + originalTx.qty;
-                    // Apply actual deduction
-                    s[item.palletId] = (s[item.palletId] || 0) - item.qty;
-                    nextStock[sId] = s;
-                }
-            } else if (isNew) {
-                // For new split items, deduct from source
-                if (updatedTx.source && nextStock[updatedTx.source as BranchId]) {
-                    const sId = updatedTx.source as BranchId;
-                    const s = { ...nextStock[sId] } as Record<PalletId, number>;
-                    s[item.palletId] = (s[item.palletId] || 0) - item.qty;
-                    nextStock[sId] = s;
-                }
-            }
-
-            // Always add to destination stock
             if (updatedTx.dest && nextStock[updatedTx.dest as BranchId]) {
-                const dId = updatedTx.dest as BranchId;
-                const d = { ...nextStock[dId] } as Record<PalletId, number>;
+                const d = { ...nextStock[updatedTx.dest as BranchId] } as Record<PalletId, number>;
                 d[updatedTx.palletId] = (d[updatedTx.palletId] || 0) + updatedTx.qty;
-                nextStock[dId] = d;
+                nextStock[updatedTx.dest as BranchId] = d;
             }
         });
 
-        const originalGroupDocNo = results[0]?.docNo;
-        if (originalGroupDocNo) {
-            const originalGroupIds = transactions
-                .filter(t => t.docNo === originalGroupDocNo && t.status === 'PENDING')
-                .map(t => t.id);
+        await firebaseService.addMovementBatch(finalTxs, nextStock);
 
-            originalGroupIds.forEach(id => {
-                if (!results.some(r => r.id === id)) {
-                    const txToCancel = transactions.find(t => t.id === id);
-                    if (txToCancel && txToCancel.source && nextStock[txToCancel.source as BranchId]) {
-                        const sId = txToCancel.source as BranchId;
-                        const s = { ...nextStock[sId] } as Record<PalletId, number>;
-                        s[txToCancel.palletId] = (s[txToCancel.palletId] || 0) + txToCancel.qty;
-                        nextStock[sId] = s;
-                        finalTxs.push({ ...txToCancel, status: 'CANCELLED' });
-                    }
-                }
+        if (config?.telegramChatId) {
+            results.forEach(tx => {
+                const sourceName = BRANCHES.find(b => b.id === tx.source)?.name || tx.source;
+                const destName = BRANCHES.find(b => b.id === tx.dest)?.name || tx.dest;
+                const message = telegramService.formatMovementNotification({ ...tx, type: 'IN', items: [{ palletId: tx.palletId, qty: tx.qty }] }, sourceName, destName);
+                telegramService.sendMessage(config.telegramChatId, message);
             });
         }
-
-        if (finalTxs.length > 0) {
-            await firebaseService.addMovementBatch(finalTxs, nextStock);
-
-            if (config?.telegramChatId) {
-                const docNo = finalTxs[0].docNo;
-                const sourceName = BRANCHES.find(b => b.id === finalTxs[0].source)?.name || finalTxs[0].source;
-                const destName = BRANCHES.find(b => b.id === finalTxs[0].dest)?.name || finalTxs[0].dest;
-                const summaryData = {
-                    type: 'IN',
-                    docNo,
-                    items: finalTxs.filter(t => t.status === 'COMPLETED').map(t => ({ palletId: t.palletId, qty: t.qty })),
-                    referenceDocNo: finalTxs[0].referenceDocNo
-                };
-                const message = telegramService.formatMovementNotification(summaryData, sourceName, destName);
-                telegramService.sendMessage(config.telegramChatId, message);
-            }
-        }
     }, [stock, transactions, config]);
-
-    const confirmTransaction = useCallback((txId: number) => {
-        const tx = transactions.find(t => t.id === txId);
-        if (tx) confirmTransactionsBatch([tx]);
-    }, [transactions, confirmTransactionsBatch]);
-
-    const deleteTransaction = useCallback(async (txId: number) => {
-        const tx = transactions.find(t => t.id === txId);
-        if (!tx || tx.status === 'CANCELLED') return;
-
-        const nextStock = { ...stock };
-        if (tx.source && BRANCHES.some(b => b.id === tx.source)) {
-            const bId = tx.source as BranchId;
-            const s = { ...nextStock[bId] } as Record<PalletId, number>;
-            s[tx.palletId] = (s[tx.palletId] || 0) + tx.qty;
-            nextStock[bId] = s;
-        }
-        if (tx.status === 'COMPLETED' && tx.dest && BRANCHES.some(b => b.id === tx.dest)) {
-            const dId = tx.dest as BranchId;
-            const d = { ...nextStock[dId] } as Record<PalletId, number>;
-            d[tx.palletId] = Math.max(0, (d[tx.palletId] || 0) - tx.qty);
-            nextStock[dId] = d;
-        }
-
-        const updatedTx = { ...tx, status: 'CANCELLED' as const };
-        await firebaseService.addMovementBatch([updatedTx], nextStock);
-    }, [transactions, stock]);
 
     const addMovementBatch = useCallback(async (data: {
         type: TransactionType;
@@ -329,7 +250,9 @@ export const StockProvider: React.FC<StockProviderProps> = ({ children }) => {
         referenceDocNo?: string;
         note?: string;
     }) => {
-        // --- STRICT STOCK VALIDATION ---
+        const dateStr = new Date().toISOString().split('T')[0];
+
+        // --- STRICT STOCK VALIDATION FOR BATCH ---
         if (data.type === 'OUT' && BRANCHES.some(b => b.id === data.source)) {
             const sourceId = data.source as BranchId;
             data.items.forEach(item => {
@@ -342,66 +265,92 @@ export const StockProvider: React.FC<StockProviderProps> = ({ children }) => {
             });
         }
 
-        const dateStr = new Date().toISOString().split('T')[0];
         const docNo = data.docNo || generateDocNo(data.type, data.source, data.dest, dateStr);
         const isSourceBranch = BRANCHES.some(b => b.id === data.source);
         const isDestBranch = BRANCHES.some(b => b.id === data.dest);
         const isInternalTransfer = isSourceBranch && isDestBranch && data.type === 'OUT';
         const status = isInternalTransfer ? 'PENDING' : 'COMPLETED';
 
-        const newTransactions: Transaction[] = [];
+        const batchTxs: Transaction[] = data.items.map(item => ({
+            id: Date.now() + Math.floor(Math.random() * 1000000),
+            date: dateStr,
+            docNo,
+            type: data.type,
+            status,
+            source: data.source,
+            dest: data.dest,
+            palletId: item.palletId,
+            qty: item.qty,
+            carRegistration: data.carRegistration,
+            vehicleType: data.vehicleType,
+            driverName: data.driverName,
+            transportCompany: data.transportCompany,
+            referenceDocNo: data.referenceDocNo,
+            note: data.note
+        } as Transaction));
+
         const nextStock = { ...stock };
-        const baseId = Date.now() + Math.floor(Math.random() * 1000);
-
-        data.items.forEach((item, index) => {
-            const newTx: Transaction = {
-                id: baseId + index,
-                date: dateStr,
-                docNo,
-                type: data.type,
-                status,
-                source: data.source,
-                dest: data.dest,
-                palletId: item.palletId,
-                qty: item.qty,
-                carRegistration: data.carRegistration,
-                vehicleType: data.vehicleType,
-                driverName: data.driverName,
-                transportCompany: data.transportCompany,
-                referenceDocNo: data.referenceDocNo,
-                note: data.note,
-            } as Transaction;
-
-            newTransactions.push(newTx);
-
-            if (data.source && nextStock[data.source as BranchId]) {
-                const s = { ...nextStock[data.source as BranchId] } as Record<PalletId, number>;
-                s[item.palletId] = (s[item.palletId] || 0) - item.qty;
-                nextStock[data.source as BranchId] = s;
+        batchTxs.forEach(tx => {
+            if (tx.source && nextStock[tx.source as BranchId]) {
+                const s = { ...nextStock[tx.source as BranchId] } as Record<PalletId, number>;
+                s[tx.palletId] = (s[tx.palletId] || 0) - tx.qty;
+                nextStock[tx.source as BranchId] = s;
             }
-            if (status === 'COMPLETED' && data.dest && nextStock[data.dest as BranchId]) {
-                const d = { ...nextStock[data.dest as BranchId] } as Record<PalletId, number>;
-                d[item.palletId] = (d[item.palletId] || 0) + item.qty;
-                nextStock[data.dest as BranchId] = d;
+            if (status === 'COMPLETED' && tx.dest && nextStock[tx.dest as BranchId]) {
+                const d = { ...nextStock[tx.dest as BranchId] } as Record<PalletId, number>;
+                d[tx.palletId] = (d[tx.palletId] || 0) + tx.qty;
+                nextStock[tx.dest as BranchId] = d;
             }
         });
 
-        await firebaseService.addMovementBatch(newTransactions, nextStock);
+        await firebaseService.addMovementBatch(batchTxs, nextStock);
 
         if (config?.telegramChatId) {
-            const allEntities = [...BRANCHES, ...EXTERNAL_PARTNERS, { id: 'maintenance_stock', name: 'คลังซ่อม' }];
+            const allEntities = [...BRANCHES, ...EXTERNAL_PARTNERS];
             const sourceName = allEntities.find(e => e.id === data.source)?.name || data.source;
             const destName = allEntities.find(e => e.id === data.dest)?.name || data.dest;
-
-            if (data.referenceDocNo?.startsWith('REQ-')) {
-                const message = telegramService.formatShipmentNotification({ requestNo: data.referenceDocNo, items: data.items }, docNo, sourceName, destName, data);
-                telegramService.sendMessage(config.telegramChatId, message);
-            } else {
-                const message = telegramService.formatMovementNotification(data, sourceName, destName);
-                telegramService.sendMessage(config.telegramChatId, message);
-            }
+            const message = telegramService.formatMovementNotification({ ...data, docNo }, sourceName, destName);
+            telegramService.sendMessage(config.telegramChatId, message);
         }
     }, [stock, generateDocNo, config]);
+
+    const confirmTransaction = useCallback(async (txId: number) => {
+        const tx = transactions.find(t => t.id === txId);
+        if (!tx) return;
+
+        const updatedTx: Transaction = { ...tx, status: 'COMPLETED', receivedAt: new Date().toISOString() };
+        const nextStock = { ...stock };
+
+        if (updatedTx.dest && nextStock[updatedTx.dest as BranchId]) {
+            const d = { ...nextStock[updatedTx.dest as BranchId] } as Record<PalletId, number>;
+            d[updatedTx.palletId] = (d[updatedTx.palletId] || 0) + updatedTx.qty;
+            nextStock[updatedTx.dest as BranchId] = d;
+        }
+
+        await firebaseService.addMovementBatch([updatedTx], nextStock);
+    }, [stock, transactions]);
+
+    const deleteTransaction = useCallback(async (txId: number) => {
+        const tx = transactions.find(t => t.id === txId);
+        if (!tx) return;
+
+        const updatedTx: Transaction = { ...tx, status: 'CANCELLED' };
+        const nextStock = { ...stock };
+
+        if (updatedTx.source && nextStock[updatedTx.source as BranchId]) {
+            const s = { ...nextStock[updatedTx.source as BranchId] } as Record<PalletId, number>;
+            s[updatedTx.palletId] = (s[updatedTx.palletId] || 0) + updatedTx.qty;
+            nextStock[updatedTx.source as BranchId] = s;
+        }
+
+        if (updatedTx.status === 'COMPLETED' && updatedTx.dest && nextStock[updatedTx.dest as BranchId]) {
+            const d = { ...nextStock[updatedTx.dest as BranchId] } as Record<PalletId, number>;
+            d[updatedTx.palletId] = (d[updatedTx.palletId] || 0) - updatedTx.qty;
+            nextStock[updatedTx.dest as BranchId] = d;
+        }
+
+        await firebaseService.addMovementBatch([updatedTx], nextStock);
+    }, [stock, transactions]);
 
     const processBatchMaintenance = useCallback(async (data: {
         items: { palletId: PalletId; qty: number }[];
@@ -411,23 +360,10 @@ export const StockProvider: React.FC<StockProviderProps> = ({ children }) => {
         branchId: BranchId;
         targetBranchId?: BranchId;
     }) => {
-        // --- STRICT STOCK VALIDATION ---
-        data.items.forEach(item => {
-            const available = stock[data.branchId]?.[item.palletId] || 0;
-            if (item.qty > available) {
-                const branchName = BRANCHES.find(b => b.id === data.branchId)?.name || data.branchId;
-                const palletName = PALLET_TYPES.find(p => p.id === item.palletId)?.name || item.palletId;
-                throw new Error(`ไม่สามารถทำรายการซ่อมได้เนื่องจากพาเลทไม่เพียงพอ: ${branchName} มี ${palletName} ในสต๊อก ${available} ตัว (ต้องการ ${item.qty} ตัว)`);
-            }
-        });
-
-        const totalProcessed = data.items.reduce((sum, item) => sum + item.qty, 0);
-        const targetBranch = data.targetBranchId || data.branchId;
         const dateStr = new Date().toISOString().split('T')[0];
-        const datePart = dateStr.replace(/-/g, '');
-        const existingDocs = transactions.filter(t => t.docNo && t.docNo.startsWith(`MNT-${datePart}`));
-        const running = (existingDocs.length + 1).toString().padStart(3, '0');
-        const docNo = `MNT-${datePart}-${running}`;
+        const targetBranch = data.targetBranchId || data.branchId;
+
+        const docNo = generateDocNo('MAINTENANCE', data.branchId, targetBranch, dateStr);
 
         const newTx: Transaction = {
             id: Date.now(),
@@ -437,19 +373,16 @@ export const StockProvider: React.FC<StockProviderProps> = ({ children }) => {
             status: 'COMPLETED',
             source: data.branchId,
             dest: targetBranch,
-            palletId: 'general',
-            qty: totalProcessed,
-            action: 'REPAIR_CONVERT',
+            palletId: data.items[0]?.palletId || 'unknown' as PalletId,
+            qty: data.fixedQty + data.scrappedQty,
             note: data.note,
-            noteExtended: `Batch: ${data.items.map((i) => `${i.palletId} ${i.qty}`).join(', ')} | Fixed: ${data.fixedQty}, Scrap: ${data.scrappedQty}`,
-            qtyRepaired: data.fixedQty,
-            targetPallet: 'general',
+            noteExtended: `REPAIR: ${data.fixedQty}, SCRAP: ${data.scrappedQty}`
         } as Transaction;
 
         const nextStock = { ...stock };
         if (nextStock[data.branchId]) {
             const s = { ...nextStock[data.branchId] } as Record<PalletId, number>;
-            data.items.forEach((item) => {
+            data.items.forEach(item => {
                 s[item.palletId] = (s[item.palletId] || 0) - item.qty;
             });
             nextStock[data.branchId] = s;
@@ -461,22 +394,21 @@ export const StockProvider: React.FC<StockProviderProps> = ({ children }) => {
         }
 
         await firebaseService.addMovementBatch([newTx], nextStock);
-    }, [stock, transactions]);
+    }, [stock, transactions, generateDocNo]);
 
     const createPalletRequest = useCallback(async (reqData: Partial<PalletRequest>) => {
         const dateStr = new Date().toISOString().split('T')[0];
-        const requestNo = generateRequestNo(dateStr);
-
         const newReq: PalletRequest = {
             id: Date.now().toString(),
             date: dateStr,
-            requestNo,
+            requestNo: generateRequestNo(dateStr, reqData.requestType || 'PUSH'),
             branchId: reqData.branchId || 'hub_nw',
             items: reqData.items || [],
             targetBranchId: reqData.targetBranchId,
             purpose: reqData.purpose || '',
             priority: reqData.priority || 'NORMAL',
             status: 'PENDING',
+            requestType: reqData.requestType || 'PUSH',
             note: reqData.note || '',
         };
 
@@ -515,7 +447,7 @@ export const StockProvider: React.FC<StockProviderProps> = ({ children }) => {
                 getStockForBranch,
                 palletRequests,
                 createPalletRequest,
-                updatePalletRequest: updatePalletRequest,
+                updatePalletRequest,
                 config,
                 updateSystemConfig
             }}
