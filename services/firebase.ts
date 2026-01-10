@@ -116,6 +116,26 @@ export const initializeData = async () => {
         if (!branchesSnap.exists()) {
             console.log('Seeding initial branches data...');
             await set(branchesRef, BRANCHES);
+        } else {
+            // Update existing branches with new ones from constants
+            const currentBranches = branchesSnap.val();
+            const branchList = Array.isArray(currentBranches) ? currentBranches : Object.values(currentBranches);
+            const branchIds = new Set(branchList.map((b: any) => b.id));
+
+            let needsUpdate = false;
+            const updatedBranches = [...branchList];
+
+            BRANCHES.forEach(b => {
+                if (!branchIds.has(b.id)) {
+                    console.log(`Adding new branch to master data: ${b.name}`);
+                    updatedBranches.push(b);
+                    needsUpdate = true;
+                }
+            });
+
+            if (needsUpdate) {
+                await set(branchesRef, updatedBranches);
+            }
         }
 
         // Check Master Data: Partners
@@ -396,6 +416,30 @@ export const addMasterData = async (type: 'pallets' | 'branches' | 'partners', d
         throw error;
     }
 };
+
+export const deleteMasterData = async (type: 'pallets' | 'branches' | 'partners', id: string) => {
+    try {
+        const db = getDb();
+        const { ref, get, set } = getUtils();
+
+        const path = type;
+        const dbRef = ref(db, path);
+        const snapshot = await get(dbRef);
+        let currentData = snapshot.val() || [];
+
+        if (!Array.isArray(currentData)) {
+            currentData = Object.values(currentData);
+        }
+
+        const newData = currentData.filter((item: any) => item.id !== id);
+        await set(dbRef, newData);
+
+    } catch (error) {
+        console.error(`Error deleting ${type}:`, error);
+        throw error;
+    }
+};
+
 
 export const updatePalletRequest = async (request: any) => {
     try {

@@ -6,7 +6,7 @@ import Swal from 'sweetalert2';
 export const useQRScanner = (
     currentUser: User | null,
     transactions: Transaction[],
-    confirmTransactionsBatch: (txIdsOrAdjustments: (number | { id: number; palletId: any; qty: number })[]) => void,
+    confirmTransactionsBatch: (results: Transaction[]) => void,
     setActiveTab: (tab: any) => void
 ) => {
     const [isScannerOpen, setIsScannerOpen] = useState(false);
@@ -47,7 +47,7 @@ export const useQRScanner = (
                     reverseButtons: true
                 }).then((result: any) => {
                     if (result.isConfirmed) {
-                        confirmTransactionsBatch(pendingTxs.map(t => t.id));
+                        confirmTransactionsBatch(pendingTxs);
                         Swal.fire({
                             title: 'สำเร็จ!',
                             text: 'บันทึกการรับพาเลทเรียบร้อยแล้ว',

@@ -7,11 +7,11 @@ import { User } from '../../types';
 const MOCK_USERS: User[] = [
     { username: 'admin', role: 'ADMIN', name: 'System Administrator' },
     { username: 'user_nw', role: 'USER', branchId: 'hub_nw', name: 'Operator - Hub NW' },
-    { username: 'user_sai3', role: 'USER', branchId: 'sai3', name: 'Staff - Sai 3' },
     { username: 'user_cm', role: 'USER', branchId: 'cm', name: 'Staff - Chiang Mai' },
     { username: 'user_kpp', role: 'USER', branchId: 'kpp', name: 'Staff - Kamphaeng Phet' },
     { username: 'user_plk', role: 'USER', branchId: 'plk', name: 'Staff - Phitsanulok' },
     { username: 'user_ekp', role: 'USER', branchId: 'ekp', name: 'Staff - EKP' },
+    { username: 'user_ms', role: 'USER', branchId: 'ms', name: 'Staff - Mae Sot' },
 ];
 
 interface LoginScreenProps {

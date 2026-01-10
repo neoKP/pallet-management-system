@@ -189,6 +189,29 @@ const SettingsTab: React.FC = () => {
         }
     };
 
+    const handleDelete = async (type: 'pallets' | 'branches' | 'partners', id: string, name: string) => {
+        const result = await Swal.fire({
+            title: `ลบ ${name}?`,
+            text: "การลบนี้ไม่สามารถกู้คืนได้ และอาจส่งผลกระทบต่อข้อมูลอดีต",
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonColor: '#d33',
+            cancelButtonColor: '#3085d6',
+            confirmButtonText: 'ใช่, ลบเลย',
+            cancelButtonText: 'ยกเลิก'
+        });
+
+        if (result.isConfirmed) {
+            try {
+                await firebaseService.deleteMasterData(type, id);
+                Swal.fire('ลบสำเร็จ', `ลบ ${name} เรียบร้อยแล้ว`, 'success');
+            } catch (error) {
+                console.error(error);
+                Swal.fire('ผิดพลาด', 'ไม่สามารถลบข้อมูลได้', 'error');
+            }
+        }
+    };
+
     return (
         <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4">
 
@@ -307,7 +330,11 @@ const SettingsTab: React.FC = () => {
                                                 <div className={`w-6 h-6 rounded-full mx-auto shadow-sm border border-slate-200 ${p.color.startsWith('bg-') ? p.color : ''}`} {...{ style: dotStyle }}></div>
                                             </td>
                                             <td className="p-4 text-center">
-                                                <button aria-label="Delete" className="text-slate-400 hover:text-red-500 transition-colors">
+                                                <button
+                                                    onClick={() => handleDelete('pallets', p.id, p.name)}
+                                                    aria-label="Delete"
+                                                    className="text-slate-400 hover:text-red-500 transition-colors"
+                                                >
                                                     <Trash2 size={18} />
                                                 </button>
                                             </td>
@@ -343,7 +370,11 @@ const SettingsTab: React.FC = () => {
                                         </td>
                                         <td className="p-4 uppercase text-xs font-bold text-slate-500">{b.type}</td>
                                         <td className="p-4 text-center">
-                                            <button aria-label="Delete branch" className="text-slate-400 hover:text-red-500 transition-colors">
+                                            <button
+                                                onClick={() => handleDelete('branches', b.id, b.name)}
+                                                aria-label="Delete branch"
+                                                className="text-slate-400 hover:text-red-500 transition-colors"
+                                            >
                                                 <Trash2 size={18} />
                                             </button>
                                         </td>
@@ -365,7 +396,11 @@ const SettingsTab: React.FC = () => {
                                         </td>
                                         <td className="p-4 uppercase text-xs font-bold text-slate-500">{p.type}</td>
                                         <td className="p-4 text-center">
-                                            <button aria-label="Delete partner" className="text-slate-400 hover:text-red-500 transition-colors">
+                                            <button
+                                                onClick={() => handleDelete('partners', p.id, p.name)}
+                                                aria-label="Delete partner"
+                                                className="text-slate-400 hover:text-red-500 transition-colors"
+                                            >
                                                 <Trash2 size={18} />
                                             </button>
                                         </td>

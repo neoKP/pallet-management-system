@@ -65,7 +65,7 @@ const MovementTab: React.FC<MovementTabProps> = ({ selectedBranch, transactions,
                         <TransactionTimelineModal
                             isOpen={logic.isTimelineOpen}
                             onClose={() => logic.setIsTimelineOpen(false)}
-                            transaction={logic.timelineTx}
+                            transactions={[logic.timelineTx]}
                         />
                     )}
 

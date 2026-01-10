@@ -16,11 +16,11 @@ export type PalletId =
  */
 export type BranchId =
   | 'hub_nw'
-  | 'sai3'
   | 'kpp'
   | 'plk'
   | 'cm'
   | 'ekp'
+  | 'ms'
   | 'maintenance_stock';
 
 /**

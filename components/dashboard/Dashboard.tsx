@@ -94,19 +94,24 @@ const Dashboard: React.FC<DashboardProps> = ({ stock, selectedBranch, transactio
         const activeBranchIds = BRANCHES.map(b => b.id);
 
         if (selectedBranch === 'ALL') {
-            // Calculate Sum of All Branch Stocks
+            // Filter specific branches for 'ALL' view (Northern Group + Maintenance + EKP)
+            const allowedBranchIds = ['hub_nw', 'kpp', 'cm', 'plk', 'maintenance_stock', 'ekp', 'ms'];
+
+            // Calculate Sum of specific Branch Stocks
             activeBranchIds.forEach(branchId => {
-                const branchStock = stock[branchId];
-                if (branchStock) {
-                    Object.entries(branchStock).forEach(([pid, qty]) => {
-                        confirmed[pid] = (confirmed[pid] || 0) + (qty as number);
-                    });
+                if (allowedBranchIds.includes(branchId)) {
+                    const branchStock = stock[branchId];
+                    if (branchStock) {
+                        Object.entries(branchStock).forEach(([pid, qty]) => {
+                            confirmed[pid] = (confirmed[pid] || 0) + (qty as number);
+                        });
+                    }
                 }
             });
 
-            // Calculate Sum of All PENDING transactions (In-Transit)
+            // Calculate Sum of PENDING transactions (In-Transit) destined for these branches
             transactions.forEach(t => {
-                if (t.status === 'PENDING') {
+                if (t.status === 'PENDING' && allowedBranchIds.includes(t.dest)) {
                     pending[t.palletId] = (pending[t.palletId] || 0) + (t.qty as number);
                 }
             });
@@ -294,6 +299,71 @@ const Dashboard: React.FC<DashboardProps> = ({ stock, selectedBranch, transactio
                     subtext="Circular"
                 />
             </div>
+
+            {selectedBranch === 'ALL' && (
+                <div className="bg-white p-6 rounded-3xl shadow-sm border border-slate-100 overflow-hidden animate-in fade-in slide-in-from-bottom-4">
+                    <div className="flex items-center gap-3 mb-6 border-b border-slate-50 pb-4">
+                        <div className="p-2 bg-blue-50 text-blue-600 rounded-lg">
+                            <Layers size={20} />
+                        </div>
+                        <div>
+                            <h3 className="text-lg font-black text-slate-800">Branch Stock Breakdown</h3>
+                            <p className="text-sm text-slate-500">รายละเอียดสต็อกรายสาขา (Detailed Stock per Branch)</p>
+                        </div>
+                    </div>
+                    <div className="overflow-x-auto">
+                        <table className="w-full text-sm">
+                            <thead>
+                                <tr className="bg-slate-50 border-b border-slate-100 text-slate-500">
+                                    <th className="p-4 text-left font-bold rounded-tl-xl">Branch Name</th>
+                                    <th className="p-4 text-center font-bold text-red-600">Loscam Red</th>
+                                    <th className="p-4 text-center font-bold text-amber-500">Loscam Yellow</th>
+                                    <th className="p-4 text-center font-bold text-blue-600">Loscam Blue</th>
+                                    <th className="p-4 text-center font-bold text-orange-500">HI-Q</th>
+                                    <th className="p-4 text-center font-bold text-slate-600">General</th>
+                                    <th className="p-4 text-center font-bold text-teal-600 rounded-tr-xl">Plastic</th>
+                                    <th className="p-4 text-center font-black text-slate-800">Total</th>
+                                </tr>
+                            </thead>
+                            <tbody className="divide-y divide-slate-50">
+                                {BRANCHES
+                                    .filter(b => ['hub_nw', 'kpp', 'cm', 'plk', 'maintenance_stock', 'ekp', 'ms'].includes(b.id))
+                                    .map(branch => {
+                                        const branchStock = stock[branch.id] || {};
+                                        const getQty = (id: PalletId) => branchStock[id] || 0;
+                                        const total = getQty('loscam_red') + getQty('loscam_yellow') + getQty('loscam_blue') +
+                                            getQty('hiq') + getQty('general') + getQty('plastic_circular');
+
+                                        return (
+                                            <tr key={branch.id} className="hover:bg-slate-50/80 transition-colors">
+                                                <td className="p-4 font-bold text-slate-800 border-r border-slate-50">{branch.name}</td>
+                                                <td className="p-4 text-center font-mono text-slate-600">{getQty('loscam_red')}</td>
+                                                <td className="p-4 text-center font-mono text-slate-600">{getQty('loscam_yellow')}</td>
+                                                <td className="p-4 text-center font-mono text-slate-600">{getQty('loscam_blue')}</td>
+                                                <td className="p-4 text-center font-mono text-slate-600">{getQty('hiq')}</td>
+                                                <td className="p-4 text-center font-mono text-slate-600">{getQty('general')}</td>
+                                                <td className="p-4 text-center font-mono text-slate-600">{getQty('plastic_circular')}</td>
+                                                <td className="p-4 text-center font-black text-slate-900 bg-slate-50/50">{total}</td>
+                                            </tr>
+                                        );
+                                    })}
+                            </tbody>
+                            <tfoot className="bg-slate-100 font-black text-slate-900 border-t-2 border-slate-200">
+                                <tr>
+                                    <td className="p-4 text-right">GRAND TOTAL</td>
+                                    <td className="p-4 text-center">{stats.loscamRed.confirmed}</td>
+                                    <td className="p-4 text-center">{stats.loscamYellow.confirmed}</td>
+                                    <td className="p-4 text-center">{stats.loscamBlue.confirmed}</td>
+                                    <td className="p-4 text-center">{stats.hiq.confirmed}</td>
+                                    <td className="p-4 text-center">{stats.general.confirmed}</td>
+                                    <td className="p-4 text-center">{stats.plastic.confirmed}</td>
+                                    <td className="p-4 text-center">{stats.totalStock - stats.totalPending}</td>
+                                </tr>
+                            </tfoot>
+                        </table>
+                    </div>
+                </div>
+            )}
 
             <StockVisualizer
                 currentStock={Object.fromEntries(
