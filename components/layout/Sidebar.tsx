@@ -79,7 +79,7 @@ const Sidebar: React.FC<SidebarProps> = ({ activeTab, setActiveTab, currentUser,
             {/* Footer / Version Info */}
             <div className="p-6 border-t border-slate-100">
                 <div className="text-xs text-slate-400 font-medium text-center">
-                    v1.2.0 Enterprise
+                    Dev by Paweewat Phosanga
                 </div>
             </div>
         </aside>
