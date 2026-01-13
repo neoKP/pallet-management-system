@@ -108,9 +108,9 @@ const DocumentPreviewModal: React.FC<DocumentPreviewModalProps> = ({ isOpen, onC
                         {/* Document Title & Identification Section */}
                         <div className="flex justify-between items-end mb-8 border-b-4 border-slate-900 pb-4">
                             <div className="flex-1">
-                                <h2 className="text-4xl font-black text-slate-900 leading-none mb-1">ใบส่งคืนพาเลท</h2>
+                                <h2 className="text-4xl font-black text-slate-900 leading-none mb-1">ใบควบคุมพาเลท</h2>
                                 <div className="flex items-center gap-3">
-                                    <p className="text-sm font-bold text-slate-500 tracking-[0.2em] uppercase">Pallet Return Form</p>
+                                    <p className="text-sm font-bold text-slate-500 tracking-[0.2em] uppercase">Pallet Control Form</p>
                                     <div className="h-4 w-1 bg-blue-600"></div>
                                     <p className="text-xs font-bold text-blue-600 uppercase">Original (ต้นฉบับ)</p>
                                 </div>
