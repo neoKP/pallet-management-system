@@ -33,7 +33,7 @@ const DocumentPreviewModal: React.FC<DocumentPreviewModalProps> = ({ isOpen, onC
         const originalContents = document.body.innerHTML;
 
         if (printContent) {
-            document.body.innerHTML = printContent.innerHTML;
+            document.body.innerHTML = printContent.outerHTML;
             window.print();
             document.body.innerHTML = originalContents;
             window.location.reload(); // Reload to restore event listeners
@@ -56,14 +56,29 @@ const DocumentPreviewModal: React.FC<DocumentPreviewModalProps> = ({ isOpen, onC
 
                 {/* Document Preview Area (Scrollable) */}
                 <div className="flex-1 overflow-y-auto p-12 bg-slate-100 flex justify-center">
-                    <div id="print-area" className="bg-white p-12 w-[210mm] min-h-[297mm] shadow-lg text-slate-900 relative">
+                    <div id="print-area" className="bg-white p-12 w-[210mm] min-h-[297mm] shadow-lg text-slate-900 relative flex flex-col">
                         {/* Styles for Print */}
                         <style>
                             {`
                                 @media print {
                                     @page { size: A4; margin: 0; }
-                                    body { print-color-adjust: exact; -webkit-print-color-adjust: exact; }
-                                    #print-area { box-shadow: none; width: 100%; height: 100%; padding: 10mm; }
+                                    body { 
+                                        print-color-adjust: exact; 
+                                        -webkit-print-color-adjust: exact; 
+                                        background-color: white; 
+                                    }
+                                    #print-area { 
+                                        box-shadow: none; 
+                                        width: 210mm; 
+                                        height: 297mm; 
+                                        padding: 15mm; 
+                                        margin: 0; 
+                                        overflow: hidden;
+                                        display: flex;
+                                        flex-direction: column;
+                                    }
+                                    /* Hide other elements */
+                                    body > *:not(#print-area) { display: none; }
                                 }
                             `}
                         </style>
