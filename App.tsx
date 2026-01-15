@@ -22,7 +22,9 @@ export default function App() {
   const { stock, transactions, addTransaction, processBatchMaintenance, confirmTransactionsBatch } = useStock();
 
   const [activeTab, setActiveTab] = useState<'dashboard' | 'record' | 'maintenance' | 'settings'>('dashboard');
+  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
   const [selectedBranch, setSelectedBranch] = useState<BranchId | 'ALL'>(() => {
+
     const savedUser = safeStorage.getItem('neo-siam-user');
     if (savedUser) {
       const user = JSON.parse(savedUser);
@@ -86,9 +88,13 @@ export default function App() {
         setActiveTab={setActiveTab}
         currentUser={currentUser}
         selectedBranch={selectedBranch}
+        isCollapsed={isSidebarCollapsed}
+        setIsCollapsed={setIsSidebarCollapsed}
       />
 
-      <div className="flex-1 flex flex-col md:ml-64 transition-all duration-300">
+
+      <div className={`flex-1 flex flex-col transition-all duration-300 ${isSidebarCollapsed ? 'md:ml-20' : 'md:ml-64'}`}>
+
         <Header
           activeTab={activeTab}
           currentUser={currentUser}
