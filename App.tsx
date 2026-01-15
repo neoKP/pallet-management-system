@@ -13,6 +13,7 @@ import MobileNav from './components/layout/MobileNav';
 import SettingsTab from './components/settings/SettingsTab';
 import QRScannerModal from './components/common/QRScannerModal';
 import { BRANCHES } from './constants';
+import { safeStorage } from './utils/helpers';
 // @ts-ignore
 import Swal from 'sweetalert2';
 
@@ -22,7 +23,7 @@ export default function App() {
 
   const [activeTab, setActiveTab] = useState<'dashboard' | 'record' | 'maintenance' | 'settings'>('dashboard');
   const [selectedBranch, setSelectedBranch] = useState<BranchId | 'ALL'>(() => {
-    const savedUser = localStorage.getItem('neo-siam-user');
+    const savedUser = safeStorage.getItem('neo-siam-user');
     if (savedUser) {
       const user = JSON.parse(savedUser);
       if (user.role === 'ADMIN' || user.branchId === 'hub_nw') return 'ALL';
@@ -30,6 +31,7 @@ export default function App() {
     }
     return 'hub_nw';
   });
+
 
   const { isScannerOpen, setIsScannerOpen, handleScanSuccess } = useQRScanner(
     currentUser,

@@ -116,7 +116,10 @@ export const StockProvider: React.FC<StockProviderProps> = ({ children }) => {
     }, [palletRequests]);
 
     const addTransaction = useCallback(async (txData: Partial<Transaction>) => {
-        const dateStr = new Date().toISOString().split('T')[0];
+        const now = new Date();
+        const dateStr = now.toISOString().split('T')[0];
+        const timestamp = now.toISOString();
+
         if (!txData.type || !txData.source || !txData.dest) return;
 
         // --- STRICT STOCK VALIDATION ---
@@ -141,7 +144,7 @@ export const StockProvider: React.FC<StockProviderProps> = ({ children }) => {
 
         const newTx: Transaction = {
             id: Date.now() + Math.floor(Math.random() * 1000),
-            date: dateStr,
+            date: timestamp,
             docNo,
             type: txData.type,
             status,
@@ -156,6 +159,7 @@ export const StockProvider: React.FC<StockProviderProps> = ({ children }) => {
             transportCompany: txData.transportCompany,
             referenceDocNo: txData.referenceDocNo,
         } as Transaction;
+
 
         const nextStock = { ...stock };
         if (newTx.source && nextStock[newTx.source as BranchId]) {
@@ -250,7 +254,10 @@ export const StockProvider: React.FC<StockProviderProps> = ({ children }) => {
         referenceDocNo?: string;
         note?: string;
     }) => {
-        const dateStr = new Date().toISOString().split('T')[0];
+        const now = new Date();
+        const dateStr = now.toISOString().split('T')[0];
+        const timestamp = now.toISOString();
+
 
         // --- STRICT STOCK VALIDATION FOR BATCH ---
         if (data.type === 'OUT' && BRANCHES.some(b => b.id === data.source)) {
@@ -273,8 +280,9 @@ export const StockProvider: React.FC<StockProviderProps> = ({ children }) => {
 
         const batchTxs: Transaction[] = data.items.map(item => ({
             id: Date.now() + Math.floor(Math.random() * 1000000),
-            date: dateStr,
+            date: timestamp,
             docNo,
+
             type: data.type,
             status,
             source: data.source,
@@ -360,15 +368,19 @@ export const StockProvider: React.FC<StockProviderProps> = ({ children }) => {
         branchId: BranchId;
         targetBranchId?: BranchId;
     }) => {
-        const dateStr = new Date().toISOString().split('T')[0];
+        const now = new Date();
+        const dateStr = now.toISOString().split('T')[0];
+        const timestamp = now.toISOString();
+
         const targetBranch = data.targetBranchId || data.branchId;
 
         const docNo = generateDocNo('MAINTENANCE', data.branchId, targetBranch, dateStr);
 
         const newTx: Transaction = {
             id: Date.now(),
-            date: dateStr,
+            date: timestamp,
             docNo,
+
             type: 'MAINTENANCE',
             status: 'COMPLETED',
             source: data.branchId,

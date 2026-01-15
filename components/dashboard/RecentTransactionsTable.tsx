@@ -213,9 +213,19 @@ const RecentTransactionsTable: React.FC<RecentTransactionsTableProps> = ({
                                 return (
                                     <tr key={mainTx.docNo || mainTx.id} className={`transition-colors ${isCancelled ? 'bg-red-50/30' : 'hover:bg-slate-50/50'}`}>
                                         <td className={`p-4 text-slate-500 whitespace-nowrap ${isCancelled ? 'line-through decoration-red-300 opacity-60' : ''}`}>
-                                            <div className="font-bold">{new Date(mainTx.date).toLocaleDateString('th-TH', { day: '2-digit', month: 'short', year: '2-digit' })}</div>
-                                            <div className="text-[10px] opacity-70">{new Date(mainTx.date).toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' })}</div>
+                                            {(() => {
+                                                const dateObj = (mainTx.date && mainTx.date.includes('T'))
+                                                    ? new Date(mainTx.date)
+                                                    : new Date(mainTx.id);
+                                                return (
+                                                    <>
+                                                        <div className="font-bold">{dateObj.toLocaleDateString('th-TH', { day: '2-digit', month: 'short', year: '2-digit' })}</div>
+                                                        <div className="text-[10px] opacity-70">{dateObj.toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' })}</div>
+                                                    </>
+                                                );
+                                            })()}
                                         </td>
+
                                         <td className="p-4 whitespace-nowrap align-top">
                                             <div className="flex flex-col items-start gap-1">
                                                 <span className={`font-mono font-medium ${isCancelled ? 'text-slate-400 line-through decoration-red-300' : 'text-blue-600'}`}>

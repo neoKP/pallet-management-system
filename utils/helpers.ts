@@ -155,3 +155,36 @@ export const toTitleCase = (str: string): string => {
         .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
         .join(' ');
 };
+
+/**
+ * Safe localStorage wrapper to handle SecurityError in some environments
+ */
+export const safeStorage = {
+    getItem: (key: string): string | null => {
+        try {
+            return typeof window !== 'undefined' ? localStorage.getItem(key) : null;
+        } catch (e) {
+            console.warn('localStorage is not accessible:', e);
+            return null;
+        }
+    },
+    setItem: (key: string, value: string): void => {
+        try {
+            if (typeof window !== 'undefined') {
+                localStorage.setItem(key, value);
+            }
+        } catch (e) {
+            console.warn('localStorage is not accessible:', e);
+        }
+    },
+    removeItem: (key: string): void => {
+        try {
+            if (typeof window !== 'undefined') {
+                localStorage.removeItem(key);
+            }
+        } catch (e) {
+            console.warn('localStorage is not accessible:', e);
+        }
+    }
+};
+
