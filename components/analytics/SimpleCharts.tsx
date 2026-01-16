@@ -33,11 +33,12 @@ export const SimpleBarChart: React.FC<SimpleBarChartProps> = ({
                 {title}
             </h3>
 
-            <div className="relative" style={{ height: `${height}px` }}>
+            <div className="relative" style={{ height: `${height}px` } as React.CSSProperties}>
                 <div className="flex items-end justify-around h-full gap-4">
                     {data.map((item, index) => {
                         const barHeight = (item.value / maxValue) * 100;
                         const isHovered = hoveredIndex === index;
+                        const color = item.color || '#6366f1';
 
                         return (
                             <div
@@ -50,10 +51,10 @@ export const SimpleBarChart: React.FC<SimpleBarChartProps> = ({
                                 {/* Value Label */}
                                 <div
                                     className={`
-                    text-sm font-bold transition-all duration-300
-                    ${isHovered ? 'scale-110' : 'scale-100'}
-                    ${isDarkMode ? 'text-gray-300' : 'text-gray-700'}
-                  `}
+                                        text-sm font-bold transition-all duration-300
+                                        ${isHovered ? 'scale-110' : 'scale-100'}
+                                        ${isDarkMode ? 'text-gray-300' : 'text-gray-700'}
+                                    `}
                                 >
                                     {item.value.toLocaleString()}
                                     {item.percentage && (
@@ -65,31 +66,26 @@ export const SimpleBarChart: React.FC<SimpleBarChartProps> = ({
                                 <div className="w-full relative">
                                     <div
                                         className={`
-                      w-full rounded-t-lg transition-all duration-500 ease-out
-                      ${isHovered ? 'opacity-100 scale-105' : 'opacity-90'}
-                      relative overflow-hidden
-                    `}
+                                            w-full rounded-t-lg transition-all duration-500 ease-out
+                                            ${isHovered ? 'opacity-100 scale-105' : 'opacity-90'}
+                                            relative overflow-hidden
+                                        `}
                                         style={{
                                             height: `${barHeight}%`,
-                                            backgroundColor: item.color || '#6366f1',
+                                            backgroundColor: color,
                                             boxShadow: isHovered
-                                                ? `0 8px 24px ${item.color}40`
-                                                : `0 4px 12px ${item.color}20`,
-                                        }}
+                                                ? `0 8px 24px ${color}40`
+                                                : `0 4px 12px ${color}20`,
+                                        } as React.CSSProperties}
                                     >
                                         {/* Shine Effect */}
                                         <div
                                             className={`
-                        absolute inset-0 opacity-0 group-hover:opacity-100
-                        transition-opacity duration-700
-                      `}
+                                                absolute inset-0 opacity-0 group-hover:opacity-100
+                                                transition-opacity duration-700
+                                            `}
                                         >
-                                            <div
-                                                className="absolute inset-0 translate-y-[-100%] group-hover:translate-y-[100%] transition-transform duration-1000"
-                                                style={{
-                                                    background: 'linear-gradient(180deg, transparent, rgba(255,255,255,0.3), transparent)',
-                                                }}
-                                            />
+                                            <div className="absolute inset-0 translate-y-[-100%] group-hover:translate-y-[100%] transition-transform duration-1000 bg-gradient-to-b from-transparent via-white/30 to-transparent" />
                                         </div>
                                     </div>
                                 </div>
@@ -172,7 +168,7 @@ export const SimplePieChart: React.FC<SimplePieChartProps> = ({
                                     className="transition-all duration-300 cursor-pointer"
                                     style={{
                                         filter: isHovered ? `drop-shadow(0 0 8px ${item.color})` : 'none',
-                                    }}
+                                    } as React.CSSProperties}
                                     onMouseEnter={() => setHoveredIndex(index)}
                                     onMouseLeave={() => setHoveredIndex(null)}
                                     onClick={() => onSegmentClick?.(item)}
@@ -219,7 +215,7 @@ export const SimplePieChart: React.FC<SimplePieChartProps> = ({
                                         style={{
                                             backgroundColor: item.color,
                                             transform: isHovered ? 'scale(1.2)' : 'scale(1)',
-                                        }}
+                                        } as React.CSSProperties}
                                     />
                                     <span className={`font-medium ${isDarkMode ? 'text-gray-300' : 'text-gray-700'}`}>
                                         {item.name}

@@ -93,7 +93,7 @@ export const SimpleLineChart: React.FC<SimpleLineChartProps> = ({
                         >
                             <div
                                 className="w-3 h-3 rounded-full"
-                                style={{ backgroundColor: line.color }}
+                                style={{ backgroundColor: line.color } as React.CSSProperties}
                             />
                             <span className={isDarkMode ? 'text-gray-300' : 'text-gray-700'}>
                                 {line.label}
@@ -103,7 +103,7 @@ export const SimpleLineChart: React.FC<SimpleLineChartProps> = ({
                 </div>
             </div>
 
-            <div className="relative" style={{ height: `${height}px` }}>
+            <div className="relative" style={{ height: `${height}px` } as React.CSSProperties}>
                 <svg
                     viewBox="0 0 100 100"
                     preserveAspectRatio="none"
@@ -146,7 +146,7 @@ export const SimpleLineChart: React.FC<SimpleLineChartProps> = ({
                                     className="transition-all duration-500"
                                     style={{
                                         filter: `drop-shadow(0 0 4px ${line.color}80)`,
-                                    }}
+                                    } as React.CSSProperties}
                                 />
 
                                 {/* Data Points */}
@@ -167,7 +167,7 @@ export const SimpleLineChart: React.FC<SimpleLineChartProps> = ({
                                             onMouseLeave={() => setHoveredIndex(null)}
                                             style={{
                                                 filter: isHovered ? `drop-shadow(0 0 4px ${line.color})` : 'none',
-                                            }}
+                                            } as React.CSSProperties}
                                         />
                                     );
                                 })}
@@ -191,7 +191,7 @@ export const SimpleLineChart: React.FC<SimpleLineChartProps> = ({
                         style={{
                             left: `${(hoveredIndex / (data.length - 1)) * 100}%`,
                             top: '0',
-                        }}
+                        } as React.CSSProperties}
                     >
                         <div className={`text-xs font-medium mb-2 ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>
                             {formatDate(data[hoveredIndex].date)}
@@ -203,7 +203,7 @@ export const SimpleLineChart: React.FC<SimpleLineChartProps> = ({
                                 <div key={line.key} className="flex items-center gap-2 text-sm">
                                     <div
                                         className="w-2 h-2 rounded-full"
-                                        style={{ backgroundColor: line.color }}
+                                        style={{ backgroundColor: line.color } as React.CSSProperties}
                                     />
                                     <span className={isDarkMode ? 'text-gray-300' : 'text-gray-700'}>
                                         {line.label}:

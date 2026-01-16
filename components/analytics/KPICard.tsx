@@ -63,11 +63,11 @@ export const KPICard: React.FC<KPICardProps> = ({
                     : 'bg-white/80 backdrop-blur-xl border border-gray-200'
                 }
       `}
-            style={{
+            style={({
                 boxShadow: isDarkMode
                     ? `0 8px 32px 0 ${color}26`
                     : '0 4px 16px rgba(0, 0, 0, 0.08)',
-            }}
+            } as React.CSSProperties)}
         >
             {/* Gradient Background */}
             <motion.div
@@ -75,9 +75,9 @@ export const KPICard: React.FC<KPICardProps> = ({
                 initial={{ opacity: 0 }}
                 whileHover={{ opacity: 0.1 }}
                 transition={{ duration: 0.3 }}
-                style={{
+                style={({
                     background: `linear-gradient(135deg, ${color} 0%, transparent 100%)`,
-                }}
+                } as React.CSSProperties)}
             />
 
             {/* Icon */}
@@ -85,9 +85,9 @@ export const KPICard: React.FC<KPICardProps> = ({
                 className="inline-flex p-3 rounded-xl mb-4"
                 whileHover={{ scale: 1.1, rotate: 5 }}
                 transition={{ type: 'spring', stiffness: 300 }}
-                style={{ backgroundColor: `${color}20` }}
+                style={({ backgroundColor: `${color}20` } as React.CSSProperties)}
             >
-                <div style={{ color }}>{icon}</div>
+                <div style={({ color } as React.CSSProperties)}>{icon}</div>
             </motion.div>
 
             {/* Title */}
@@ -129,9 +129,9 @@ export const KPICard: React.FC<KPICardProps> = ({
                 initial={{ x: '-100%' }}
                 whileHover={{ x: '100%' }}
                 transition={{ duration: 0.6 }}
-                style={{
+                style={({
                     background: `linear-gradient(90deg, transparent, ${isDarkMode ? 'rgba(255,255,255,0.1)' : 'rgba(255,255,255,0.4)'}, transparent)`,
-                }}
+                } as React.CSSProperties)}
             />
         </motion.div>
     );

@@ -12,6 +12,9 @@ export interface AnalyticsFilters {
     selectedVehicle: string | null;
     selectedBranch: string | null;
     selectedPalletType: string | null;
+    selectedBranches: string[]; // Multi-select
+    selectedPalletTypes: string[]; // Multi-select
+    selectedYears: number[]; // Multi-select
 }
 
 interface AnalyticsState {
@@ -48,6 +51,9 @@ export const useAnalyticsStore = create<AnalyticsState>()(
                 selectedVehicle: null,
                 selectedBranch: null,
                 selectedPalletType: null,
+                selectedBranches: [],
+                selectedPalletTypes: [],
+                selectedYears: [],
             },
             isDarkMode: true, // Default: Dark Mode
 
@@ -74,6 +80,9 @@ export const useAnalyticsStore = create<AnalyticsState>()(
                         selectedVehicle: null,
                         selectedBranch: null,
                         selectedPalletType: null,
+                        selectedBranches: [],
+                        selectedPalletTypes: [],
+                        selectedYears: [],
                     },
                 });
             },

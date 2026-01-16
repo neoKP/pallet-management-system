@@ -34,6 +34,7 @@ export interface BranchPerformance {
     outTransactions: number;
     utilizationRate: number;
     color: string;
+    percentage?: number; // Added
 }
 
 export interface PalletTypeAnalysis {
@@ -45,6 +46,24 @@ export interface PalletTypeAnalysis {
     maintenanceCount: number;
     turnoverRate: number;
     color: string;
+    percentage?: number; // Added
+}
+
+// NEW: Premium Analytics Interfaces
+export interface HeatmapData {
+    date: Date;
+    value: number;
+}
+
+export interface WaterfallDataPoint {
+    label: string;
+    value: number;
+    isTotal?: boolean;
+}
+
+export interface SparklineData {
+    date: string;
+    value: number;
 }
 
 /**
@@ -245,6 +264,10 @@ export const getBranchPerformance = (
 
     // Get valid branch IDs from branchNames (excludes external partners)
     const validBranchIds = Object.keys(branchNames);
+    const totalOverallStock = validBranchIds.reduce((sum, bid) => {
+        const bStock = stock[bid as BranchId];
+        return sum + (bStock ? Object.values(bStock).reduce((s, q) => s + q, 0) : 0);
+    }, 0);
 
     return Object.entries(stock)
         .filter(([branchId]) => validBranchIds.includes(branchId)) // Only include actual branches
@@ -262,6 +285,8 @@ export const getBranchPerformance = (
                 ? Math.min(((inTransactions + outTransactions) / totalStock) * 100, 100)
                 : 0;
 
+            const percentage = totalOverallStock > 0 ? (totalStock / totalOverallStock) * 100 : 0;
+
             return {
                 branchId: branchId as BranchId,
                 branchName: branchNames[branchId as BranchId] || branchId,
@@ -270,6 +295,7 @@ export const getBranchPerformance = (
                 outTransactions,
                 utilizationRate: Math.round(utilizationRate * 10) / 10,
                 color: branchColors[index % branchColors.length],
+                percentage: Math.round(percentage * 10) / 10,
             };
         })
         .sort((a, b) => b.totalStock - a.totalStock);
@@ -305,6 +331,8 @@ export const getPalletTypeAnalysis = (
 
         const turnoverRate = totalStock > 0 ? ((inCount + outCount) / totalStock) * 100 : 0;
 
+        const totalAllStock = Object.values(palletStocks).reduce((sum, qty) => sum + qty, 0);
+
         return {
             palletId: palletId as PalletId,
             palletName: palletNames[palletId as PalletId] || palletId,
@@ -314,6 +342,7 @@ export const getPalletTypeAnalysis = (
             maintenanceCount,
             turnoverRate: Math.round(turnoverRate * 10) / 10,
             color: palletColors[palletId as PalletId] || '#6366f1',
+            percentage: totalAllStock > 0 ? Math.round((totalStock / totalAllStock) * 100 * 10) / 10 : 0,
         };
     }).sort((a, b) => b.totalStock - a.totalStock);
 };
