@@ -57,9 +57,16 @@ export const calculateKPIs = (
 ): KPIMetrics => {
     const filteredTransactions = filterTransactionsByDate(transactions, startDate, endDate);
 
-    // Total Pallets in Stock
-    const totalPalletsInStock = Object.values(stock).reduce((sum, branchStock) => {
-        return sum + Object.values(branchStock).reduce((branchSum, qty) => branchSum + qty, 0);
+    // Valid branch IDs (excluding external partners)
+    const validBranchIds: BranchId[] = ['hub_nw', 'kpp', 'plk', 'cm', 'ekp', 'ms', 'maintenance_stock'];
+
+    // Total Pallets in Stock (only from actual branches)
+    const totalPalletsInStock = validBranchIds.reduce((sum, branchId) => {
+        const branchStock = stock[branchId];
+        if (branchStock) {
+            return sum + Object.values(branchStock).reduce((branchSum, qty) => branchSum + qty, 0);
+        }
+        return sum;
     }, 0);
 
     // Total Movements
@@ -229,30 +236,36 @@ export const getBranchPerformance = (
         '#6366f1', '#8b5cf6', '#ec4899', '#f59e0b', '#10b981', '#06b6d4', '#ef4444'
     ];
 
-    return Object.entries(stock).map(([branchId, branchStock], index) => {
-        const totalStock = Object.values(branchStock).reduce((sum, qty) => sum + qty, 0);
+    // Get valid branch IDs from branchNames (excludes external partners)
+    const validBranchIds = Object.keys(branchNames);
 
-        const branchTransactions = filtered.filter(
-            t => t.source === branchId || t.dest === branchId
-        );
+    return Object.entries(stock)
+        .filter(([branchId]) => validBranchIds.includes(branchId)) // Only include actual branches
+        .map(([branchId, branchStock], index) => {
+            const totalStock = Object.values(branchStock).reduce((sum, qty) => sum + qty, 0);
 
-        const inTransactions = branchTransactions.filter(t => t.dest === branchId && t.type === 'IN').length;
-        const outTransactions = branchTransactions.filter(t => t.source === branchId && t.type === 'OUT').length;
+            const branchTransactions = filtered.filter(
+                t => t.source === branchId || t.dest === branchId
+            );
 
-        const utilizationRate = totalStock > 0
-            ? Math.min(((inTransactions + outTransactions) / totalStock) * 100, 100)
-            : 0;
+            const inTransactions = branchTransactions.filter(t => t.dest === branchId && t.type === 'IN').length;
+            const outTransactions = branchTransactions.filter(t => t.source === branchId && t.type === 'OUT').length;
 
-        return {
-            branchId: branchId as BranchId,
-            branchName: branchNames[branchId as BranchId] || branchId,
-            totalStock,
-            inTransactions,
-            outTransactions,
-            utilizationRate: Math.round(utilizationRate * 10) / 10,
-            color: branchColors[index % branchColors.length],
-        };
-    }).sort((a, b) => b.totalStock - a.totalStock);
+            const utilizationRate = totalStock > 0
+                ? Math.min(((inTransactions + outTransactions) / totalStock) * 100, 100)
+                : 0;
+
+            return {
+                branchId: branchId as BranchId,
+                branchName: branchNames[branchId as BranchId] || branchId,
+                totalStock,
+                inTransactions,
+                outTransactions,
+                utilizationRate: Math.round(utilizationRate * 10) / 10,
+                color: branchColors[index % branchColors.length],
+            };
+        })
+        .sort((a, b) => b.totalStock - a.totalStock);
 };
 
 /**
@@ -271,10 +284,10 @@ export const getPalletTypeAnalysis = (
     // Calculate total stock per pallet type
     const palletStocks = Object.values(stock).reduce((acc, branchStock) => {
         Object.entries(branchStock).forEach(([palletId, qty]) => {
-            acc[palletId] = (acc[palletId] || 0) + qty;
+            acc[palletId as PalletId] = (acc[palletId as PalletId] || 0) + qty;
         });
         return acc;
-    }, {} as Record<string, number>);
+    }, {} as Record<PalletId, number>);
 
     return Object.entries(palletStocks).map(([palletId, totalStock]) => {
         const palletTransactions = filtered.filter(t => t.palletId === palletId);
