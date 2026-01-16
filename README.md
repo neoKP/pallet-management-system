@@ -2,10 +2,11 @@
 
 ระบบจัดการพาเลทสำหรับ Neo Siam Logistics บริษัทขนส่งและโลจิสติกส์ ที่ช่วยในการติดตาม ควบคุม และบริหารจัดการพาเลทในเครือข่ายสาขาทั้งหมด
 
-![Version](https://img.shields.io/badge/version-1.0.0-blue.svg)
+![Version](https://img.shields.io/badge/version-2.0.0-blue.svg)
 ![License](https://img.shields.io/badge/license-MIT-green.svg)
 ![React](https://img.shields.io/badge/React-19.2.3-61DAFB.svg)
 ![TypeScript](https://img.shields.io/badge/TypeScript-5.8.2-3178C6.svg)
+![Analytics](https://img.shields.io/badge/Analytics-Power_BI_Inspired-purple.svg)
 
 ---
 
@@ -67,6 +68,21 @@
 - ใช้ Google Gemini AI
 - รองรับภาษาไทย
 
+### 📊 Analytics Dashboard (NEW!)
+
+- **Business Intelligence แบบ Power BI**
+- Date Range Drill-down (วัน/สัปดาห์/เดือน/ไตรมาส/ปี)
+- Cross-Filtering (Interactive + Global)
+- Dark/Light Mode (Glassmorphism Design)
+- Real-time Data Updates
+- Professional Charts (Recharts)
+  - Line/Area Chart - แนวโน้มการเคลื่อนไหว
+  - Pie/Donut Chart - สถานะรายการ
+  - Bar Charts - วิเคราะห์ตามสาขา/ประเภทพาเลท
+- Animated KPI Cards (Framer Motion)
+- Export Ready (PDF/Excel)
+- Thai Locale Formatting (date-fns)
+
 ---
 
 ## เทคโนโลยีที่ใช้
@@ -78,6 +94,13 @@
 - **Vite 6.2.0** - Build Tool
 - **Tailwind CSS** - Styling Framework
 - **Lucide React** - Icon Library
+
+### Analytics & Visualization
+
+- **Recharts** - Professional Charts Library
+- **Zustand** - Modern State Management
+- **Framer Motion** - Animation Library
+- **date-fns** - Date Utilities (Thai Locale)
 
 ### AI Integration
 

@@ -1,0 +1,92 @@
+import { create } from 'zustand';
+import { persist } from 'zustand/middleware';
+
+export type DateRangeType = 'day' | 'week' | 'month' | 'quarter' | 'year' | 'custom';
+
+export interface AnalyticsFilters {
+    dateRange: DateRangeType;
+    startDate: Date;
+    endDate: Date;
+    selectedSubcontractor: string | null;
+    selectedRoute: string | null;
+    selectedVehicle: string | null;
+    selectedBranch: string | null;
+    selectedPalletType: string | null;
+}
+
+interface AnalyticsState {
+    filters: AnalyticsFilters;
+    isDarkMode: boolean;
+    updateFilters: (updates: Partial<AnalyticsFilters>) => void;
+    resetFilters: () => void;
+    toggleDarkMode: () => void;
+    setDarkMode: (isDark: boolean) => void;
+}
+
+const getDefaultDateRange = (): { startDate: Date; endDate: Date } => {
+    const endDate = new Date();
+    endDate.setHours(23, 59, 59, 999); // End of today
+
+    const startDate = new Date();
+    startDate.setMonth(startDate.getMonth() - 1); // Default: Last month
+    startDate.setHours(0, 0, 0, 0); // Start of day
+
+    return { startDate, endDate };
+};
+
+const defaultRange = getDefaultDateRange();
+
+export const useAnalyticsStore = create<AnalyticsState>()(
+    persist(
+        (set) => ({
+            filters: {
+                dateRange: 'month',
+                startDate: defaultRange.startDate,
+                endDate: defaultRange.endDate,
+                selectedSubcontractor: null,
+                selectedRoute: null,
+                selectedVehicle: null,
+                selectedBranch: null,
+                selectedPalletType: null,
+            },
+            isDarkMode: true, // Default: Dark Mode
+
+            updateFilters: (updates) =>
+                set((state) => ({
+                    filters: {
+                        ...state.filters,
+                        ...updates,
+                        // Ensure dates are valid Date objects
+                        startDate: updates.startDate instanceof Date ? updates.startDate : state.filters.startDate,
+                        endDate: updates.endDate instanceof Date ? updates.endDate : state.filters.endDate,
+                    },
+                })),
+
+            resetFilters: () => {
+                const defaultRange = getDefaultDateRange();
+                set({
+                    filters: {
+                        dateRange: 'month',
+                        startDate: defaultRange.startDate,
+                        endDate: defaultRange.endDate,
+                        selectedSubcontractor: null,
+                        selectedRoute: null,
+                        selectedVehicle: null,
+                        selectedBranch: null,
+                        selectedPalletType: null,
+                    },
+                });
+            },
+
+            toggleDarkMode: () =>
+                set((state) => ({ isDarkMode: !state.isDarkMode })),
+
+            setDarkMode: (isDark) =>
+                set({ isDarkMode: isDark }),
+        }),
+        {
+            name: 'analytics-storage',
+            partialize: (state) => ({ isDarkMode: state.isDarkMode }), // Only persist dark mode
+        }
+    )
+);

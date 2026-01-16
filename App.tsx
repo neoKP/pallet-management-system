@@ -7,6 +7,7 @@ import LoginScreen from './components/auth/LoginScreen';
 import Dashboard from './components/dashboard/Dashboard';
 import MovementTab from './components/movements/MovementTab';
 import MaintenanceTab from './components/maintenance/MaintenanceTab';
+import { AnalyticsDashboard } from './components/analytics/AnalyticsDashboard';
 import Sidebar from './components/layout/Sidebar';
 import Header from './components/layout/Header';
 import MobileNav from './components/layout/MobileNav';
@@ -21,7 +22,7 @@ export default function App() {
   const { currentUser, login, logout } = useAuth();
   const { stock, transactions, addTransaction, processBatchMaintenance, confirmTransactionsBatch } = useStock();
 
-  const [activeTab, setActiveTab] = useState<'dashboard' | 'record' | 'maintenance' | 'settings'>('dashboard');
+  const [activeTab, setActiveTab] = useState<'dashboard' | 'record' | 'maintenance' | 'settings' | 'analytics'>('dashboard');
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
   const [selectedBranch, setSelectedBranch] = useState<BranchId | 'ALL'>(() => {
 
@@ -119,6 +120,13 @@ export default function App() {
               transactions={transactions}
               addTransaction={addTransaction}
               currentUser={currentUser}
+            />
+          )}
+
+          {activeTab === 'analytics' && (
+            <AnalyticsDashboard
+              transactions={transactions}
+              stock={stock}
             />
           )}
 
