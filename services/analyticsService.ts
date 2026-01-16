@@ -3,6 +3,7 @@ import { Transaction, Stock, BranchId, PalletId } from '../types';
 export interface KPIMetrics {
     totalTransactions: number;
     totalPalletsInStock: number;
+    totalPalletsInTransit: number; // NEW: Pending/In-Transit pallets
     totalMovements: number;
     utilizationRate: number;
     maintenanceRate: number;
@@ -69,6 +70,11 @@ export const calculateKPIs = (
         return sum;
     }, 0);
 
+    // Total Pallets In-Transit (PENDING transactions to valid branches)
+    const totalPalletsInTransit = transactions
+        .filter(t => t.status === 'PENDING' && validBranchIds.includes(t.dest as BranchId))
+        .reduce((sum, t) => sum + t.qty, 0);
+
     // Total Movements
     const totalMovements = filteredTransactions.reduce((sum, t) => sum + t.qty, 0);
 
@@ -103,6 +109,7 @@ export const calculateKPIs = (
     return {
         totalTransactions: filteredTransactions.length,
         totalPalletsInStock,
+        totalPalletsInTransit,
         totalMovements,
         utilizationRate: Math.round(utilizationRate * 10) / 10,
         maintenanceRate: Math.round(maintenanceRate * 10) / 10,

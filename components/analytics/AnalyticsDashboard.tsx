@@ -24,6 +24,7 @@ import {
     Download,
     RefreshCw,
     Sparkles,
+    Truck,
 } from 'lucide-react';
 import { BRANCHES, PALLET_TYPES } from '../../constants';
 
@@ -113,8 +114,8 @@ export const AnalyticsDashboard: React.FC<AnalyticsDashboardProps> = ({
     return (
         <div
             className={`min-h-screen transition-colors duration-500 ${isDarkMode
-                    ? 'bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900'
-                    : 'bg-gradient-to-br from-gray-50 via-blue-50 to-gray-50'
+                ? 'bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900'
+                : 'bg-gradient-to-br from-gray-50 via-blue-50 to-gray-50'
                 }`}
         >
             <div className="max-w-[1600px] mx-auto p-4 md:p-8 space-y-8">
@@ -128,8 +129,8 @@ export const AnalyticsDashboard: React.FC<AnalyticsDashboardProps> = ({
                     <div>
                         <h1
                             className={`text-4xl font-black mb-2 flex items-center gap-3 ${isDarkMode
-                                    ? 'text-transparent bg-clip-text bg-gradient-to-r from-indigo-400 to-purple-400'
-                                    : 'text-transparent bg-clip-text bg-gradient-to-r from-indigo-600 to-purple-600'
+                                ? 'text-transparent bg-clip-text bg-gradient-to-r from-indigo-400 to-purple-400'
+                                : 'text-transparent bg-clip-text bg-gradient-to-r from-indigo-600 to-purple-600'
                                 }`}
                         >
                             <Sparkles className="w-10 h-10 text-indigo-500" />
@@ -223,7 +224,7 @@ export const AnalyticsDashboard: React.FC<AnalyticsDashboardProps> = ({
                 />
 
                 {/* KPI Cards */}
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6">
                     <KPICard
                         title="รายการทั้งหมด"
                         value={kpis.totalTransactions}
@@ -244,6 +245,15 @@ export const AnalyticsDashboard: React.FC<AnalyticsDashboardProps> = ({
                         delay={100}
                     />
                     <KPICard
+                        title="ยอดระหว่างทาง"
+                        value={kpis.totalPalletsInTransit}
+                        icon={<Truck className="w-6 h-6" />}
+                        suffix="ชิ้น"
+                        color="#3b82f6"
+                        isDarkMode={isDarkMode}
+                        delay={150}
+                    />
+                    <KPICard
                         title="อัตราการใช้งาน"
                         value={kpis.utilizationRate}
                         icon={<TrendingUp className="w-6 h-6" />}
@@ -259,7 +269,7 @@ export const AnalyticsDashboard: React.FC<AnalyticsDashboardProps> = ({
                         suffix="%"
                         color="#f59e0b"
                         isDarkMode={isDarkMode}
-                        delay={300}
+                        delay={250}
                     />
                 </div>
 
