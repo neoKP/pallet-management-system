@@ -118,9 +118,16 @@ export const TargetActualCard: React.FC<TargetActualCardProps> = ({
                         <motion.div
                             className="h-full rounded-full relative"
                             style={{ backgroundColor: statusColor } as React.CSSProperties}
-                            initial={{ width: 0 }}
-                            animate={{ width: `${cappedPercentage}%` }}
-                            transition={{ delay: delay + 0.3, duration: 1, ease: 'easeOut' }}
+                            initial={{ width: '0%' }}
+                            animate={{
+                                width: ['0%', '100%', `${cappedPercentage}%`]  // Overshoot animation
+                            }}
+                            transition={{
+                                delay: delay + 0.3,
+                                duration: 1.5,
+                                times: [0, 0.4, 1],
+                                ease: ['easeOut', 'easeInOut']
+                            }}
                         >
                             {/* Shine effect */}
                             <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/30 to-transparent" />

@@ -173,9 +173,14 @@ export const ComparisonCard: React.FC<ComparisonCardProps> = ({
                             className={`font-bold ${isDarkMode ? 'text-white' : 'text-gray-900'}`}
                             animate={{
                                 fontSize: isHovering ? '2.5rem' : '2.25rem',
-                                textShadow: isHovering ? `0 0 20px ${color}40` : 'none'
+                                textShadow: isHovering ? `0 0 20px ${color}40` : 'none',
+                                scale: [1, 1.02, 1], // Heartbeat pulse
                             }}
-                            transition={{ duration: 0.3 }}
+                            transition={{
+                                fontSize: { duration: 0.3 },
+                                textShadow: { duration: 0.3 },
+                                scale: { duration: 3, repeat: Infinity, ease: 'easeInOut' }
+                            }}
                         >
                             {currentValue.toLocaleString()}
                         </motion.span>

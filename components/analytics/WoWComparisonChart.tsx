@@ -24,6 +24,8 @@ export const WoWComparisonChart: React.FC<WoWComparisonChartProps> = ({
     metric = 'รายการ',
     isDarkMode,
 }) => {
+    // Focus Mode state - track which bar is hovered
+    const [focusedIndex, setFocusedIndex] = useState<number | null>(null);
     // Calculate insights from real data
     const insights = useMemo(() => {
         if (data.length < 2) return null;
@@ -158,8 +160,15 @@ export const WoWComparisonChart: React.FC<WoWComparisonChartProps> = ({
                         <motion.div
                             key={week.weekLabel}
                             initial={{ opacity: 0, x: -20 }}
-                            animate={{ opacity: 1, x: 0 }}
-                            transition={{ delay: index * 0.05 }}
+                            animate={{
+                                opacity: focusedIndex === null || focusedIndex === index ? 1 : 0.3,
+                                x: 0,
+                                scale: focusedIndex === index ? 1.02 : 1,
+                                filter: focusedIndex !== null && focusedIndex !== index ? 'blur(1px)' : 'none'
+                            }}
+                            transition={{ delay: index * 0.05, duration: 0.3 }}
+                            onMouseEnter={() => setFocusedIndex(index)}
+                            onMouseLeave={() => setFocusedIndex(null)}
                             whileHover="hover"
                             className="relative"
                         >

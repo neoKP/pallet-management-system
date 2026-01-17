@@ -85,16 +85,23 @@ export const Slicers: React.FC<SlicersProps> = ({
                                 </div>
                                 <div className="grid grid-cols-3 gap-2">
                                     {years.map(year => (
-                                        <button
+                                        <motion.button
                                             key={year}
                                             onClick={() => toggleSelection('years', year)}
+                                            whileHover={{ scale: 1.05, y: -2 }}
+                                            whileTap={{ scale: 0.95 }}
+                                            animate={{
+                                                boxShadow: filters.years.includes(year)
+                                                    ? '0 0 20px rgba(99, 102, 241, 0.5)'
+                                                    : '0 0 0px transparent'
+                                            }}
                                             className={`py-2 px-3 rounded-lg text-sm font-medium transition-all ${filters.years.includes(year)
-                                                ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-500/30'
+                                                ? 'bg-indigo-600 text-white shadow-lg'
                                                 : isDarkMode ? 'bg-slate-800 text-slate-400 hover:bg-slate-700' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
                                                 }`}
                                         >
                                             {year}
-                                        </button>
+                                        </motion.button>
                                     ))}
                                 </div>
                             </div>
@@ -107,9 +114,16 @@ export const Slicers: React.FC<SlicersProps> = ({
                                 </div>
                                 <div className="space-y-2">
                                     {PALLET_TYPES.map(type => (
-                                        <button
+                                        <motion.button
                                             key={type.id}
                                             onClick={() => toggleSelection('palletTypes', type.id)}
+                                            whileHover={{ scale: 1.02, x: 5 }}
+                                            whileTap={{ scale: 0.98 }}
+                                            animate={{
+                                                boxShadow: filters.palletTypes.includes(type.id)
+                                                    ? '0 0 15px rgba(99, 102, 241, 0.3)'
+                                                    : '0 0 0px transparent'
+                                            }}
                                             className={`w-full flex items-center justify-between p-3 rounded-xl transition-all ${filters.palletTypes.includes(type.id)
                                                 ? 'bg-indigo-600/10 border border-indigo-500/50 text-indigo-400'
                                                 : isDarkMode ? 'bg-slate-800/50 border border-transparent text-slate-400 hover:bg-slate-800' : 'bg-slate-50 border border-transparent text-slate-600 hover:bg-slate-100'
@@ -117,7 +131,7 @@ export const Slicers: React.FC<SlicersProps> = ({
                                         >
                                             <span className="text-sm font-medium">{type.name}</span>
                                             {filters.palletTypes.includes(type.id) && <Check className="w-4 h-4" />}
-                                        </button>
+                                        </motion.button>
                                     ))}
                                 </div>
                             </div>
