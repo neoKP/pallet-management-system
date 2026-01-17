@@ -579,27 +579,27 @@ export const AnalyticsDashboard: React.FC<AnalyticsDashboardProps> = ({
 
                         {/* KPI Grid */}
                         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6">
-                            <EnhancedKPICard title="รายการรวม" value={kpis.totalTransactions} icon={<Activity />} trend={kpis.trend} trendValue={kpis.trendPercentage} sparklineData={last7DaysData} variant="primary" color={currentTheme.primary} isDarkMode={isDarkMode} delay={0.1} />
-                            <EnhancedKPICard title="สต็อกปัจจุบัน" value={kpis.totalPalletsInStock} suffix="ชิ้น" icon={<Package />} sparklineData={last7DaysData} variant="secondary" color={currentTheme.secondary} isDarkMode={isDarkMode} delay={0.2} />
-                            <EnhancedKPICard title="ระหว่างขนส่ง" value={kpis.totalPalletsInTransit} suffix="ชิ้น" icon={<Truck />} sparklineData={last7DaysData} variant="accent" color={currentTheme.accent} isDarkMode={isDarkMode} delay={0.3} />
-                            <EnhancedKPICard title="การใช้สอย" value={kpis.utilizationRate} suffix="%" icon={<TrendingUp />} sparklineData={last7DaysData} variant="success" color="#10b981" isDarkMode={isDarkMode} delay={0.4} />
-                            <EnhancedKPICard title="ซ่อมบำรุง" value={kpis.maintenanceRate} suffix="%" icon={<Wrench />} sparklineData={last7DaysData} variant="warning" color="#f59e0b" isDarkMode={isDarkMode} delay={0.5} />
+                            <EnhancedKPICard title="การเคลื่อนไหวรวม" value={kpis.totalTransactions} icon={<Activity />} trend={kpis.trend} trendValue={kpis.trendPercentage} sparklineData={last7DaysData} variant="primary" color={currentTheme.primary} isDarkMode={isDarkMode} delay={0.1} />
+                            <EnhancedKPICard title="พาเลทในคลัง" value={kpis.totalPalletsInStock} suffix="ชิ้น" icon={<Package />} sparklineData={last7DaysData} variant="secondary" color={currentTheme.secondary} isDarkMode={isDarkMode} delay={0.2} />
+                            <EnhancedKPICard title="กำลังโอนย้าย" value={kpis.totalPalletsInTransit} suffix="ชิ้น" icon={<Truck />} sparklineData={last7DaysData} variant="accent" color={currentTheme.accent} isDarkMode={isDarkMode} delay={0.3} />
+                            <EnhancedKPICard title="อัตราหมุนเวียน" value={kpis.utilizationRate} suffix="%" icon={<TrendingUp />} sparklineData={last7DaysData} variant="success" color="#10b981" isDarkMode={isDarkMode} delay={0.4} />
+                            <EnhancedKPICard title="เข้าซ่อมบำรุง" value={kpis.maintenanceRate} suffix="%" icon={<Wrench />} sparklineData={last7DaysData} variant="warning" color="#f59e0b" isDarkMode={isDarkMode} delay={0.5} />
                         </div>
 
                         {/* Main Interaction Charts */}
                         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-                            <RechartsLineChart data={sevenDayPerformanceData} title="📅 7-Day Performance Focus (Real Data)" isDarkMode={isDarkMode} />
-                            <RechartsPieChart data={statusData} title="🧿 Status Distribution (Interactive)" isDarkMode={isDarkMode} onSegmentClick={handleChartClick} />
+                            <RechartsLineChart data={sevenDayPerformanceData} title="📅 การเคลื่อนไหวพาเลท 7 วันล่าสุด" isDarkMode={isDarkMode} />
+                            <RechartsPieChart data={statusData} title="🧿 สัดส่วนประเภทการเคลื่อนไหว" isDarkMode={isDarkMode} onSegmentClick={handleChartClick} />
                             <RechartsBarChart
                                 data={branchPerformance.map(b => ({ name: b.branchName, value: b.totalStock }))}
-                                title="🏢 Branch Stock Ranking"
+                                title="🏢 พาเลทในคลังแยกตามสาขา"
                                 isDarkMode={isDarkMode}
                                 highlightedItem={highlightedItem}
                                 onBarClick={(item) => { handleChartClick(item); handleDrillDown(item.name); }}
                             />
                             <RechartsBarChart
                                 data={palletAnalysis.map(p => ({ name: p.palletName, value: p.totalStock, color: palletColors[p.palletId] }))}
-                                title="🎨 Inventory by Pallet Type"
+                                title="🎨 สัดส่วนพาเลทแยกตามประเภท"
                                 isDarkMode={isDarkMode}
                                 highlightedItem={highlightedItem}
                                 onBarClick={handleChartClick}
@@ -613,12 +613,12 @@ export const AnalyticsDashboard: React.FC<AnalyticsDashboardProps> = ({
                                     <TrendingUp className="w-8 h-8 text-indigo-500" />
                                     <h2 className={`text-2xl font-black ${isDarkMode ? 'text-white' : 'text-slate-900'}`}>Operational Flow Insights</h2>
                                 </div>
-                                <SankeyDiagram data={sankeyData} isDarkMode={isDarkMode} title="🔄 Network Logistics Flow (Sankey Matrix)" />
+                                <SankeyDiagram data={sankeyData} isDarkMode={isDarkMode} title="🔄 การไหลของพาเลทระหว่างสาขา" />
 
                                 <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                                    <GaugeChart value={kpis.utilizationRate} max={100} title="Resource Efficiency" isDarkMode={isDarkMode} />
-                                    <GaugeChart value={kpis.totalPalletsInStock} max={2000} title="Stock Capacity" color="#8b5cf6" isDarkMode={isDarkMode} />
-                                    <ComparisonCard title="Monthly Throughput" currentValue={kpis.totalTransactions} previousValue={previousMonthTransactions} icon={<Activity />} color="#6366f1" isDarkMode={isDarkMode} />
+                                    <GaugeChart value={kpis.utilizationRate} max={100} title="ประสิทธิภาพการหมุนเวียน" isDarkMode={isDarkMode} />
+                                    <GaugeChart value={kpis.totalPalletsInStock} max={2000} title="ความจุคลังพาเลท" color="#8b5cf6" isDarkMode={isDarkMode} />
+                                    <ComparisonCard title="การเคลื่อนไหวประจำเดือน" currentValue={kpis.totalTransactions} previousValue={previousMonthTransactions} icon={<Activity />} color="#6366f1" isDarkMode={isDarkMode} />
                                 </div>
 
                                 {/* AI-Powered Forecast Section */}
@@ -629,7 +629,7 @@ export const AnalyticsDashboard: React.FC<AnalyticsDashboardProps> = ({
                                     </div>
                                     <ForecastChart
                                         historicalData={forecastHistoricalData}
-                                        title="🔮 Transaction Forecast (AI-Powered Prediction)"
+                                        title="🔮 พยากรณ์การหมุนเวียนพาเลท (AI)"
                                         isDarkMode={isDarkMode}
                                         forecastDays={7}
                                     />
@@ -641,7 +641,7 @@ export const AnalyticsDashboard: React.FC<AnalyticsDashboardProps> = ({
                                     {yoyData.length > 1 ? (
                                         <YoYComparisonChart
                                             data={yoyData}
-                                            title="📈 Year-over-Year Transaction Growth"
+                                            title="📈 เปรียบเทียบการหมุนเวียนรายปี"
                                             metric="รายการ"
                                             isDarkMode={isDarkMode}
                                         />
@@ -667,7 +667,7 @@ export const AnalyticsDashboard: React.FC<AnalyticsDashboardProps> = ({
                                     {/* Week-over-Week - More immediately useful */}
                                     <WoWComparisonChart
                                         data={wowData}
-                                        title="📊 Week-over-Week Trend (8 สัปดาห์)"
+                                        title="📊 แนวโน้มการหมุนเวียน 8 สัปดาห์"
                                         metric="รายการ"
                                         isDarkMode={isDarkMode}
                                     />
@@ -681,8 +681,8 @@ export const AnalyticsDashboard: React.FC<AnalyticsDashboardProps> = ({
                                     isDarkMode={isDarkMode}
                                 />
 
-                                <WaterfallChart data={waterfallData} title="Incremental Stock Flow Analysis" isDarkMode={isDarkMode} />
-                                <HeatmapCalendar data={heatmapData} title="Tactical Activity Density (Yearly View)" isDarkMode={isDarkMode} />
+                                <WaterfallChart data={waterfallData} title="การเปลี่ยนแปลงสต็อกพาเลท" isDarkMode={isDarkMode} />
+                                <HeatmapCalendar data={heatmapData} title="ความหนาแน่นการหมุนเวียน (รายปี)" isDarkMode={isDarkMode} />
                             </motion.div>
                         </div>
                     </motion.div>

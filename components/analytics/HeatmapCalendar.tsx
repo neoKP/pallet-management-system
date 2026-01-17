@@ -205,7 +205,7 @@ export const HeatmapCalendar: React.FC<HeatmapCalendarProps> = ({
 
                 {/* Animated Legend */}
                 <div className="flex items-center gap-3 bg-black/20 px-3 py-1.5 rounded-full border border-white/5 backdrop-blur-sm">
-                    <span className="text-[9px] text-gray-400 font-mono uppercase tracking-widest">Power Level</span>
+                    <span className="text-[9px] text-gray-400 font-mono uppercase tracking-widest">ระดับความหนาแน่น</span>
                     <div className="flex gap-1">
                         {[0.2, 0.4, 0.6, 0.8, 1].map((opacity, i) => (
                             <motion.div
@@ -299,16 +299,16 @@ export const HeatmapCalendar: React.FC<HeatmapCalendarProps> = ({
                         <div className="absolute inset-0 pointer-events-none opacity-10 bg-[linear-gradient(transparent_50%,rgba(0,0,0,0.5)_50%)] bg-[length:100%_4px]" />
 
                         <div className="flex flex-col relative z-10">
-                            <span className="text-[10px] text-gray-400 font-mono uppercase">DATE_LOG</span>
+                            <span className="text-[10px] text-gray-400 font-mono uppercase">วันที่</span>
                             <span className={`text-sm font-bold ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>
                                 {format(hoveredData.date, 'dd MMM yyyy')}
                             </span>
                         </div>
                         <div className="w-px h-8 bg-gray-500/20 relative z-10" />
                         <div className="flex flex-col relative z-10">
-                            <span className="text-[10px] text-gray-400 font-mono uppercase">OUTPUT</span>
+                            <span className="text-[10px] text-gray-400 font-mono uppercase">การเคลื่อนไหว</span>
                             <span className="text-xl font-black text-glow" style={{ color: currentTheme.primary }}>
-                                {hoveredData.value.toLocaleString()}
+                                {hoveredData.value.toLocaleString()} รายการ
                             </span>
                         </div>
                     </motion.div>
