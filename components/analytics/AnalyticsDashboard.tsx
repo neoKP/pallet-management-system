@@ -589,7 +589,7 @@ export const AnalyticsDashboard: React.FC<AnalyticsDashboardProps> = ({
                         {/* Main Interaction Charts */}
                         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
                             <RechartsLineChart data={sevenDayPerformanceData} title="📅 การเคลื่อนไหวพาเลท 7 วันล่าสุด" isDarkMode={isDarkMode} />
-                            <RechartsPieChart data={statusData} title="🧿 สัดส่วนประเภทการเคลื่อนไหว" isDarkMode={isDarkMode} onSegmentClick={handleChartClick} />
+                            <RechartsPieChart data={statusData} title="🧿 สัดส่วนสถานะการเคลื่อนไหว" isDarkMode={isDarkMode} onSegmentClick={handleChartClick} />
                             <RechartsBarChart
                                 data={branchPerformance.map(b => ({ name: b.branchName, value: b.totalStock }))}
                                 title="🏢 พาเลทในคลังแยกตามสาขา"
