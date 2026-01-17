@@ -2,6 +2,7 @@ import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 
 export type DateRangeType = 'day' | 'week' | 'month' | 'quarter' | 'year' | 'custom';
+export type ThemeColor = 'indigo' | 'purple' | 'blue' | 'green' | 'rose' | 'amber';
 
 export interface AnalyticsFilters {
     dateRange: DateRangeType;
@@ -20,10 +21,12 @@ export interface AnalyticsFilters {
 interface AnalyticsState {
     filters: AnalyticsFilters;
     isDarkMode: boolean;
+    themeColor: ThemeColor;
     updateFilters: (updates: Partial<AnalyticsFilters>) => void;
     resetFilters: () => void;
     toggleDarkMode: () => void;
     setDarkMode: (isDark: boolean) => void;
+    setThemeColor: (color: ThemeColor) => void;
 }
 
 const getDefaultDateRange = (): { startDate: Date; endDate: Date } => {
@@ -56,6 +59,7 @@ export const useAnalyticsStore = create<AnalyticsState>()(
                 selectedYears: [],
             },
             isDarkMode: true, // Default: Dark Mode
+            themeColor: 'indigo' as ThemeColor, // Default theme
 
             updateFilters: (updates) =>
                 set((state) => ({
@@ -92,10 +96,13 @@ export const useAnalyticsStore = create<AnalyticsState>()(
 
             setDarkMode: (isDark) =>
                 set({ isDarkMode: isDark }),
+
+            setThemeColor: (color) =>
+                set({ themeColor: color }),
         }),
         {
             name: 'analytics-storage',
-            partialize: (state) => ({ isDarkMode: state.isDarkMode }), // Only persist dark mode
+            partialize: (state) => ({ isDarkMode: state.isDarkMode, themeColor: state.themeColor }), // Persist dark mode and theme
         }
     )
 );

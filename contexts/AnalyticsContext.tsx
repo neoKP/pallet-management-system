@@ -62,7 +62,7 @@ export const AnalyticsProvider: React.FC<{ children: ReactNode }> = ({ children 
     };
 
     const toggleDarkMode = () => {
-        setIsDarkMode(prev => {
+        setIsDarkMode((prev: boolean) => {
             const newValue = !prev;
             localStorage.setItem('analytics-dark-mode', JSON.stringify(newValue));
             return newValue;

@@ -1,5 +1,7 @@
 import React from 'react';
 import { motion } from 'framer-motion';
+import { useAnalyticsStore } from '../../stores/analyticsStore';
+import { THEMES } from './ThemeEngine';
 
 interface WaterfallDataPoint {
     label: string;
@@ -18,6 +20,9 @@ export const WaterfallChart: React.FC<WaterfallChartProps> = ({
     title,
     isDarkMode,
 }) => {
+    const { themeColor } = useAnalyticsStore();
+    const currentTheme = THEMES.find(t => t.id === themeColor) || THEMES[0];
+
     // Calculate cumulative values
     let cumulative = 0;
     const chartData = data.map((item, index) => {
@@ -87,7 +92,7 @@ export const WaterfallChart: React.FC<WaterfallChartProps> = ({
                         const barY = getY(barEnd);
 
                         const color = item.isTotal
-                            ? isDarkMode ? '#8b5cf6' : '#7c3aed'
+                            ? currentTheme.primary
                             : item.isPositive
                                 ? isDarkMode ? '#10b981' : '#059669'
                                 : isDarkMode ? '#ef4444' : '#dc2626';
@@ -117,25 +122,34 @@ export const WaterfallChart: React.FC<WaterfallChartProps> = ({
                                     width={barWidth}
                                     height={barHeight}
                                     fill={color}
-                                    rx="4"
-                                    initial={{ scaleY: 0 }}
-                                    animate={{ scaleY: 1 }}
-                                    transition={{ delay: index * 0.1, duration: 0.5 }}
+                                    rx="6"
+                                    initial={{ scaleY: 0, opacity: 0 }}
+                                    animate={{ scaleY: 1, opacity: 1 }}
+                                    transition={{
+                                        type: 'spring',
+                                        stiffness: 100,
+                                        damping: 15,
+                                        delay: index * 0.1
+                                    }}
+                                    whileHover={{
+                                        scale: 1.05,
+                                        filter: `drop-shadow(0 0 12px ${color}) brightness(1.2)`,
+                                    }}
                                     style={{
-                                        transformOrigin: `${x + barWidth / 2}px ${getY(0)}px`,
-                                        filter: `drop-shadow(0 4px 6px ${color}40)`,
+                                        transformOrigin: `${x + barWidth / 2}px ${getY(item.start)}px`,
+                                        cursor: 'pointer'
                                     }}
                                 />
 
                                 {/* Value Label */}
                                 <motion.text
                                     x={x + barWidth / 2}
-                                    y={barY - 8}
+                                    y={barY - 12}
                                     textAnchor="middle"
-                                    className={`text-xs font-semibold ${isDarkMode ? 'fill-white' : 'fill-gray-900'}`}
-                                    initial={{ opacity: 0 }}
-                                    animate={{ opacity: 1 }}
-                                    transition={{ delay: index * 0.1 + 0.3 }}
+                                    className={`text-xs font-bold ${isDarkMode ? 'fill-white' : 'fill-gray-900'}`}
+                                    initial={{ opacity: 0, y: barY }}
+                                    animate={{ opacity: 1, y: barY - 12 }}
+                                    transition={{ delay: index * 0.1 + 0.4 }}
                                 >
                                     {item.value > 0 ? '+' : ''}{item.value.toLocaleString()}
                                 </motion.text>
@@ -143,23 +157,26 @@ export const WaterfallChart: React.FC<WaterfallChartProps> = ({
                                 {/* Label */}
                                 <text
                                     x={x + barWidth / 2}
-                                    y={chartHeight + 20}
+                                    y={chartHeight + 25}
                                     textAnchor="middle"
-                                    className={`text-xs ${isDarkMode ? 'fill-gray-400' : 'fill-gray-600'}`}
+                                    className={`text-[10px] font-medium uppercase tracking-wider ${isDarkMode ? 'fill-gray-400' : 'fill-gray-600'}`}
                                 >
                                     {item.label}
                                 </text>
 
                                 {/* Total Value (for total bars) */}
                                 {item.isTotal && (
-                                    <text
+                                    <motion.text
+                                        initial={{ opacity: 0 }}
+                                        animate={{ opacity: 1 }}
+                                        transition={{ delay: index * 0.1 + 0.5 }}
                                         x={x + barWidth / 2}
-                                        y={chartHeight + 35}
+                                        y={chartHeight + 45}
                                         textAnchor="middle"
-                                        className={`text-sm font-bold ${isDarkMode ? 'fill-purple-400' : 'fill-purple-600'}`}
+                                        className={`text-sm font-black ${isDarkMode ? 'fill-purple-400' : 'fill-purple-600'}`}
                                     >
                                         {item.end.toLocaleString()}
-                                    </text>
+                                    </motion.text>
                                 )}
                             </g>
                         );

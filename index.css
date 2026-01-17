@@ -232,6 +232,39 @@ select {
   }
 }
 
+/* Analytics Dynamic Utilities */
+.dynamic-shadow {
+  box-shadow: var(--dynamic-shadow-value);
+}
+
+.dynamic-bg {
+  background: var(--dynamic-bg-value);
+}
+
+.dynamic-color {
+  color: var(--dynamic-color-value);
+}
+
+.dynamic-bg-color {
+  background-color: var(--dynamic-bg-color-value);
+}
+
+.dynamic-height {
+  height: var(--dynamic-height-value);
+}
+
+.dynamic-filter {
+  filter: var(--dynamic-filter-value);
+}
+
+.dynamic-stroke {
+  stroke: var(--dynamic-stroke-value);
+}
+
+.dynamic-fill {
+  fill: var(--dynamic-fill-value);
+}
+
 /* Toast Notifications Container */
 .toast-container {
   z-index: 9999;

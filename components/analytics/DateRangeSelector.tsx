@@ -63,9 +63,7 @@ export const DateRangeSelector: React.FC<DateRangeSelectorProps> = ({
                 return; // Custom - don't auto-set dates
         }
 
-        if (range !== 'custom') {
-            onCustomDateChange(start, end);
-        }
+        onCustomDateChange(start!, end!);
     };
 
     const formatDateThai = (date: Date): string => {

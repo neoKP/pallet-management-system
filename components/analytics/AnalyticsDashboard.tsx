@@ -32,7 +32,8 @@ import {
     Filter,
 } from 'lucide-react';
 import { BRANCHES, PALLET_TYPES } from '../../constants';
-import { isSameDay } from 'date-fns';
+import { isSameDay, startOfWeek, endOfWeek, subWeeks, format, isWithinInterval } from 'date-fns';
+import { th } from 'date-fns/locale';
 
 // Premium Analytics Components
 import { GaugeChart } from './GaugeChart';
@@ -44,7 +45,13 @@ import { EnhancedKPICard } from './EnhancedKPICard';
 import { Slicers } from './Slicers';
 import { SankeyDiagram } from './SankeyDiagram';
 import { AnalyticsSkeleton } from './SkeletonLoader';
-import { Filter as FilterIcon } from 'lucide-react';
+import { ForecastChart } from './ForecastChart';
+import { YoYComparisonChart } from './YoYComparisonChart';
+import { WoWComparisonChart } from './WoWComparisonChart';
+import { ActionableInsights } from './ActionableInsights';
+import { ThemeEngine, THEMES } from './ThemeEngine';
+import { DrillThroughModal } from './DrillThroughModal';
+import { Filter as FilterIcon, Brain, Palette } from 'lucide-react';
 
 interface AnalyticsDashboardProps {
     transactions: Transaction[];
@@ -55,8 +62,17 @@ export const AnalyticsDashboard: React.FC<AnalyticsDashboardProps> = ({
     transactions,
     stock,
 }) => {
-    const { filters, updateFilters, resetFilters, isDarkMode, toggleDarkMode } = useAnalyticsStore();
+    const { filters, updateFilters, resetFilters, isDarkMode, toggleDarkMode, themeColor, setThemeColor } = useAnalyticsStore();
+    const currentTheme = useMemo(() => THEMES.find(t => t.id === themeColor) || THEMES[0], [themeColor]);
+
     const [isSlicerOpen, setIsSlicerOpen] = useState(false);
+    const [isThemeOpen, setIsThemeOpen] = useState(false);
+    const [drillThroughOpen, setDrillThroughOpen] = useState(false);
+    const [drillThroughData, setDrillThroughData] = useState<{
+        title: string;
+        subtitle?: string;
+        transactions: Transaction[];
+    }>({ title: '', transactions: [] });
     const [drillStack, setDrillStack] = useState<string[]>([]);
     const [isLoading, setIsLoading] = useState(true);
 
@@ -157,7 +173,7 @@ export const AnalyticsDashboard: React.FC<AnalyticsDashboardProps> = ({
         [filteredTransactions, stock, filters.startDate, filters.endDate, palletNames, palletColors]
     );
 
-    // Premium Analytics Data
+    // Premium Analytics Data - 7-Day Performance (Real Data Only)
     const last7DaysData = useMemo(() => {
         const days = Array.from({ length: 7 }, (_, i) => {
             const date = new Date();
@@ -166,11 +182,43 @@ export const AnalyticsDashboard: React.FC<AnalyticsDashboardProps> = ({
         });
 
         return days.map(date =>
-            slicerFilteredTransactions.filter((t: Transaction) =>
+            transactions.filter((t: Transaction) =>
                 isSameDay(new Date(t.date), date)
             ).length
         );
-    }, [slicerFilteredTransactions]);
+    }, [transactions]);
+
+    // 7-Day Performance Focus - Detailed Time Series (Real Data)
+    const sevenDayPerformanceData = useMemo(() => {
+        const thaiMonths = ['ม.ค.', 'ก.พ.', 'มี.ค.', 'เม.ย.', 'พ.ค.', 'มิ.ย.',
+            'ก.ค.', 'ส.ค.', 'ก.ย.', 'ต.ค.', 'พ.ย.', 'ธ.ค.'];
+
+        const days = Array.from({ length: 7 }, (_, i) => {
+            const date = new Date();
+            date.setDate(date.getDate() - (6 - i));
+            return date;
+        });
+
+        return days.map(date => {
+            const dayTransactions = transactions.filter((t: Transaction) =>
+                isSameDay(new Date(t.date), date)
+            );
+
+            const inQty = dayTransactions.filter(t => t.type === 'IN').reduce((sum, t) => sum + t.qty, 0);
+            const outQty = dayTransactions.filter(t => t.type === 'OUT').reduce((sum, t) => sum + t.qty, 0);
+            const maintenanceQty = dayTransactions.filter(t => t.type === 'MAINTENANCE').reduce((sum, t) => sum + t.qty, 0);
+
+            const dateLabel = `${date.getDate()} ${thaiMonths[date.getMonth()]}`;
+
+            return {
+                date: dateLabel,
+                in: inQty,
+                out: outQty,
+                maintenance: maintenanceQty,
+                total: inQty + outQty + maintenanceQty,
+            };
+        });
+    }, [transactions]);
 
     const heatmapData: HeatmapData[] = useMemo(() => {
         const data: HeatmapData[] = [];
@@ -231,6 +279,76 @@ export const AnalyticsDashboard: React.FC<AnalyticsDashboardProps> = ({
         });
     }, [filteredTransactions]);
 
+    // Forecast Data - Historical daily transactions for prediction
+    const forecastHistoricalData = useMemo(() => {
+        const last30Days: { date: string; value: number }[] = [];
+        for (let i = 29; i >= 0; i--) {
+            const date = new Date();
+            date.setDate(date.getDate() - i);
+            const dateStr = date.toISOString().split('T')[0];
+            const count = slicerFilteredTransactions.filter((t: Transaction) =>
+                isSameDay(new Date(t.date), date)
+            ).length;
+            last30Days.push({ date: dateStr, value: count });
+        }
+        return last30Days;
+    }, [slicerFilteredTransactions]);
+
+    // Real YoY Data - Calculate from actual transactions grouped by year
+    const yoyData = useMemo(() => {
+        const yearCounts: Record<number, number> = {};
+
+        // Group transactions by year (using all transactions, not just filtered by date range)
+        transactions.forEach(t => {
+            const year = new Date(t.date).getFullYear();
+            yearCounts[year] = (yearCounts[year] || 0) + 1;
+        });
+
+        // Get years with data and sort
+        const years = Object.keys(yearCounts).map(Number).sort((a, b) => a - b);
+
+        // Create color gradient for years
+        const colors = ['#64748b', '#94a3b8', '#6366f1', '#8b5cf6', '#a855f7'];
+
+        return years.map((year, index) => ({
+            year,
+            value: yearCounts[year],
+            color: colors[Math.min(index, colors.length - 1)] || '#6366f1',
+        }));
+    }, [transactions]);
+
+    // Real WoW Data - Calculate from actual transactions grouped by week (last 8 weeks)
+    const wowData = useMemo(() => {
+        const weeksToShow = 8;
+        const now = new Date();
+        const weekData: { weekLabel: string; weekStart: string; value: number }[] = [];
+
+        for (let i = weeksToShow - 1; i >= 0; i--) {
+            const weekStart = startOfWeek(subWeeks(now, i), { weekStartsOn: 1 }); // Monday start
+            const weekEnd = endOfWeek(subWeeks(now, i), { weekStartsOn: 1 });
+
+            // Count transactions in this week from ALL transactions (not filtered by date range)
+            const weekTransactions = transactions.filter(t => {
+                const txDate = new Date(t.date);
+                return isWithinInterval(txDate, { start: weekStart, end: weekEnd });
+            });
+
+            const weekLabel = i === 0
+                ? 'สัปดาห์นี้'
+                : i === 1
+                    ? 'สัปดาห์ที่แล้ว'
+                    : format(weekStart, 'd MMM', { locale: th });
+
+            weekData.push({
+                weekLabel,
+                weekStart: format(weekStart, 'yyyy-MM-dd'),
+                value: weekTransactions.length,
+            });
+        }
+
+        return weekData;
+    }, [transactions]);
+
     const [highlightedItem, setHighlightedItem] = useState<string | null>(null);
 
     // Simulated "AI Insight" generation logic
@@ -275,11 +393,35 @@ export const AnalyticsDashboard: React.FC<AnalyticsDashboardProps> = ({
         }
         setHighlightedItem(item.name);
 
-        // Optional: Also auto-filter after a short delay for BI feel
+        // Open Drill-Through Modal with filtered transactions
         const branch = BRANCHES.find(b => b.name === item.name);
+        const palletType = PALLET_TYPES.find(p => p.name === item.name);
+
+        let filteredTx = filteredTransactions;
+        let title = '';
+        let subtitle = '';
+
         if (branch) {
-            // updateFilters({ selectedBranches: [branch.id] });
+            filteredTx = filteredTransactions.filter(t => t.source === branch.id || t.dest === branch.id);
+            title = `📊 รายละเอียดสาขา: ${branch.name}`;
+            subtitle = `${filteredTx.length} รายการในช่วงเวลาที่เลือก`;
+        } else if (palletType) {
+            filteredTx = filteredTransactions.filter(t => t.palletId === palletType.id);
+            title = `📦 รายละเอียดประเภท: ${palletType.name}`;
+            subtitle = `${filteredTx.length} รายการในช่วงเวลาที่เลือก`;
+        } else if (item.name === 'IN' || item.name === 'OUT' || item.name === 'MAINTENANCE') {
+            filteredTx = filteredTransactions.filter(t => t.type === item.name);
+            const typeLabels: Record<string, string> = { IN: 'รับเข้า', OUT: 'จ่ายออก', MAINTENANCE: 'ซ่อมบำรุง' };
+            title = `📋 รายการ: ${typeLabels[item.name]}`;
+            subtitle = `${filteredTx.length} รายการในช่วงเวลาที่เลือก`;
+        } else {
+            title = `📊 รายละเอียด: ${item.name}`;
+            subtitle = `${filteredTransactions.length} รายการทั้งหมด`;
+            filteredTx = filteredTransactions;
         }
+
+        setDrillThroughData({ title, subtitle, transactions: filteredTx });
+        setDrillThroughOpen(true);
     };
 
     const handleExportPDF = async () => {
@@ -315,11 +457,22 @@ export const AnalyticsDashboard: React.FC<AnalyticsDashboardProps> = ({
                 >
                     <div className="space-y-1">
                         <div className="flex items-center gap-3">
-                            <div className="p-2 bg-indigo-500 rounded-xl shadow-lg shadow-indigo-500/20">
+                            <div
+                                className="p-2 rounded-xl shadow-lg transition-all duration-500"
+                                style={{
+                                    backgroundColor: currentTheme.primary,
+                                    boxShadow: `0 10px 20px ${currentTheme.primary}40`
+                                }}
+                            >
                                 <Sparkles className="w-8 h-8 text-white" />
                             </div>
                             <h1 className={`text-4xl font-extrabold tracking-tighter ${isDarkMode ? 'text-white' : 'text-slate-900'}`}>
-                                Premium <span className="text-transparent bg-clip-text bg-gradient-to-r from-indigo-500 to-purple-500">Analytics</span>
+                                Premium <span
+                                    className="text-transparent bg-clip-text transition-all duration-500"
+                                    style={{ backgroundImage: `linear-gradient(to right, ${currentTheme.primary}, ${currentTheme.secondary})` }}
+                                >
+                                    Analytics
+                                </span>
                             </h1>
                         </div>
                         <p className={`text-sm font-medium pl-14 ${isDarkMode ? 'text-slate-400' : 'text-slate-500'}`}>
@@ -331,9 +484,31 @@ export const AnalyticsDashboard: React.FC<AnalyticsDashboardProps> = ({
                         <motion.button whileHover={{ y: -2 }} whileTap={{ scale: 0.95 }} onClick={handleExportPDF} className={`px-4 py-2 rounded-xl font-bold text-xs uppercase tracking-wider transition-all ${isDarkMode ? 'bg-white/5 text-slate-300 hover:bg-white/10' : 'bg-white text-slate-600 shadow-sm hover:shadow-md'}`}>PDF</motion.button>
                         <motion.button whileHover={{ y: -2 }} whileTap={{ scale: 0.95 }} onClick={handleExportExcel} className={`px-4 py-2 rounded-xl font-bold text-xs uppercase tracking-wider transition-all ${isDarkMode ? 'bg-white/5 text-slate-300 hover:bg-white/10' : 'bg-white text-slate-600 shadow-sm hover:shadow-md'}`}>Excel</motion.button>
                         <div className="w-px h-6 bg-slate-500/20 mx-1" />
-                        <motion.button whileHover={{ y: -2 }} whileTap={{ scale: 0.95 }} onClick={() => setIsSlicerOpen(true)} className={`flex items-center gap-2 px-4 py-2 rounded-xl font-bold text-xs uppercase tracking-wider transition-all ${isDarkMode ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-600/20' : 'bg-indigo-500 text-white shadow-md'}`}>
+                        <motion.button
+                            whileHover={{ y: -2, scale: 1.02 }}
+                            whileTap={{ scale: 0.98 }}
+                            onClick={() => setIsSlicerOpen(true)}
+                            className="flex items-center gap-2 px-4 py-2 rounded-xl font-bold text-xs uppercase tracking-wider transition-all shadow-lg text-white"
+                            style={{
+                                backgroundColor: currentTheme.primary,
+                                boxShadow: `0 4px 12px ${currentTheme.primary}40`
+                            }}
+                        >
                             <Filter className="w-3.5 h-3.5" />
                             Filters
+                        </motion.button>
+                        <motion.button
+                            whileHover={{ y: -2, scale: 1.02 }}
+                            whileTap={{ scale: 0.98 }}
+                            onClick={() => setIsThemeOpen(true)}
+                            className="flex items-center gap-2 px-4 py-2 rounded-xl font-bold text-xs uppercase tracking-wider transition-all shadow-lg text-white"
+                            style={{
+                                backgroundColor: currentTheme.accent,
+                                boxShadow: `0 4px 12px ${currentTheme.accent}40`
+                            }}
+                        >
+                            <Palette className="w-3.5 h-3.5" />
+                            Theme
                         </motion.button>
                         <motion.button whileHover={{ rotate: 180 }} whileTap={{ scale: 0.9 }} onClick={toggleDarkMode} className="p-2 rounded-xl hover:bg-black/5 dark:hover:bg-white/10 transition-all">{isDarkMode ? <Sun className="w-5 h-5 text-yellow-400" /> : <Moon className="w-5 h-5 text-slate-600" />}</motion.button>
                     </div>
@@ -354,17 +529,32 @@ export const AnalyticsDashboard: React.FC<AnalyticsDashboardProps> = ({
                         {/* Smart Narrative Insight Overlay */}
                         <motion.div
                             variants={{ hidden: { opacity: 0, scale: 0.98 }, show: { opacity: 1, scale: 1 } }}
-                            className={`p-6 rounded-3xl border ${isDarkMode ? 'bg-indigo-500/10 border-indigo-500/20' : 'bg-indigo-50 border-indigo-100'} relative overflow-hidden`}
+                            className={`p-6 rounded-3xl border transition-all duration-500 ${isDarkMode ? 'bg-white/5 border-white/10' : 'bg-white border-slate-100 shadow-sm'} relative overflow-hidden`}
                         >
+                            <div
+                                className="absolute inset-0 opacity-[0.03] pointer-events-none"
+                                style={{ background: `linear-gradient(135deg, ${currentTheme.primary}, ${currentTheme.secondary})` }}
+                            />
                             <div className="absolute top-0 right-0 p-4">
-                                <span className={`px-2 py-1 rounded-full text-[10px] font-black uppercase tracking-widest ${isDarkMode ? 'bg-indigo-500 text-white' : 'bg-indigo-600 text-white'}`}>AI Insight</span>
+                                <span
+                                    className="px-2 py-1 rounded-full text-[10px] font-black uppercase tracking-widest text-white"
+                                    style={{ backgroundColor: currentTheme.primary }}
+                                >
+                                    AI Insight
+                                </span>
                             </div>
                             <div className="flex gap-4 items-start">
-                                <div className={`p-3 rounded-2xl ${isDarkMode ? 'bg-indigo-500/20 text-indigo-400' : 'bg-indigo-500 text-white'}`}>
+                                <div
+                                    className="p-3 rounded-2xl text-white shadow-lg"
+                                    style={{
+                                        backgroundColor: currentTheme.primary,
+                                        boxShadow: `0 8px 16px ${currentTheme.primary}30`
+                                    }}
+                                >
                                     <Sparkles className="w-6 h-6" />
                                 </div>
                                 <div className="space-y-1 pr-20">
-                                    <h4 className={`text-sm font-black ${isDarkMode ? 'text-indigo-300' : 'text-indigo-900'}`}>Smart Narrative</h4>
+                                    <h4 className={`text-sm font-black transition-colors duration-500`} style={{ color: currentTheme.primary }}>Smart Narrative</h4>
                                     <p className={`text-base font-medium leading-relaxed ${isDarkMode ? 'text-slate-300' : 'text-slate-700'}`}>
                                         {smartInsight.text}
                                     </p>
@@ -383,12 +573,18 @@ export const AnalyticsDashboard: React.FC<AnalyticsDashboardProps> = ({
                                 isDarkMode={isDarkMode}
                             />
                             {drillStack.length > 0 && (
-                                <div className={`flex items-center gap-2 p-1.5 px-4 rounded-2xl border ${isDarkMode ? 'bg-white/5 border-white/10 text-indigo-400' : 'bg-indigo-50 border-indigo-100 text-indigo-600'} text-xs font-bold uppercase tracking-wider`}>
+                                <div className={`flex items-center gap-2 p-1.5 px-4 rounded-2xl border ${isDarkMode ? 'bg-white/5 border-white/10 text-slate-300' : 'bg-white border-slate-200 text-slate-600'} text-xs font-bold uppercase tracking-wider`}>
                                     <button onClick={() => handleBreadcrumbClick(-1)}>Global View</button>
                                     {drillStack.map((level, i) => (
                                         <React.Fragment key={i}>
                                             <ChevronRight className="w-4 h-4 opacity-50" />
-                                            <button onClick={() => handleBreadcrumbClick(i)} className={i === drillStack.length - 1 ? 'text-indigo-500 font-black' : ''}>{level}</button>
+                                            <button
+                                                onClick={() => handleBreadcrumbClick(i)}
+                                                className={i === drillStack.length - 1 ? 'font-black' : ''}
+                                                style={{ color: i === drillStack.length - 1 ? currentTheme.primary : 'inherit' }}
+                                            >
+                                                {level}
+                                            </button>
                                         </React.Fragment>
                                     ))}
                                 </div>
@@ -397,16 +593,16 @@ export const AnalyticsDashboard: React.FC<AnalyticsDashboardProps> = ({
 
                         {/* KPI Grid */}
                         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6">
-                            <EnhancedKPICard title="รายการรวม" value={kpis.totalTransactions} icon={<Activity />} trend={kpis.trend} trendValue={kpis.trendPercentage} sparklineData={last7DaysData} color="#6366f1" isDarkMode={isDarkMode} delay={0.1} />
-                            <EnhancedKPICard title="สต็อกปัจจุบัน" value={kpis.totalPalletsInStock} suffix="ชิ้น" icon={<Package />} sparklineData={last7DaysData} color="#8b5cf6" isDarkMode={isDarkMode} delay={0.2} />
-                            <EnhancedKPICard title="ระหว่างขนส่ง" value={kpis.totalPalletsInTransit} suffix="ชิ้น" icon={<Truck />} sparklineData={last7DaysData} color="#3b82f6" isDarkMode={isDarkMode} delay={0.3} />
+                            <EnhancedKPICard title="รายการรวม" value={kpis.totalTransactions} icon={<Activity />} trend={kpis.trend} trendValue={kpis.trendPercentage} sparklineData={last7DaysData} color={currentTheme.primary} isDarkMode={isDarkMode} delay={0.1} />
+                            <EnhancedKPICard title="สต็อกปัจจุบัน" value={kpis.totalPalletsInStock} suffix="ชิ้น" icon={<Package />} sparklineData={last7DaysData} color={currentTheme.secondary} isDarkMode={isDarkMode} delay={0.2} />
+                            <EnhancedKPICard title="ระหว่างขนส่ง" value={kpis.totalPalletsInTransit} suffix="ชิ้น" icon={<Truck />} sparklineData={last7DaysData} color={currentTheme.accent} isDarkMode={isDarkMode} delay={0.3} />
                             <EnhancedKPICard title="การใช้สอย" value={kpis.utilizationRate} suffix="%" icon={<TrendingUp />} sparklineData={last7DaysData} color="#10b981" isDarkMode={isDarkMode} delay={0.4} />
                             <EnhancedKPICard title="ซ่อมบำรุง" value={kpis.maintenanceRate} suffix="%" icon={<Wrench />} sparklineData={last7DaysData} color="#f59e0b" isDarkMode={isDarkMode} delay={0.5} />
                         </div>
 
                         {/* Main Interaction Charts */}
                         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-                            <RechartsLineChart data={timeSeriesData} title="📅 7-Day Performance Focus" isDarkMode={isDarkMode} />
+                            <RechartsLineChart data={sevenDayPerformanceData} title="📅 7-Day Performance Focus (Real Data)" isDarkMode={isDarkMode} />
                             <RechartsPieChart data={statusData} title="🧿 Status Distribution (Interactive)" isDarkMode={isDarkMode} onSegmentClick={handleChartClick} />
                             <RechartsBarChart
                                 data={branchPerformance.map(b => ({ name: b.branchName, value: b.totalStock }))}
@@ -439,6 +635,66 @@ export const AnalyticsDashboard: React.FC<AnalyticsDashboardProps> = ({
                                     <ComparisonCard title="Monthly Throughput" currentValue={kpis.totalTransactions} previousValue={previousMonthTransactions} icon={<Activity />} color="#6366f1" isDarkMode={isDarkMode} />
                                 </div>
 
+                                {/* AI-Powered Forecast Section */}
+                                <div className="space-y-4">
+                                    <div className="flex items-center gap-3">
+                                        <Brain className="w-8 h-8 text-purple-500" />
+                                        <h2 className={`text-2xl font-black ${isDarkMode ? 'text-white' : 'text-slate-900'}`}>Predictive Intelligence</h2>
+                                    </div>
+                                    <ForecastChart
+                                        historicalData={forecastHistoricalData}
+                                        title="🔮 Transaction Forecast (AI-Powered Prediction)"
+                                        isDarkMode={isDarkMode}
+                                        forecastDays={7}
+                                    />
+                                </div>
+
+                                {/* YoY & WoW Comparison Charts - Real Data Only */}
+                                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                                    {/* Year-over-Year - Shows if we have data from multiple years */}
+                                    {yoyData.length > 1 ? (
+                                        <YoYComparisonChart
+                                            data={yoyData}
+                                            title="📈 Year-over-Year Transaction Growth"
+                                            metric="รายการ"
+                                            isDarkMode={isDarkMode}
+                                        />
+                                    ) : (
+                                        <div className={`p-6 rounded-2xl border ${isDarkMode ? 'bg-slate-800/50 border-white/10' : 'bg-white border-gray-200'}`}>
+                                            <div className="flex items-center gap-3 mb-4">
+                                                <div className={`p-2 rounded-xl ${isDarkMode ? 'bg-indigo-500/20' : 'bg-indigo-100'}`}>
+                                                    <TrendingUp className="w-5 h-5 text-indigo-500" />
+                                                </div>
+                                                <h3 className={`text-lg font-bold ${isDarkMode ? 'text-white' : 'text-slate-900'}`}>
+                                                    📈 Year-over-Year (YoY)
+                                                </h3>
+                                            </div>
+                                            <div className="flex items-center justify-center py-8">
+                                                <p className={`text-sm text-center ${isDarkMode ? 'text-slate-400' : 'text-slate-500'}`}>
+                                                    📊 ข้อมูลปัจจุบันมีเฉพาะปี {new Date().getFullYear()}<br />
+                                                    จะแสดง YoY เมื่อมีข้อมูลมากกว่า 1 ปี
+                                                </p>
+                                            </div>
+                                        </div>
+                                    )}
+
+                                    {/* Week-over-Week - More immediately useful */}
+                                    <WoWComparisonChart
+                                        data={wowData}
+                                        title="📊 Week-over-Week Trend (8 สัปดาห์)"
+                                        metric="รายการ"
+                                        isDarkMode={isDarkMode}
+                                    />
+                                </div>
+
+                                {/* Actionable AI Insights */}
+                                <ActionableInsights
+                                    kpis={kpis}
+                                    branchPerformance={branchPerformance}
+                                    palletAnalysis={palletAnalysis}
+                                    isDarkMode={isDarkMode}
+                                />
+
                                 <WaterfallChart data={waterfallData} title="Incremental Stock Flow Analysis" isDarkMode={isDarkMode} />
                                 <HeatmapCalendar data={heatmapData} title="Tactical Activity Density (Yearly View)" isDarkMode={isDarkMode} />
                             </motion.div>
@@ -456,6 +712,24 @@ export const AnalyticsDashboard: React.FC<AnalyticsDashboardProps> = ({
                     if (type === 'palletTypes') updateFilters({ selectedPalletTypes: value });
                     if (type === 'years') updateFilters({ selectedYears: value });
                 }}
+                isDarkMode={isDarkMode}
+            />
+
+            <ThemeEngine
+                isOpen={isThemeOpen}
+                onClose={() => setIsThemeOpen(false)}
+                currentTheme={themeColor}
+                isDarkMode={isDarkMode}
+                onThemeChange={setThemeColor}
+                onDarkModeToggle={toggleDarkMode}
+            />
+
+            <DrillThroughModal
+                isOpen={drillThroughOpen}
+                onClose={() => setDrillThroughOpen(false)}
+                title={drillThroughData.title}
+                subtitle={drillThroughData.subtitle}
+                transactions={drillThroughData.transactions}
                 isDarkMode={isDarkMode}
             />
         </div>

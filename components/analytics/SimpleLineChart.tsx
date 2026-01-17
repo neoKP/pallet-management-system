@@ -92,8 +92,8 @@ export const SimpleLineChart: React.FC<SimpleLineChartProps> = ({
               `}
                         >
                             <div
-                                className="w-3 h-3 rounded-full"
-                                style={{ backgroundColor: line.color } as React.CSSProperties}
+                                className="w-3 h-3 rounded-full dynamic-bg-color"
+                                style={{ '--dynamic-bg-color-value': line.color } as React.CSSProperties}
                             />
                             <span className={isDarkMode ? 'text-gray-300' : 'text-gray-700'}>
                                 {line.label}
@@ -103,7 +103,7 @@ export const SimpleLineChart: React.FC<SimpleLineChartProps> = ({
                 </div>
             </div>
 
-            <div className="relative" style={{ height: `${height}px` } as React.CSSProperties}>
+            <div className="relative dynamic-height" style={{ '--dynamic-height-value': `${height}px` } as React.CSSProperties}>
                 <svg
                     viewBox="0 0 100 100"
                     preserveAspectRatio="none"
@@ -143,9 +143,9 @@ export const SimpleLineChart: React.FC<SimpleLineChartProps> = ({
                                     strokeWidth="0.5"
                                     strokeLinecap="round"
                                     strokeLinejoin="round"
-                                    className="transition-all duration-500"
+                                    className="transition-all duration-500 dynamic-filter"
                                     style={{
-                                        filter: `drop-shadow(0 0 4px ${line.color}80)`,
+                                        '--dynamic-filter-value': `drop-shadow(0 0 4px ${line.color}80)`,
                                     } as React.CSSProperties}
                                 />
 
@@ -162,11 +162,11 @@ export const SimpleLineChart: React.FC<SimpleLineChartProps> = ({
                                             cy={y}
                                             r={isHovered ? "1.5" : "0.8"}
                                             fill={line.color}
-                                            className="transition-all duration-300 cursor-pointer"
+                                            className="transition-all duration-300 cursor-pointer dynamic-filter"
                                             onMouseEnter={() => setHoveredIndex(i)}
                                             onMouseLeave={() => setHoveredIndex(null)}
                                             style={{
-                                                filter: isHovered ? `drop-shadow(0 0 4px ${line.color})` : 'none',
+                                                '--dynamic-filter-value': isHovered ? `drop-shadow(0 0 4px ${line.color})` : 'none',
                                             } as React.CSSProperties}
                                         />
                                     );
@@ -202,8 +202,8 @@ export const SimpleLineChart: React.FC<SimpleLineChartProps> = ({
                             return (
                                 <div key={line.key} className="flex items-center gap-2 text-sm">
                                     <div
-                                        className="w-2 h-2 rounded-full"
-                                        style={{ backgroundColor: line.color } as React.CSSProperties}
+                                        className="w-2 h-2 rounded-full dynamic-bg-color"
+                                        style={{ '--dynamic-bg-color-value': line.color } as React.CSSProperties}
                                     />
                                     <span className={isDarkMode ? 'text-gray-300' : 'text-gray-700'}>
                                         {line.label}:

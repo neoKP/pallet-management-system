@@ -33,7 +33,7 @@ export const SimpleBarChart: React.FC<SimpleBarChartProps> = ({
                 {title}
             </h3>
 
-            <div className="relative" style={{ height: `${height}px` } as React.CSSProperties}>
+            <div className="relative dynamic-height" style={{ '--dynamic-height-value': `${height}px` } as React.CSSProperties}>
                 <div className="flex items-end justify-around h-full gap-4">
                     {data.map((item, index) => {
                         const barHeight = (item.value / maxValue) * 100;
@@ -69,11 +69,12 @@ export const SimpleBarChart: React.FC<SimpleBarChartProps> = ({
                                             w-full rounded-t-lg transition-all duration-500 ease-out
                                             ${isHovered ? 'opacity-100 scale-105' : 'opacity-90'}
                                             relative overflow-hidden
+                                            dynamic-height dynamic-bg-color dynamic-shadow
                                         `}
                                         style={{
-                                            height: `${barHeight}%`,
-                                            backgroundColor: color,
-                                            boxShadow: isHovered
+                                            '--dynamic-height-value': `${barHeight}%`,
+                                            '--dynamic-bg-color-value': color,
+                                            '--dynamic-shadow-value': isHovered
                                                 ? `0 8px 24px ${color}40`
                                                 : `0 4px 12px ${color}20`,
                                         } as React.CSSProperties}
@@ -165,9 +166,9 @@ export const SimplePieChart: React.FC<SimplePieChartProps> = ({
                                     strokeWidth={isHovered ? "22" : "20"}
                                     strokeDasharray={strokeDasharray}
                                     strokeDashoffset={strokeDashoffset}
-                                    className="transition-all duration-300 cursor-pointer"
+                                    className="transition-all duration-300 cursor-pointer dynamic-filter"
                                     style={{
-                                        filter: isHovered ? `drop-shadow(0 0 8px ${item.color})` : 'none',
+                                        '--dynamic-filter-value': isHovered ? `drop-shadow(0 0 8px ${item.color})` : 'none',
                                     } as React.CSSProperties}
                                     onMouseEnter={() => setHoveredIndex(index)}
                                     onMouseLeave={() => setHoveredIndex(null)}
@@ -211,9 +212,9 @@ export const SimplePieChart: React.FC<SimplePieChartProps> = ({
                             >
                                 <div className="flex items-center gap-3">
                                     <div
-                                        className="w-4 h-4 rounded-full transition-transform duration-300"
+                                        className="w-4 h-4 rounded-full transition-transform duration-300 dynamic-bg-color"
                                         style={{
-                                            backgroundColor: item.color,
+                                            '--dynamic-bg-color-value': item.color,
                                             transform: isHovered ? 'scale(1.2)' : 'scale(1)',
                                         } as React.CSSProperties}
                                     />

@@ -1,6 +1,8 @@
 import React from 'react';
 import { motion } from 'framer-motion';
 import { format, startOfWeek, addDays, isSameDay } from 'date-fns';
+import { useAnalyticsStore } from '../../stores/analyticsStore';
+import { THEMES } from './ThemeEngine';
 
 interface HeatmapData {
     date: Date;
@@ -18,6 +20,8 @@ export const HeatmapCalendar: React.FC<HeatmapCalendarProps> = ({
     title,
     isDarkMode,
 }) => {
+    const { themeColor } = useAnalyticsStore();
+    const currentTheme = THEMES.find(t => t.id === themeColor) || THEMES[0];
     const weeks = 12; // Show 12 weeks
     const days = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 
@@ -28,10 +32,15 @@ export const HeatmapCalendar: React.FC<HeatmapCalendarProps> = ({
     const getColor = (value: number) => {
         const intensity = value / maxValue;
         if (intensity === 0) return isDarkMode ? '#1e293b' : '#f1f5f9';
-        if (intensity < 0.25) return isDarkMode ? '#1e40af' : '#dbeafe';
-        if (intensity < 0.5) return isDarkMode ? '#2563eb' : '#93c5fd';
-        if (intensity < 0.75) return isDarkMode ? '#3b82f6' : '#60a5fa';
-        return isDarkMode ? '#60a5fa' : '#3b82f6';
+
+        // Use theme color for intensity
+        // currentTheme.primary is something like '#6366f1'
+        // We can use opacity to simulate intensity
+        const baseColor = currentTheme.primary;
+        if (intensity < 0.25) return `${baseColor}40`;
+        if (intensity < 0.5) return `${baseColor}80`;
+        if (intensity < 0.75) return `${baseColor}bf`;
+        return baseColor;
     };
 
     // Generate calendar grid
@@ -106,13 +115,24 @@ export const HeatmapCalendar: React.FC<HeatmapCalendarProps> = ({
                                 return (
                                     <motion.div
                                         key={dayIndex}
-                                        initial={{ scale: 0 }}
-                                        animate={{ scale: 1 }}
-                                        transition={{ delay: (weekIndex * 7 + dayIndex) * 0.01 }}
-                                        whileHover={{ scale: 1.2 }}
+                                        initial={{ scale: 0, opacity: 0 }}
+                                        animate={{ scale: 1, opacity: 1 }}
+                                        transition={{
+                                            type: 'spring',
+                                            stiffness: 300,
+                                            damping: 20,
+                                            delay: (weekIndex * 7 + dayIndex) * 0.005
+                                        }}
+                                        whileHover={{
+                                            scale: 1.5,
+                                            zIndex: 10,
+                                            boxShadow: isDarkMode
+                                                ? `0 0 15px ${getColor(day.value)}`
+                                                : `0 0 10px ${getColor(day.value)}`,
+                                        }}
                                         className={`
-                                            w-3 h-3 rounded-sm cursor-pointer
-                                            ${isToday ? 'ring-2 ring-blue-500' : ''}
+                                            w-3 h-3 rounded-sm cursor-pointer transition-colors duration-300
+                                            ${isToday ? 'ring-2 ring-blue-500 ring-offset-1 ' + (isDarkMode ? 'ring-offset-slate-900' : 'ring-offset-white') : ''}
                                         `}
                                         style={{
                                             backgroundColor: getColor(day.value),
@@ -128,19 +148,20 @@ export const HeatmapCalendar: React.FC<HeatmapCalendarProps> = ({
 
             {/* Legend */}
             <div className="flex items-center justify-end gap-2 mt-4">
-                <span className={`text-xs ${isDarkMode ? 'text-gray-500' : 'text-gray-600'}`}>
+                <span className={`text-[10px] font-medium uppercase tracking-wider ${isDarkMode ? 'text-gray-500' : 'text-gray-600'}`}>
                     Less
                 </span>
                 <div className="flex gap-1">
                     {[0, 0.25, 0.5, 0.75, 1].map((intensity, index) => (
-                        <div
+                        <motion.div
                             key={index}
+                            whileHover={{ scale: 1.2 }}
                             className="w-3 h-3 rounded-sm"
                             style={{ backgroundColor: getColor(intensity * maxValue) } as React.CSSProperties}
                         />
                     ))}
                 </div>
-                <span className={`text-xs ${isDarkMode ? 'text-gray-500' : 'text-gray-600'}`}>
+                <span className={`text-[10px] font-medium uppercase tracking-wider ${isDarkMode ? 'text-gray-500' : 'text-gray-600'}`}>
                     More
                 </span>
             </div>

@@ -58,36 +58,42 @@ export const KPICard: React.FC<KPICardProps> = ({
             whileHover={{ scale: 1.05, y: -5 }}
             className={`
         relative overflow-hidden rounded-2xl p-6 cursor-pointer
+        dynamic-transition dynamic-shadow
         ${isDarkMode
                     ? 'bg-white/5 backdrop-blur-xl border border-white/10'
                     : 'bg-white/80 backdrop-blur-xl border border-gray-200'
                 }
       `}
             style={({
-                boxShadow: isDarkMode
+                '--dynamic-shadow-value': isDarkMode
                     ? `0 8px 32px 0 ${color}26`
                     : '0 4px 16px rgba(0, 0, 0, 0.08)',
             } as React.CSSProperties)}
         >
             {/* Gradient Background */}
             <motion.div
-                className="absolute inset-0"
+                className="absolute inset-0 dynamic-bg"
                 initial={{ opacity: 0 }}
                 whileHover={{ opacity: 0.1 }}
                 transition={{ duration: 0.3 }}
                 style={({
-                    background: `linear-gradient(135deg, ${color} 0%, transparent 100%)`,
+                    '--dynamic-bg-value': `linear-gradient(135deg, ${color} 0%, transparent 100%)`,
                 } as React.CSSProperties)}
             />
 
             {/* Icon */}
             <motion.div
-                className="inline-flex p-3 rounded-xl mb-4"
+                className="inline-flex p-3 rounded-xl mb-4 dynamic-bg-color"
                 whileHover={{ scale: 1.1, rotate: 5 }}
                 transition={{ type: 'spring', stiffness: 300 }}
-                style={({ backgroundColor: `${color}20` } as React.CSSProperties)}
+                style={({ '--dynamic-bg-color-value': `${color}20` } as React.CSSProperties)}
             >
-                <div style={({ color } as React.CSSProperties)}>{icon}</div>
+                <div
+                    className="dynamic-color"
+                    style={({ '--dynamic-color-value': color } as React.CSSProperties)}
+                >
+                    {icon}
+                </div>
             </motion.div>
 
             {/* Title */}
@@ -125,12 +131,12 @@ export const KPICard: React.FC<KPICardProps> = ({
 
             {/* Shine Effect */}
             <motion.div
-                className="absolute inset-0 pointer-events-none"
+                className="absolute inset-0 pointer-events-none dynamic-bg"
                 initial={{ x: '-100%' }}
                 whileHover={{ x: '100%' }}
                 transition={{ duration: 0.6 }}
                 style={({
-                    background: `linear-gradient(90deg, transparent, ${isDarkMode ? 'rgba(255,255,255,0.1)' : 'rgba(255,255,255,0.4)'}, transparent)`,
+                    '--dynamic-bg-value': `linear-gradient(90deg, transparent, ${isDarkMode ? 'rgba(255,255,255,0.1)' : 'rgba(255,255,255,0.4)'}, transparent)`,
                 } as React.CSSProperties)}
             />
         </motion.div>
