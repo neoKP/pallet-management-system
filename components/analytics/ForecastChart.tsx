@@ -169,8 +169,8 @@ export const ForecastChart: React.FC<ForecastChartProps> = ({
                     initial={{ opacity: 0, scale: 0.9 }}
                     animate={{ opacity: 1, scale: 1 }}
                     className={`
-                        px-4 py-3 rounded-xl shadow-2xl border backdrop-blur-md min-w-[180px]
-                        ${isDarkMode ? 'bg-slate-900/95 border-white/20' : 'bg-white/95 border-gray-200'}
+                        px-4 py-3 rounded-xl shadow-2xl backdrop-blur-md min-w-[180px]
+                        ${isDarkMode ? 'bg-slate-900/90' : 'bg-white/95'}
                     `}
                 >
                     <div className="flex items-center gap-2 mb-2">
@@ -237,6 +237,75 @@ export const ForecastChart: React.FC<ForecastChartProps> = ({
     const transitionIndex = chartData.findIndex(d => d.isForecast);
     const transitionDate = transitionIndex > 0 ? chartData[transitionIndex - 1]?.date : null;
 
+    // --- Animation Styles & Components ---
+
+    // X-Ray Scanner Cursor - Elegant vertical laser line (no box)
+    const XRayScannerCursor = (props: any) => {
+        const { points, height } = props;
+        if (!points || points.length === 0) return null;
+        const { x } = points[0];
+
+        return (
+            <g className="xray-cursor">
+                {/* Main laser line */}
+                <line
+                    x1={x}
+                    y1={0}
+                    x2={x}
+                    y2={height}
+                    stroke="url(#laserLineGradient)"
+                    strokeWidth={2}
+                    strokeDasharray="4 4"
+                />
+                {/* Glow effect */}
+                <line
+                    x1={x}
+                    y1={0}
+                    x2={x}
+                    y2={height}
+                    stroke="#a855f7"
+                    strokeWidth={8}
+                    strokeOpacity={0.15}
+                />
+            </g>
+        );
+    };
+
+    // Bloom Active Dot - Elegant glow without distracting animations
+    const BloomActiveDot = (props: any) => {
+        const { cx, cy, stroke } = props;
+        return (
+            <g className="bloom-dot-container">
+                {/* Outer glow ring */}
+                <circle
+                    cx={cx}
+                    cy={cy}
+                    r={14}
+                    fill={stroke}
+                    fillOpacity={0.15}
+                />
+                {/* Middle glow */}
+                <circle
+                    cx={cx}
+                    cy={cy}
+                    r={10}
+                    fill={stroke}
+                    fillOpacity={0.25}
+                />
+                {/* Main dot with bloom */}
+                <circle
+                    cx={cx}
+                    cy={cy}
+                    r={6}
+                    fill="#fff"
+                    stroke={stroke}
+                    strokeWidth={2.5}
+                    className="bloom-dot"
+                />
+            </g>
+        );
+    };
+
     return (
         <motion.div
             initial={{ opacity: 0, y: 20 }}
@@ -250,6 +319,52 @@ export const ForecastChart: React.FC<ForecastChartProps> = ({
                 backdrop-blur-xl theme-border-left-primary
             `}
         >
+            <style>{`
+                @keyframes dashFlow {
+                    from { stroke-dashoffset: 20; }
+                    to { stroke-dashoffset: 0; }
+                }
+                .flow-line {
+                    animation: dashFlow 7s linear infinite;
+                }
+                
+                /* Living Line - Energy Pulse Effect */
+                @keyframes energyPulse {
+                    0%, 100% { 
+                        filter: drop-shadow(0 0 2px #3b82f6) drop-shadow(0 0 4px #3b82f6); 
+                        opacity: 0.9;
+                    }
+                    50% { 
+                        filter: drop-shadow(0 0 6px #3b82f6) drop-shadow(0 0 12px #3b82f6) drop-shadow(0 0 20px #60a5fa); 
+                        opacity: 1;
+                    }
+                }
+                .living-line {
+                    animation: energyPulse 3s ease-in-out infinite;
+                }
+                
+                /* X-Ray Scanner Cursor */
+                .xray-cursor line {
+                    filter: drop-shadow(0 0 4px #a855f7) drop-shadow(0 0 8px #a855f7);
+                }
+                
+                /* Bloom Effect for Active Dot */
+                @keyframes bloomPulse {
+                    0%, 100% { 
+                        filter: drop-shadow(0 0 4px currentColor); 
+                        transform: scale(1);
+                    }
+                    50% { 
+                        filter: drop-shadow(0 0 12px currentColor) drop-shadow(0 0 20px currentColor); 
+                        transform: scale(1.15);
+                    }
+                }
+                .bloom-dot {
+                    animation: bloomPulse 1.5s ease-in-out infinite;
+                    transform-origin: center;
+                }
+            `}</style>
+
             {/* AI Scanline Effect */}
             <motion.div
                 className="absolute inset-0 pointer-events-none opacity-[0.05] z-10 theme-scanline"
@@ -318,141 +433,154 @@ export const ForecastChart: React.FC<ForecastChartProps> = ({
             </div>
 
             {/* Chart */}
-            <ResponsiveContainer width="100%" height={350}>
-                <AreaChart data={chartData} margin={{ top: 20, right: 30, left: 0, bottom: 0 }}>
-                    <defs>
-                        {/* Actual Data Gradient */}
-                        <linearGradient id="actualGradient" x1="0" y1="0" x2="0" y2="1">
-                            <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.4} />
-                            <stop offset="95%" stopColor="#3b82f6" stopOpacity={0} />
-                        </linearGradient>
+            <div className="relative">
+                <ResponsiveContainer width="100%" height={350}>
+                    <AreaChart data={chartData} margin={{ top: 20, right: 30, left: 0, bottom: 0 }}>
+                        <defs>
+                            <linearGradient id="actualGradient" x1="0" y1="0" x2="0" y2="1">
+                                <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.4} />
+                                <stop offset="95%" stopColor="#3b82f6" stopOpacity={0} />
+                            </linearGradient>
+                            <linearGradient id="forecastGradient" x1="0" y1="0" x2="0" y2="1">
+                                <stop offset="5%" stopColor="#a855f7" stopOpacity={0.3} />
+                                <stop offset="95%" stopColor="#a855f7" stopOpacity={0} />
+                            </linearGradient>
+                            <linearGradient id="confidenceGradient" x1="0" y1="0" x2="0" y2="1">
+                                <stop offset="5%" stopColor="#a855f7" stopOpacity={0.15} />
+                                <stop offset="95%" stopColor="#a855f7" stopOpacity={0.05} />
+                            </linearGradient>
+                            <linearGradient id="laserGradient" x1="0" y1="0" x2="1" y2="0">
+                                <stop offset="0%" stopColor="#a855f7" stopOpacity={0} />
+                                <stop offset="50%" stopColor="#a855f7" stopOpacity={0.2} />
+                                <stop offset="100%" stopColor="#a855f7" stopOpacity={0} />
+                            </linearGradient>
 
-                        {/* Forecast Gradient */}
-                        <linearGradient id="forecastGradient" x1="0" y1="0" x2="0" y2="1">
-                            <stop offset="5%" stopColor="#a855f7" stopOpacity={0.3} />
-                            <stop offset="95%" stopColor="#a855f7" stopOpacity={0} />
-                        </linearGradient>
+                            {/* Rainbow Flow Gradient */}
+                            <linearGradient id="rainbowGradient" x1="0%" y1="0%" x2="100%" y2="0%">
+                                <stop offset="0%" stopColor="#ff0000" stopOpacity="0.8" />
+                                <stop offset="20%" stopColor="#ffff00" stopOpacity="0.8" />
+                                <stop offset="40%" stopColor="#00ff00" stopOpacity="0.8" />
+                                <stop offset="60%" stopColor="#00ffff" stopOpacity="0.8" />
+                                <stop offset="80%" stopColor="#0000ff" stopOpacity="0.8" />
+                                <stop offset="100%" stopColor="#ff00ff" stopOpacity="0.8" />
+                                <animate attributeName="x1" from="-100%" to="0%" dur="7s" repeatCount="indefinite" />
+                                <animate attributeName="x2" from="0%" to="100%" dur="7s" repeatCount="indefinite" />
+                            </linearGradient>
 
-                        {/* Confidence Band Gradient */}
-                        <linearGradient id="confidenceGradient" x1="0" y1="0" x2="0" y2="1">
-                            <stop offset="5%" stopColor="#a855f7" stopOpacity={0.15} />
-                            <stop offset="95%" stopColor="#a855f7" stopOpacity={0.05} />
-                        </linearGradient>
-                    </defs>
+                            {/* Laser Line Gradient for X-Ray Cursor */}
+                            <linearGradient id="laserLineGradient" x1="0" y1="0" x2="0" y2="1">
+                                <stop offset="0%" stopColor="#a855f7" stopOpacity="0" />
+                                <stop offset="20%" stopColor="#a855f7" stopOpacity="0.8" />
+                                <stop offset="50%" stopColor="#c084fc" stopOpacity="1" />
+                                <stop offset="80%" stopColor="#a855f7" stopOpacity="0.8" />
+                                <stop offset="100%" stopColor="#a855f7" stopOpacity="0" />
+                            </linearGradient>
+                        </defs>
 
-                    <CartesianGrid
-                        vertical={false}
-                        strokeDasharray="3 3"
-                        stroke={isDarkMode ? '#ffffff08' : '#00000008'}
-                    />
+                        <CartesianGrid
+                            vertical={false}
+                            strokeDasharray="3 3"
+                            stroke={isDarkMode ? '#ffffff08' : '#00000008'}
+                        />
 
-                    <XAxis
-                        dataKey="date"
-                        axisLine={false}
-                        tickLine={false}
-                        stroke={isDarkMode ? '#64748b' : '#94a3b8'}
-                        tick={{ fill: isDarkMode ? '#64748b' : '#64748b', fontSize: 11 }}
-                        tickFormatter={formatDate}
-                    />
+                        <XAxis
+                            dataKey="date"
+                            axisLine={false}
+                            tickLine={false}
+                            stroke={isDarkMode ? '#64748b' : '#94a3b8'}
+                            tick={{ fill: isDarkMode ? '#64748b' : '#64748b', fontSize: 11 }}
+                            tickFormatter={formatDate}
+                        />
 
-                    <YAxis
-                        axisLine={false}
-                        tickLine={false}
-                        stroke={isDarkMode ? '#64748b' : '#94a3b8'}
-                        tick={{ fill: isDarkMode ? '#64748b' : '#64748b', fontSize: 11 }}
-                    />
+                        <YAxis
+                            axisLine={false}
+                            tickLine={false}
+                            stroke={isDarkMode ? '#64748b' : '#94a3b8'}
+                            tick={{ fill: isDarkMode ? '#64748b' : '#64748b', fontSize: 11 }}
+                        />
 
-                    <Tooltip content={<CustomTooltip />} />
+                        <Tooltip
+                            content={<CustomTooltip />}
+                            cursor={<XRayScannerCursor />}
+                        />
 
-                    <Legend
-                        verticalAlign="top"
-                        align="right"
-                        height={36}
-                        formatter={(value) => {
-                            const labels: Record<string, string> = {
-                                actual: '📊 ข้อมูลจริง',
-                                forecast: '🔮 พยากรณ์',
-                            };
-                            return (
-                                <span className={`text-xs font-bold ${isDarkMode ? 'text-slate-400' : 'text-slate-600'}`}>
-                                    {labels[value] || value}
-                                </span>
-                            );
-                        }}
-                    />
-
-                    {/* Reference line at transition point */}
-                    {transitionDate && (
-                        <ReferenceLine
-                            x={transitionDate}
-                            stroke={isDarkMode ? '#a855f7' : '#9333ea'}
-                            strokeDasharray="4 4"
-                            strokeWidth={2}
-                            label={{
-                                value: '🔮 เริ่มพยากรณ์',
-                                position: 'top',
-                                fill: isDarkMode ? '#a855f7' : '#9333ea',
-                                fontSize: 10,
-                                fontWeight: 'bold',
+                        <Legend
+                            verticalAlign="top"
+                            align="right"
+                            height={36}
+                            formatter={(value) => {
+                                const labels: Record<string, string> = {
+                                    actual: '📊 ข้อมูลจริง',
+                                    forecast: '🔮 พยากรณ์',
+                                };
+                                return (
+                                    <span className={`text-xs font-bold ${isDarkMode ? 'text-slate-400' : 'text-slate-600'}`}>
+                                        {labels[value] || value}
+                                    </span>
+                                );
                             }}
                         />
-                    )}
 
-                    {/* Confidence Band (Upper and Lower) */}
-                    <Area
-                        type="monotone"
-                        dataKey="upperBound"
-                        stroke="none"
-                        fill="url(#confidenceGradient)"
-                        animationDuration={2000}
-                    />
-                    <Area
-                        type="monotone"
-                        dataKey="lowerBound"
-                        stroke="none"
-                        fill={isDarkMode ? '#0f172a' : '#ffffff'}
-                        animationDuration={2000}
-                    />
+                        {transitionDate && (
+                            <ReferenceLine
+                                x={transitionDate}
+                                stroke={isDarkMode ? '#a855f7' : '#9333ea'}
+                                strokeDasharray="4 4"
+                                strokeWidth={2}
+                                label={{
+                                    value: '🔮 เริ่มพยากรณ์',
+                                    position: 'top',
+                                    fill: isDarkMode ? '#a855f7' : '#9333ea',
+                                    fontSize: 10,
+                                    fontWeight: 'bold',
+                                }}
+                            />
+                        )}
 
-                    {/* Actual Data Line */}
-                    <Area
-                        type="monotone"
-                        dataKey="actual"
-                        stroke="#3b82f6"
-                        strokeWidth={4}
-                        fill="url(#actualGradient)"
-                        animationDuration={1500}
-                        dot={{ r: 4, fill: '#3b82f6', strokeWidth: 0 }}
-                        activeDot={{
-                            r: 8,
-                            fill: '#3b82f6',
-                            stroke: '#ffffff',
-                            strokeWidth: 2,
-                            className: "animate-pulse"
-                        }}
-                    />
+                        <Area
+                            type="monotone"
+                            dataKey="upperBound"
+                            stroke="none"
+                            fill="url(#confidenceGradient)"
+                            animationDuration={2000}
+                        />
+                        <Area
+                            type="monotone"
+                            dataKey="lowerBound"
+                            stroke="none"
+                            fill={isDarkMode ? '#0f172a' : '#ffffff'}
+                            animationDuration={2000}
+                        />
 
-                    {/* Forecast Line */}
-                    <Area
-                        type="monotone"
-                        dataKey="forecast"
-                        stroke="#a855f7"
-                        strokeWidth={4}
-                        strokeDasharray="10 5"
-                        fill="url(#forecastGradient)"
-                        animationDuration={2500}
-                        animationBegin={800}
-                        dot={{ r: 4, fill: '#a855f7', strokeWidth: 0 }}
-                        activeDot={{
-                            r: 8,
-                            fill: '#a855f7',
-                            stroke: '#ffffff',
-                            strokeWidth: 2,
-                            className: "animate-bounce"
-                        }}
-                    />
-                </AreaChart>
-            </ResponsiveContainer>
+                        {/* Actual Data Line with Living Line Effect */}
+                        <Area
+                            type="monotone"
+                            dataKey="actual"
+                            stroke="url(#rainbowGradient)"
+                            strokeWidth={4}
+                            fill="url(#actualGradient)"
+                            animationDuration={1500}
+                            className="living-line"
+                            dot={{ r: 0 }}
+                            activeDot={<BloomActiveDot stroke="#3b82f6" />}
+                        />
+
+                        <Area
+                            type="monotone"
+                            dataKey="forecast"
+                            stroke="#a855f7"
+                            strokeWidth={3}
+                            strokeDasharray="8 8"
+                            fill="url(#forecastGradient)"
+                            animationDuration={2500}
+                            animationBegin={800}
+                            className="flow-line"
+                            dot={{ r: 0 }}
+                            activeDot={<BloomActiveDot stroke="#a855f7" />}
+                        />
+                    </AreaChart>
+                </ResponsiveContainer>
+            </div>
 
             {/* AI Insight Footer */}
             {insights && (

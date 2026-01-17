@@ -194,7 +194,7 @@ export const WaterfallChart: React.FC<WaterfallChartProps> = ({
                                             animate={{
                                                 scaleY: 1,
                                                 opacity: 1,
-                                                scale: isFocused && focusedIndex === index ? 1.05 : 1 // Scale up on hover
+                                                scale: isFocused && focusedIndex === index ? 1.1 : 1 // Scale up on hover
                                             }}
                                             transition={{
                                                 type: 'spring',

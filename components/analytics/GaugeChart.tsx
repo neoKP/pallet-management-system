@@ -131,7 +131,7 @@ export const GaugeChart: React.FC<GaugeChartProps> = ({
                                 style={{ transition: 'stroke-width 0.3s ease' }}
                             />
 
-                            {/* Progress Arc */}
+                            {/* Progress Arc with Ignition Sequence */}
                             <motion.path
                                 d="M 20 100 A 80 80 0 0 1 180 100"
                                 fill="none"
@@ -140,17 +140,32 @@ export const GaugeChart: React.FC<GaugeChartProps> = ({
                                 strokeLinecap="round"
                                 strokeDasharray="251.2"
                                 initial={{ strokeDashoffset: 251.2 }}
-                                animate={{ strokeDashoffset: 251.2 - (251.2 * percentage) / 100 }}
-                                transition={{ duration: 1.5, ease: 'easeOut' }}
+                                animate={{
+                                    strokeDashoffset: [
+                                        251.2,           // Start at 0%
+                                        0,               // Sweep to 100% (ignition)
+                                        251.2 - (251.2 * percentage) / 100  // Settle at actual value
+                                    ]
+                                }}
+                                transition={{
+                                    duration: 2.5,
+                                    times: [0, 0.4, 1],
+                                    ease: ['easeOut', 'easeInOut']
+                                }}
                                 filter={`url(#gaugeGlow-${title.replace(/\s/g, '')})`}
-                                style={{ transition: 'stroke-width 0.3s ease' }}
                             />
 
-                            {/* Needle */}
+                            {/* Needle with Ignition Sequence */}
                             <motion.g
                                 initial={{ rotate: -90 }}
-                                animate={{ rotate: angle }}
-                                transition={{ duration: 1.5, ease: 'backOut' }}
+                                animate={{
+                                    rotate: [-90, 90, angle]  // Sweep to 100% then settle
+                                }}
+                                transition={{
+                                    duration: 2.5,
+                                    times: [0, 0.4, 1],
+                                    ease: ['easeOut', 'backOut']
+                                }}
                                 style={{ transformOrigin: '100px 100px' }}
                             >
                                 <line
