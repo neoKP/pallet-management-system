@@ -1,6 +1,6 @@
-import React, { useMemo } from 'react';
-import { motion } from 'framer-motion';
-import { TrendingUp, TrendingDown, Minus, Calendar, BarChart3 } from 'lucide-react';
+import React, { useMemo, useState } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
+import { TrendingUp, TrendingDown, Minus, Calendar, BarChart3, ArrowRight } from 'lucide-react';
 import { useAnalyticsStore } from '../../stores/analyticsStore';
 import { THEMES } from './ThemeEngine';
 
@@ -104,7 +104,7 @@ export const WoWComparisonChart: React.FC<WoWComparisonChartProps> = ({
         <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
-            className={`p-6 rounded-2xl border ${isDarkMode ? 'bg-slate-800/50 border-white/10' : 'bg-white border-gray-200'}`}
+            className={`p-6 rounded-2xl border relative overflow-hidden ${isDarkMode ? 'bg-slate-800/50 border-white/10' : 'bg-white border-gray-200'}`}
         >
             {/* Header */}
             <div className="flex items-center justify-between mb-6">
@@ -143,10 +143,14 @@ export const WoWComparisonChart: React.FC<WoWComparisonChartProps> = ({
                 )}
             </div>
 
-            {/* Chart - Horizontal Bars */}
+            {/* Chart - Vertical List with Hover Effects */}
             <div className="space-y-3 mb-6">
                 {data.map((week, index) => {
                     const isCurrentWeek = index === data.length - 1;
+                    const prevWeekValue = index > 0 ? data[index - 1].value : 0;
+                    const change = index > 0 ? week.value - prevWeekValue : 0;
+                    const percentChange = index > 0 && prevWeekValue > 0 ? (change / prevWeekValue) * 100 : 0;
+
                     const barWidth = (week.value / maxValue) * 100;
                     const color = week.color || getWeekColor(index, data.length);
 
@@ -156,79 +160,121 @@ export const WoWComparisonChart: React.FC<WoWComparisonChartProps> = ({
                             initial={{ opacity: 0, x: -20 }}
                             animate={{ opacity: 1, x: 0 }}
                             transition={{ delay: index * 0.05 }}
-                            whileHover={{
-                                scale: 1.02,
-                                x: 10,
-                                backgroundColor: isDarkMode ? "rgba(30, 41, 59, 0.8)" : "rgba(241, 245, 249, 1)",
-                                borderColor: isCurrentWeek ? currentTheme.primary : (isDarkMode ? 'rgba(255,255,255,0.2)' : 'rgba(0,0,0,0.1)')
-                            }}
-                            className={`
-                                flex items-center gap-4 group p-3 rounded-xl border border-transparent transition-colors duration-200 cursor-pointer
-                                ${isDarkMode ? 'hover:shadow-lg hover:shadow-cyan-500/10' : 'hover:shadow-md'}
-                            `}
+                            whileHover="hover"
+                            className="relative"
                         >
-                            {/* Week Label */}
-                            <div className="w-24 flex-shrink-0">
-                                <span className={`
-                                    text-sm font-bold transition-colors duration-300
-                                    ${isCurrentWeek
-                                        ? 'text-cyan-500'
-                                        : isDarkMode ? 'text-slate-400' : 'text-slate-600'
+                            <motion.div
+                                layout
+                                variants={{
+                                    hover: {
+                                        scale: 1.02,
+                                        x: 10,
+                                        backgroundColor: isDarkMode ? "rgba(30, 41, 59, 0.9)" : "rgba(255, 255, 255, 0.9)",
+                                        borderColor: color,
                                     }
-                                    ${isCurrentWeek ? 'group-hover:text-cyan-400' : 'group-hover:text-slate-200'}
-                                `}>
-                                    {week.weekLabel}
-                                    {isCurrentWeek && (
-                                        <motion.span
-                                            animate={{ opacity: [0.5, 1, 0.5] }}
-                                            transition={{ repeat: Infinity, duration: 2 }}
-                                            className="ml-1 text-[10px] bg-cyan-500/20 text-cyan-500 px-1.5 py-0.5 rounded-full"
-                                        >
-                                            ปัจจุบัน
-                                        </motion.span>
+                                }}
+                                className={`
+                                    flex flex-col p-3 rounded-xl border border-transparent transition-colors duration-200 cursor-pointer overflow-hidden
+                                    ${isDarkMode ? 'bg-white/5' : 'bg-gray-50'}
+                                `}
+                                style={{
+                                    // @ts-ignore
+                                    '--neon-color': color
+                                }}
+                            >
+                                {/* Neon Border Glow on Hover */}
+                                <motion.div
+                                    className="absolute inset-0 rounded-xl opacity-0 hover:opacity-100 pointer-events-none"
+                                    variants={{ hover: { opacity: 1 } }}
+                                    style={{
+                                        boxShadow: `inset 0 0 10px ${color}40, 0 0 15px ${color}20`
+                                    }}
+                                />
+
+                                <div className="flex items-center gap-4 relative z-10 w-full">
+                                    {/* Week Label */}
+                                    <div className="w-24 flex-shrink-0">
+                                        <span className={`
+                                            text-sm font-bold transition-colors duration-300
+                                            ${isCurrentWeek
+                                                ? 'text-cyan-500'
+                                                : isDarkMode ? 'text-slate-400' : 'text-slate-600'
+                                            }
+                                        `}>
+                                            {week.weekLabel}
+                                            {isCurrentWeek && (
+                                                <motion.span
+                                                    animate={{ opacity: [0.5, 1, 0.5] }}
+                                                    transition={{ repeat: Infinity, duration: 2 }}
+                                                    className="ml-1 text-[10px] bg-cyan-500/20 text-cyan-500 px-1.5 py-0.5 rounded-full"
+                                                >
+                                                    Live
+                                                </motion.span>
+                                            )}
+                                        </span>
+                                    </div>
+
+                                    {/* Bar Section */}
+                                    <div className="flex-1">
+                                        <div className={`h-10 rounded-xl overflow-hidden ${isDarkMode ? 'bg-black/20' : 'bg-gray-200/50'} relative`}>
+                                            <motion.div
+                                                initial={{ width: 0 }}
+                                                animate={{ width: `${barWidth}%` }}
+                                                transition={{ duration: 0.8, delay: index * 0.05, type: 'spring' }}
+                                                className="h-full rounded-xl relative shadow-lg flex items-center justify-end pr-3"
+                                                style={{
+                                                    backgroundColor: color,
+                                                    boxShadow: isCurrentWeek ? `0 0 15px ${color}60` : 'none'
+                                                }}
+                                            >
+                                                {/* Animated Scanline inside bar */}
+                                                <motion.div
+                                                    className="absolute inset-0 bg-white/20"
+                                                    animate={{ x: ['-100%', '100%'] }}
+                                                    transition={{ repeat: Infinity, duration: 2, ease: "linear", repeatDelay: 1 }}
+                                                />
+
+                                                {/* Value inside bar if wide enough */}
+                                                {barWidth > 20 && (
+                                                    <span className="text-white text-xs font-black drop-shadow-md z-10">
+                                                        {week.value.toLocaleString()}
+                                                    </span>
+                                                )}
+                                            </motion.div>
+                                        </div>
+                                    </div>
+
+                                    {/* Value outside if bar is small */}
+                                    {barWidth <= 20 && (
+                                        <span className={`w-12 text-right text-sm font-black ${isDarkMode ? 'text-white' : 'text-slate-900'}`}>
+                                            {week.value.toLocaleString()}
+                                        </span>
                                     )}
-                                </span>
-                            </div>
-
-                            {/* Bar */}
-                            <div className="flex-1">
-                                <div className={`h-10 rounded-xl overflow-hidden ${isDarkMode ? 'bg-white/5' : 'bg-gray-100'} transition-all duration-300 group-hover:bg-white/10`}>
-                                    <motion.div
-                                        initial={{ width: 0 }}
-                                        animate={{ width: `${barWidth}%` }}
-                                        transition={{
-                                            duration: 0.8,
-                                            delay: index * 0.05,
-                                            type: 'spring',
-                                            bounce: 0.4
-                                        }}
-                                        className="h-full rounded-xl relative shadow-lg"
-                                        style={{
-                                            backgroundColor: color,
-                                            boxShadow: isCurrentWeek ? `0 0 15px ${color}60` : 'none'
-                                        }}
-                                    >
-                                        <motion.div
-                                            className="absolute inset-0 bg-white/10"
-                                            animate={{ opacity: isCurrentWeek ? [0, 0.2, 0] : 0 }}
-                                            transition={{ repeat: Infinity, duration: 3 }}
-                                        />
-
-                                        {barWidth > 15 && (
-                                            <span className="absolute right-3 top-1/2 -translate-y-1/2 text-white text-sm font-black drop-shadow-md">
-                                                {week.value.toLocaleString()}
-                                            </span>
-                                        )}
-                                    </motion.div>
                                 </div>
-                            </div>
 
-                            {/* Value (if bar is too small) */}
-                            {barWidth <= 15 && (
-                                <span className={`w-16 text-right text-sm font-black transition-colors duration-300 ${isDarkMode ? 'text-white' : 'text-slate-900'} group-hover:text-cyan-400`}>
-                                    {week.value.toLocaleString()}
-                                </span>
-                            )}
+                                {/* Hover Reveal Section: Extra Details */}
+                                <motion.div
+                                    initial={{ height: 0, opacity: 0 }}
+                                    variants={{
+                                        hover: { height: 'auto', opacity: 1, marginTop: 12 }
+                                    }}
+                                    className="overflow-hidden"
+                                >
+                                    <div className="flex items-center justify-between text-xs pt-2 border-t border-dashed border-gray-500/30">
+                                        <div className="flex items-center gap-2">
+                                            <span className={`${isDarkMode ? 'text-slate-400' : 'text-slate-500'}`}>vs Prev Week:</span>
+                                            <span className={`font-bold flex items-center gap-1 ${change > 0 ? 'text-green-500' : change < 0 ? 'text-red-500' : 'text-gray-500'}`}>
+                                                {change > 0 ? <TrendingUp size={12} /> : change < 0 ? <TrendingDown size={12} /> : <Minus size={12} />}
+                                                {change > 0 ? '+' : ''}{percentChange.toFixed(1)}% ({change > 0 ? '+' : ''}{change})
+                                            </span>
+                                        </div>
+                                        <div className="flex items-center gap-1 text-cyan-500 cursor-pointer hover:underline">
+                                            <span>View Report</span>
+                                            <ArrowRight size={12} />
+                                        </div>
+                                    </div>
+                                </motion.div>
+                            </motion.div>
                         </motion.div>
                     );
                 })}

@@ -48,7 +48,7 @@ export const GaugeChart: React.FC<GaugeChartProps> = ({
             <TiltCard
                 isDarkMode={isDarkMode}
                 className={`
-                    relative p-6 rounded-xl overflow-hidden transition-all duration-500 group h-full
+                    relative p-6 rounded-xl overflow-hidden transition-all duration-500 group h-full flex flex-col justify-between
                     ${isDarkMode
                         ? 'bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 border border-slate-700/50'
                         : 'bg-gradient-to-br from-white via-gray-50 to-white border border-gray-200'
@@ -73,7 +73,7 @@ export const GaugeChart: React.FC<GaugeChartProps> = ({
                 </AnimatePresence>
 
                 {/* Title with interactive badge */}
-                <div className="text-center mb-4 relative z-10">
+                <div className="text-center mb-2 relative z-10">
                     <div className="flex items-center justify-center gap-2">
                         <h3 className={`text-sm font-semibold ${isDarkMode ? 'text-gray-300' : 'text-gray-700'}`}>
                             {title}
@@ -102,108 +102,108 @@ export const GaugeChart: React.FC<GaugeChartProps> = ({
                     )}
                 </div>
 
-                {/* Gauge SVG */}
-                <div className="relative w-full aspect-square max-w-[200px] mx-auto">
-                    <svg viewBox="0 0 200 120" className="w-full h-full" style={{ overflow: 'visible' }}>
-                        <defs>
-                            <filter id={`gaugeGlow-${title.replace(/\s/g, '')}`}>
-                                <feGaussianBlur stdDeviation={isHovering ? "4" : "2"} result="coloredBlur" />
-                                <feMerge>
-                                    <feMergeNode in="coloredBlur" />
-                                    <feMergeNode in="SourceGraphic" />
-                                </feMerge>
-                            </filter>
-                            <linearGradient id={`arcGradient-${title.replace(/\s/g, '')}`} x1="0%" y1="0%" x2="100%" y2="0%">
-                                <stop offset="0%" stopColor={gaugeColor} stopOpacity={0.6} />
-                                <stop offset="100%" stopColor={gaugeColor} stopOpacity={1} />
-                            </linearGradient>
-                        </defs>
+                {/* Gauge Area */}
+                <div className="flex-1 flex flex-col items-center justify-center min-h-[160px]">
+                    {/* Gauge SVG */}
+                    <div className="relative w-full aspect-[2/1] max-w-[200px] mx-auto mb-2">
+                        <svg viewBox="0 0 200 110" className="w-full h-full" style={{ overflow: 'visible' }}>
+                            <defs>
+                                <filter id={`gaugeGlow-${title.replace(/\s/g, '')}`}>
+                                    <feGaussianBlur stdDeviation={isHovering ? "4" : "2"} result="coloredBlur" />
+                                    <feMerge>
+                                        <feMergeNode in="coloredBlur" />
+                                        <feMergeNode in="SourceGraphic" />
+                                    </feMerge>
+                                </filter>
+                                <linearGradient id={`arcGradient-${title.replace(/\s/g, '')}`} x1="0%" y1="0%" x2="100%" y2="0%">
+                                    <stop offset="0%" stopColor={gaugeColor} stopOpacity={0.6} />
+                                    <stop offset="100%" stopColor={gaugeColor} stopOpacity={1} />
+                                </linearGradient>
+                            </defs>
 
-                        {/* Background Arc */}
-                        <path
-                            d="M 20 100 A 80 80 0 0 1 180 100"
-                            fill="none"
-                            stroke={isDarkMode ? '#334155' : '#e5e7eb'}
-                            strokeWidth={isHovering ? "14" : "12"}
-                            strokeLinecap="round"
-                            style={{ transition: 'stroke-width 0.3s ease' }}
-                        />
-
-                        {/* Progress Arc */}
-                        <motion.path
-                            d="M 20 100 A 80 80 0 0 1 180 100"
-                            fill="none"
-                            stroke={`url(#arcGradient-${title.replace(/\s/g, '')})`}
-                            strokeWidth={isHovering ? "14" : "12"}
-                            strokeLinecap="round"
-                            strokeDasharray="251.2"
-                            initial={{ strokeDashoffset: 251.2 }}
-                            animate={{ strokeDashoffset: 251.2 - (251.2 * percentage) / 100 }}
-                            transition={{ duration: 1.5, ease: 'easeOut' }}
-                            filter={`url(#gaugeGlow-${title.replace(/\s/g, '')})`}
-                            style={{ transition: 'stroke-width 0.3s ease' }}
-                        />
-
-                        {/* Needle */}
-                        <motion.g
-                            initial={{ rotate: -90 }}
-                            animate={{ rotate: angle }}
-                            transition={{ duration: 1.5, ease: 'backOut' }}
-                            style={{ transformOrigin: '100px 100px' }}
-                        >
-                            <line
-                                x1="100"
-                                y1="100"
-                                x2="100"
-                                y2={isHovering ? "50" : "55"}
-                                stroke={gaugeColor}
-                                strokeWidth={isHovering ? "4" : "3"}
+                            {/* Background Arc */}
+                            <path
+                                d="M 20 100 A 80 80 0 0 1 180 100"
+                                fill="none"
+                                stroke={isDarkMode ? '#334155' : '#e5e7eb'}
+                                strokeWidth={isHovering ? "14" : "12"}
                                 strokeLinecap="round"
-                                style={{ transition: 'all 0.3s ease' }}
+                                style={{ transition: 'stroke-width 0.3s ease' }}
                             />
-                            {/* Spark at Tip */}
-                            <motion.circle
-                                cx="100"
-                                cy={isHovering ? "50" : "55"}
-                                r={isHovering ? "3" : "2"}
-                                fill="#fff"
-                                animate={{
-                                    opacity: [0.6, 1, 0.6],
-                                    scale: [1, 1.2, 1],
-                                    filter: [`drop-shadow(0 0 2px ${gaugeColor})`, `drop-shadow(0 0 8px ${gaugeColor})`, `drop-shadow(0 0 2px ${gaugeColor})`]
-                                }}
-                                transition={{ duration: 0.5, repeat: Infinity }}
-                            />
-                            <circle
-                                cx="100"
-                                cy="100"
-                                r={isHovering ? "8" : "6"}
-                                fill={gaugeColor}
-                                style={{ transition: 'r 0.3s ease' }}
-                            />
-                        </motion.g>
-                    </svg>
-                </div>
 
-                {/* Value Text Group (Moved outside SVG to prevent blocking) */}
-                <div className="text-center -mt-8 relative z-10 space-y-1">
-                    <motion.div
-                        className={`text-3xl font-bold ${isDarkMode ? 'text-white' : 'text-gray-900'}`}
-                        animate={{ scale: isHovering ? 1.1 : 1 }}
-                        transition={{ duration: 0.3 }}
-                    >
-                        {Math.round(percentage)}%
-                    </motion.div>
-                    <div className={`text-xs ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>
-                        {value.toLocaleString()} / {max.toLocaleString()}
+                            {/* Progress Arc */}
+                            <motion.path
+                                d="M 20 100 A 80 80 0 0 1 180 100"
+                                fill="none"
+                                stroke={`url(#arcGradient-${title.replace(/\s/g, '')})`}
+                                strokeWidth={isHovering ? "14" : "12"}
+                                strokeLinecap="round"
+                                strokeDasharray="251.2"
+                                initial={{ strokeDashoffset: 251.2 }}
+                                animate={{ strokeDashoffset: 251.2 - (251.2 * percentage) / 100 }}
+                                transition={{ duration: 1.5, ease: 'easeOut' }}
+                                filter={`url(#gaugeGlow-${title.replace(/\s/g, '')})`}
+                                style={{ transition: 'stroke-width 0.3s ease' }}
+                            />
+
+                            {/* Needle */}
+                            <motion.g
+                                initial={{ rotate: -90 }}
+                                animate={{ rotate: angle }}
+                                transition={{ duration: 1.5, ease: 'backOut' }}
+                                style={{ transformOrigin: '100px 100px' }}
+                            >
+                                <line
+                                    x1="100"
+                                    y1="100"
+                                    x2="100"
+                                    y2={isHovering ? "50" : "55"}
+                                    stroke={gaugeColor}
+                                    strokeWidth={isHovering ? "4" : "3"}
+                                    strokeLinecap="round"
+                                    style={{ transition: 'all 0.3s ease' }}
+                                />
+                                {/* Spark at Tip */}
+                                <motion.circle
+                                    cx="100"
+                                    cy={isHovering ? "50" : "55"}
+                                    r={isHovering ? "3" : "2"}
+                                    fill="#fff"
+                                    animate={{
+                                        opacity: [0.6, 1, 0.6],
+                                        scale: [1, 1.2, 1],
+                                        filter: [`drop-shadow(0 0 2px ${gaugeColor})`, `drop-shadow(0 0 8px ${gaugeColor})`, `drop-shadow(0 0 2px ${gaugeColor})`]
+                                    }}
+                                    transition={{ duration: 0.5, repeat: Infinity }}
+                                />
+                                <circle
+                                    cx="100"
+                                    cy="100"
+                                    r={isHovering ? "8" : "6"}
+                                    fill={gaugeColor}
+                                    style={{ transition: 'r 0.3s ease' }}
+                                />
+                            </motion.g>
+                        </svg>
+
+                        {/* 0% and 100% Labels positioned absolutely relative to container */}
+                        <div className="absolute bottom-0 left-0 text-[10px] text-gray-500 transform -translate-x-2">0%</div>
+                        <div className="absolute bottom-0 right-0 text-[10px] text-gray-500 transform translate-x-2">100%</div>
                     </div>
-                </div>
 
-                {/* Legend */}
-                <div className="flex justify-between mt-4 text-xs relative z-10">
-                    <span className={`transition-all ${isHovering ? 'font-bold' : ''} ${isDarkMode ? 'text-gray-500' : 'text-gray-600'}`}>0%</span>
-                    <span className={`transition-all ${isDarkMode ? 'text-gray-500' : 'text-gray-600'}`}>50%</span>
-                    <span className={`transition-all ${isHovering ? 'font-bold' : ''} ${isDarkMode ? 'text-gray-500' : 'text-gray-600'}`}>100%</span>
+                    {/* Value Data - Moved Below Graph */}
+                    <div className="text-center relative z-10 mt-2">
+                        <motion.div
+                            className={`text-4xl font-black tracking-tight ${isDarkMode ? 'text-white' : 'text-gray-900'}`}
+                            animate={{ scale: isHovering ? 1.1 : 1 }}
+                            transition={{ duration: 0.3, type: "spring" }}
+                        >
+                            {Math.round(percentage)}%
+                        </motion.div>
+                        <div className={`text-xs font-medium mt-1 ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>
+                            {value.toLocaleString()} / {max.toLocaleString()}
+                        </div>
+                    </div>
                 </div>
 
                 {/* Status Badge */}
@@ -213,10 +213,10 @@ export const GaugeChart: React.FC<GaugeChartProps> = ({
                         className={`
                             inline-flex items-center gap-2 px-4 py-2 rounded-full text-xs font-semibold cursor-pointer
                             transition-all duration-300
-                            ${percentage >= 90 ? 'bg-green-500/20 text-green-400' : percentage >= 70 ? 'bg-amber-500/20 text-amber-400' : percentage >= 50 ? 'bg-blue-500/20 text-blue-400' : 'bg-red-500/20 text-red-400'}
+                            ${percentage >= 90 ? 'bg-green-500/10 text-green-400 border border-green-500/20' : percentage >= 70 ? 'bg-amber-500/10 text-amber-400 border border-amber-500/20' : percentage >= 50 ? 'bg-blue-500/10 text-blue-400 border border-blue-500/20' : 'bg-red-500/10 text-red-400 border border-red-500/20'}
                         `}
                         style={{
-                            boxShadow: isHovering ? `0 0 20px ${gaugeColor}30` : 'none'
+                            boxShadow: isHovering ? `0 0 15px ${gaugeColor}20` : 'none'
                         }}
                     >
                         <span>{statusInfo.emoji}</span>

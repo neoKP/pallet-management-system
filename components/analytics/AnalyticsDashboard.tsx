@@ -53,6 +53,7 @@ import { ActionableInsights } from './ActionableInsights';
 import { ThemeEngine, THEMES } from './ThemeEngine';
 import { DrillThroughModal } from './DrillThroughModal';
 import { Filter as FilterIcon, Brain, Palette } from 'lucide-react';
+import { GlobalSpotlight } from './GlobalSpotlight';
 
 interface AnalyticsDashboardProps {
     transactions: Transaction[];
@@ -452,6 +453,7 @@ export const AnalyticsDashboard: React.FC<AnalyticsDashboardProps> = ({
             id="analytics-dashboard-root"
             className={`min-h-screen p-4 md:p-8 transition-colors duration-500 ${isDarkMode ? 'bg-slate-950 text-white font-sans' : 'bg-slate-50 text-slate-900 font-sans'}`}
         >
+            <GlobalSpotlight />
             <style dangerouslySetInnerHTML={{
                 __html: `
                 #analytics-dashboard-root {

@@ -143,22 +143,27 @@ export const HeatmapCalendar: React.FC<HeatmapCalendarProps> = ({
     // Laser Scrollbar Styles
     const scrollbarStyles = `
         .custom-scrollbar::-webkit-scrollbar {
-            height: 6px; 
+            height: 4px; /* Thin default state */
+            background-color: transparent;
         }
         .custom-scrollbar::-webkit-scrollbar-track {
-            background: ${isDarkMode ? 'rgba(255,255,255,0.02)' : 'rgba(0,0,0,0.02)'};
+            background: transparent;
             margin: 0 20px;
             border-radius: 9999px;
         }
         .custom-scrollbar::-webkit-scrollbar-thumb {
-            background: ${currentTheme.primary}40;
+            background: ${isDarkMode ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.05)'}; /* Almost invisible */
             border-radius: 9999px;
             cursor: pointer;
             transition: all 0.3s ease;
         }
+        /* Hover State: The "Laser" Activation */
+        .custom-scrollbar:hover::-webkit-scrollbar {
+            height: 6px; /* Expand on hover */
+        }
         .custom-scrollbar:hover::-webkit-scrollbar-thumb {
-            background: linear-gradient(90deg, ${currentTheme.primary}, ${currentTheme.secondary || '#fff'});
-            box-shadow: 0 0 15px ${currentTheme.primary};
+            background: linear-gradient(90deg, #a855f7, #ec4899); /* Neon Purple/Pink */
+            box-shadow: 0 0 10px #a855f7, 0 0 20px #ec4899; /* Strong Glow */
         }
     `;
 
