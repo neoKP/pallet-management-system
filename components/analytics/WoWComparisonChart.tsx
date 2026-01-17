@@ -156,8 +156,16 @@ export const WoWComparisonChart: React.FC<WoWComparisonChartProps> = ({
                             initial={{ opacity: 0, x: -20 }}
                             animate={{ opacity: 1, x: 0 }}
                             transition={{ delay: index * 0.05 }}
-                            whileHover={{ scale: 1.01, x: 5 }}
-                            className="flex items-center gap-4 group"
+                            whileHover={{
+                                scale: 1.02,
+                                x: 10,
+                                backgroundColor: isDarkMode ? "rgba(30, 41, 59, 0.8)" : "rgba(241, 245, 249, 1)",
+                                borderColor: isCurrentWeek ? currentTheme.primary : (isDarkMode ? 'rgba(255,255,255,0.2)' : 'rgba(0,0,0,0.1)')
+                            }}
+                            className={`
+                                flex items-center gap-4 group p-3 rounded-xl border border-transparent transition-colors duration-200 cursor-pointer
+                                ${isDarkMode ? 'hover:shadow-lg hover:shadow-cyan-500/10' : 'hover:shadow-md'}
+                            `}
                         >
                             {/* Week Label */}
                             <div className="w-24 flex-shrink-0">
@@ -167,7 +175,7 @@ export const WoWComparisonChart: React.FC<WoWComparisonChartProps> = ({
                                         ? 'text-cyan-500'
                                         : isDarkMode ? 'text-slate-400' : 'text-slate-600'
                                     }
-                                    ${isCurrentWeek ? 'group-hover:text-cyan-400' : 'group-hover:text-slate-300'}
+                                    ${isCurrentWeek ? 'group-hover:text-cyan-400' : 'group-hover:text-slate-200'}
                                 `}>
                                     {week.weekLabel}
                                     {isCurrentWeek && (

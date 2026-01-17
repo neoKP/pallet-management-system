@@ -1,8 +1,9 @@
-import React from 'react';
-import { motion } from 'framer-motion';
+import React, { useState, useEffect, useRef } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
 import { format, startOfWeek, addDays, isSameDay } from 'date-fns';
 import { useAnalyticsStore } from '../../stores/analyticsStore';
 import { THEMES } from './ThemeEngine';
+import { SpotlightCard } from './MotionWrappers';
 
 interface HeatmapData {
     date: Date;
@@ -15,6 +16,95 @@ interface HeatmapCalendarProps {
     isDarkMode: boolean;
 }
 
+const HeatmapCell: React.FC<{
+    intensity: number;
+    data: HeatmapData;
+    isDarkMode: boolean;
+    color: string;
+    hoveredIndex: { week: number, day: number } | null;
+    index: { week: number, day: number };
+    onHover: (data: HeatmapData | null, index: { week: number, day: number } | null) => void;
+}> = ({ intensity, data, isDarkMode, color, hoveredIndex, index, onHover }) => {
+    // Calculate distance from hovered cell for shockwave/ripple effect
+    let scale = 1;
+    let opacity = 1;
+    let isHovered = false;
+    let isNeighbor = false;
+
+    if (hoveredIndex) {
+        const dx = Math.abs(hoveredIndex.week - index.week);
+        const dy = Math.abs(hoveredIndex.day - index.day);
+        const distance = Math.sqrt(dx * dx + dy * dy);
+
+        if (distance === 0) {
+            scale = 0.85; // Implode effect (press down)
+            isHovered = true;
+        } else if (distance < 2.5) {
+            scale = 1.2; // Neighbors rise up
+            isNeighbor = true;
+            opacity = 1;
+        } else if (distance < 4) {
+            scale = 1.05; // Far ripple
+        }
+    }
+
+    // Determine color class or style based on intensity
+    const level = intensity === 0 ? 0 :
+        intensity < 0.25 ? 1 :
+            intensity < 0.5 ? 2 :
+                intensity < 0.75 ? 3 : 4;
+
+    const getCellStyle = () => {
+        if (level === 0) return {
+            bg: isDarkMode ? 'rgba(30, 41, 59, 0.4)' : '#f1f5f9',
+            border: isDarkMode ? '1px solid rgba(51, 65, 85, 0.5)' : '1px solid #cbd5e1',
+            shadow: 'none'
+        };
+
+        const baseColor = color;
+        const opacityVal = level === 1 ? '40' : level === 2 ? '80' : level === 3 ? 'BF' : 'FF';
+
+        return {
+            bg: `${baseColor}${opacityVal}`,
+            border: `1px solid ${baseColor}`,
+            shadow: `0 0 ${level * 5}px ${baseColor}${opacityVal}`
+        };
+    };
+
+    const style = getCellStyle();
+    const isHot = level === 4;
+
+    return (
+        <motion.div
+            initial={{ scale: 0, opacity: 0 }}
+            animate={{
+                scale: scale,
+                opacity: opacity,
+                boxShadow: isNeighbor ? `0 0 15px ${color}` : (isHovered || isHot ? style.shadow : 'none'),
+                backgroundColor: isNeighbor ? color : style.bg,
+                borderColor: isNeighbor ? '#fff' : style.border,
+                zIndex: isHovered || isNeighbor ? 10 : 1
+            }}
+            transition={{
+                type: "spring",
+                stiffness: 400,
+                damping: 25,
+                // Staggered matrix entrance based on position
+                delay: (index.week * 0.02) + (index.day * 0.05)
+            }}
+            onMouseEnter={() => onHover(data, index)}
+            onMouseLeave={() => onHover(null, null)}
+            style={{
+                border: style.border,
+            }}
+            className={`
+                w-4 h-4 rounded-sm cursor-pointer backdrop-blur-sm relative
+                ${isHot ? 'animate-pulse' : ''}
+            `}
+        />
+    );
+};
+
 export const HeatmapCalendar: React.FC<HeatmapCalendarProps> = ({
     data,
     title,
@@ -22,34 +112,26 @@ export const HeatmapCalendar: React.FC<HeatmapCalendarProps> = ({
 }) => {
     const { themeColor } = useAnalyticsStore();
     const currentTheme = THEMES.find(t => t.id === themeColor) || THEMES[0];
-    const weeks = 12; // Show 12 weeks
+    const weeks = 52;
     const days = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 
-    // Get max value for color scaling
+    const [hoveredData, setHoveredData] = useState<HeatmapData | null>(null);
+    const [hoveredIndex, setHoveredIndex] = useState<{ week: number, day: number } | null>(null);
+    const scrollContainerRef = useRef<HTMLDivElement>(null);
+
+    useEffect(() => {
+        if (scrollContainerRef.current) {
+            scrollContainerRef.current.scrollLeft = scrollContainerRef.current.scrollWidth;
+        }
+    }, [data]);
+
     const maxValue = Math.max(...data.map(d => d.value), 1);
-
-    // Get color intensity based on value
-    const getColor = (value: number) => {
-        const intensity = value / maxValue;
-        if (intensity === 0) return isDarkMode ? '#1e293b' : '#f1f5f9';
-
-        // Use theme color for intensity
-        // currentTheme.primary is something like '#6366f1'
-        // We can use opacity to simulate intensity
-        const baseColor = currentTheme.primary;
-        if (intensity < 0.25) return `${baseColor}40`;
-        if (intensity < 0.5) return `${baseColor}80`;
-        if (intensity < 0.75) return `${baseColor}bf`;
-        return baseColor;
-    };
-
-    // Generate calendar grid
     const today = new Date();
-    const startDate = addDays(startOfWeek(today), -weeks * 7);
+    const startDate = addDays(startOfWeek(today), -weeks * 7 + 7);
 
-    const calendarData: (HeatmapData | null)[][] = [];
+    const calendarData: (HeatmapData)[][] = [];
     for (let week = 0; week < weeks; week++) {
-        const weekData: (HeatmapData | null)[] = [];
+        const weekData: (HeatmapData)[] = [];
         for (let day = 0; day < 7; day++) {
             const currentDate = addDays(startDate, week * 7 + day);
             const dataPoint = data.find(d => isSameDay(d.date, currentDate));
@@ -58,113 +140,175 @@ export const HeatmapCalendar: React.FC<HeatmapCalendarProps> = ({
         calendarData.push(weekData);
     }
 
+    // Laser Scrollbar Styles
+    const scrollbarStyles = `
+        .custom-scrollbar::-webkit-scrollbar {
+            height: 6px; 
+        }
+        .custom-scrollbar::-webkit-scrollbar-track {
+            background: ${isDarkMode ? 'rgba(255,255,255,0.02)' : 'rgba(0,0,0,0.02)'};
+            margin: 0 20px;
+            border-radius: 9999px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb {
+            background: ${currentTheme.primary}40;
+            border-radius: 9999px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+        .custom-scrollbar:hover::-webkit-scrollbar-thumb {
+            background: linear-gradient(90deg, ${currentTheme.primary}, ${currentTheme.secondary || '#fff'});
+            box-shadow: 0 0 15px ${currentTheme.primary};
+        }
+    `;
+
     return (
-        <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.5 }}
+        <SpotlightCard
+            spotlightColor={isDarkMode ? `${currentTheme.primary}20` : 'rgba(168,85,247,0.1)'}
             className={`
-                p-6 rounded-xl
+                p-6 rounded-3xl relative overflow-hidden cyber-glass-card group
                 ${isDarkMode
-                    ? 'bg-gradient-to-br from-slate-800/50 to-slate-900/50 border border-slate-700/50'
-                    : 'bg-gradient-to-br from-white to-gray-50 border border-gray-200'
+                    ? 'bg-slate-900/60 border border-indigo-500/20'
+                    : 'bg-white/80 border border-indigo-200'
                 }
-                backdrop-blur-sm shadow-lg
+                shadow-2xl
             `}
         >
-            {/* Title */}
-            <h3 className={`text-lg font-semibold mb-4 ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>
-                {title}
-            </h3>
+            <style>{scrollbarStyles}</style>
 
-            {/* Calendar Grid */}
-            <div className="overflow-x-auto">
-                <div className="inline-flex gap-1">
+            {/* Blueprint Grid Background */}
+            <div className="absolute inset-0 pointer-events-none opacity-[0.05]"
+                style={{
+                    backgroundImage: `linear-gradient(${isDarkMode ? '#fff' : '#000'} 1px, transparent 1px), linear-gradient(90deg, ${isDarkMode ? '#fff' : '#000'} 1px, transparent 1px)`,
+                    backgroundSize: '20px 20px'
+                }}
+            />
+
+            {/* Core Energy Glow */}
+            <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-3/4 h-3/4 pointer-events-none opacity-20 blur-3xl rounded-full"
+                style={{ background: `radial-gradient(circle, ${currentTheme.primary} 0%, transparent 70%)` }}
+            />
+
+            {/* Header */}
+            <div className="flex items-center justify-between mb-6 relative z-10">
+                <div className="relative">
+                    <h3 className={`text-lg font-bold tracking-tight ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>
+                        {title}
+                    </h3>
+                    <div className="h-0.5 w-1/2 mt-1 rounded-full bg-gradient-to-r from-current to-transparent opacity-50" style={{ color: currentTheme.primary }} />
+                </div>
+
+                {/* Animated Legend */}
+                <div className="flex items-center gap-3 bg-black/20 px-3 py-1.5 rounded-full border border-white/5 backdrop-blur-sm">
+                    <span className="text-[9px] text-gray-400 font-mono uppercase tracking-widest">Power Level</span>
+                    <div className="flex gap-1">
+                        {[0.2, 0.4, 0.6, 0.8, 1].map((opacity, i) => (
+                            <motion.div
+                                key={i}
+                                initial={{ height: 6 }}
+                                animate={{ height: [6, 12, 6] }}
+                                transition={{
+                                    duration: 1.5,
+                                    repeat: Infinity,
+                                    delay: i * 0.2,
+                                    ease: "easeInOut"
+                                }}
+                                className="w-1 rounded-full"
+                                style={{ backgroundColor: currentTheme.primary, opacity }}
+                            />
+                        ))}
+                    </div>
+                </div>
+            </div>
+
+            {/* Calendar Grid Container */}
+            <div
+                ref={scrollContainerRef}
+                className="overflow-x-auto pb-6 custom-scrollbar relative z-10"
+                style={{ scrollBehavior: 'smooth' }}
+            >
+                <div className="inline-flex gap-2 min-w-full">
                     {/* Day Labels */}
-                    <div className="flex flex-col gap-1 mr-2">
-                        <div className="h-4" /> {/* Spacer for month labels */}
+                    <div className="flex flex-col gap-1.5 mr-2 pt-6 sticky left-0 z-20 backdrop-blur-sm pr-2"
+                        style={{ background: isDarkMode ? 'linear-gradient(to right, rgba(15,23,42,0.9), transparent)' : 'linear-gradient(to right, rgba(255,255,255,0.9), transparent)' }}>
                         {days.map(day => (
                             <div
                                 key={day}
-                                className={`h-3 text-[10px] flex items-center ${isDarkMode ? 'text-gray-500' : 'text-gray-600'
-                                    }`}
+                                className={`h-4 text-[9px] font-mono flex items-center ${isDarkMode ? 'text-gray-600' : 'text-gray-400'}`}
                             >
-                                {day}
+                                {day.toUpperCase()}
                             </div>
                         ))}
                     </div>
 
                     {/* Weeks */}
                     {calendarData.map((week, weekIndex) => (
-                        <div key={weekIndex} className="flex flex-col gap-1">
+                        <div key={weekIndex} className="flex flex-col gap-1.5 shrink-0">
                             {/* Month Label */}
-                            <div className="h-4 text-[10px] text-center">
-                                {weekIndex % 4 === 0 && (
-                                    <span className={isDarkMode ? 'text-gray-500' : 'text-gray-600'}>
-                                        {format(week[0]!.date, 'MMM')}
+                            <div className="h-4 text-[9px] font-bold text-center">
+                                {week.map(d => d.date.getDate()).includes(1) && (
+                                    <span className={isDarkMode ? 'text-indigo-400' : 'text-indigo-600'}>
+                                        {format(week.find(d => d.date.getDate() === 1)!.date, 'MMM').toUpperCase()}
                                     </span>
                                 )}
                             </div>
 
                             {/* Days */}
-                            {week.map((day, dayIndex) => {
-                                if (!day) return <div key={dayIndex} className="w-3 h-3" />;
-
-                                const isToday = isSameDay(day.date, today);
-
-                                return (
-                                    <motion.div
-                                        key={dayIndex}
-                                        initial={{ scale: 0, opacity: 0 }}
-                                        animate={{ scale: 1, opacity: 1 }}
-                                        transition={{
-                                            type: 'spring',
-                                            stiffness: 300,
-                                            damping: 20,
-                                            delay: (weekIndex * 7 + dayIndex) * 0.005
-                                        }}
-                                        whileHover={{
-                                            scale: 1.5,
-                                            zIndex: 10,
-                                            boxShadow: isDarkMode
-                                                ? `0 0 15px ${getColor(day.value)}`
-                                                : `0 0 10px ${getColor(day.value)}`,
-                                        }}
-                                        className={`
-                                            w-3 h-3 rounded-sm cursor-pointer transition-colors duration-300
-                                            ${isToday ? 'ring-2 ring-blue-500 ring-offset-1 ' + (isDarkMode ? 'ring-offset-slate-900' : 'ring-offset-white') : ''}
-                                        `}
-                                        style={{
-                                            backgroundColor: getColor(day.value),
-                                        } as React.CSSProperties}
-                                        title={`${format(day.date, 'MMM dd, yyyy')}: ${day.value} transactions`}
-                                    />
-                                );
-                            })}
+                            {week.map((dayData, dayIndex) => (
+                                <HeatmapCell
+                                    key={dayIndex}
+                                    index={{ week: weekIndex, day: dayIndex }}
+                                    hoveredIndex={hoveredIndex}
+                                    onHover={(d, i) => { setHoveredData(d); setHoveredIndex(i); }}
+                                    intensity={dayData.value / maxValue}
+                                    data={dayData}
+                                    isDarkMode={isDarkMode}
+                                    color={currentTheme.primary}
+                                />
+                            ))}
                         </div>
                     ))}
                 </div>
             </div>
 
-            {/* Legend */}
-            <div className="flex items-center justify-end gap-2 mt-4">
-                <span className={`text-[10px] font-medium uppercase tracking-wider ${isDarkMode ? 'text-gray-500' : 'text-gray-600'}`}>
-                    Less
-                </span>
-                <div className="flex gap-1">
-                    {[0, 0.25, 0.5, 0.75, 1].map((intensity, index) => (
-                        <motion.div
-                            key={index}
-                            whileHover={{ scale: 1.2 }}
-                            className="w-3 h-3 rounded-sm"
-                            style={{ backgroundColor: getColor(intensity * maxValue) } as React.CSSProperties}
-                        />
-                    ))}
-                </div>
-                <span className={`text-[10px] font-medium uppercase tracking-wider ${isDarkMode ? 'text-gray-500' : 'text-gray-600'}`}>
-                    More
-                </span>
-            </div>
-        </motion.div>
+            {/* Holographic Info Panel */}
+            <AnimatePresence>
+                {hoveredData && (
+                    <motion.div
+                        initial={{ opacity: 0, scale: 0.9, y: 20 }}
+                        animate={{ opacity: 1, scale: 1, y: 0 }}
+                        exit={{ opacity: 0, scale: 0.9, y: 20 }}
+                        className={`
+                            absolute bottom-6 left-6 z-40
+                            p-4 rounded-xl border border-white/10
+                            backdrop-blur-xl shadow-2xl
+                            flex items-center gap-4 overflow-hidden
+                        `}
+                        style={{
+                            background: isDarkMode ? 'rgba(15, 23, 42, 0.90)' : 'rgba(255, 255, 255, 0.90)',
+                            boxShadow: `0 0 40px -10px ${currentTheme.primary}60`,
+                            borderLeft: `4px solid ${currentTheme.primary}`
+                        }}
+                    >
+                        {/* Scanline overlay for panel */}
+                        <div className="absolute inset-0 pointer-events-none opacity-10 bg-[linear-gradient(transparent_50%,rgba(0,0,0,0.5)_50%)] bg-[length:100%_4px]" />
+
+                        <div className="flex flex-col relative z-10">
+                            <span className="text-[10px] text-gray-400 font-mono uppercase">DATE_LOG</span>
+                            <span className={`text-sm font-bold ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>
+                                {format(hoveredData.date, 'dd MMM yyyy')}
+                            </span>
+                        </div>
+                        <div className="w-px h-8 bg-gray-500/20 relative z-10" />
+                        <div className="flex flex-col relative z-10">
+                            <span className="text-[10px] text-gray-400 font-mono uppercase">OUTPUT</span>
+                            <span className="text-xl font-black text-glow" style={{ color: currentTheme.primary }}>
+                                {hoveredData.value.toLocaleString()}
+                            </span>
+                        </div>
+                    </motion.div>
+                )}
+            </AnimatePresence>
+        </SpotlightCard>
     );
 };
