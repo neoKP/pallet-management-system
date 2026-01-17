@@ -1,6 +1,6 @@
 import React, { useMemo, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { TrendingUp, TrendingDown, Minus, Calendar, BarChart3, ArrowRight } from 'lucide-react';
+import { TrendingUp, TrendingDown, Minus, Calendar, BarChart3, ArrowRight, X, Activity, Zap } from 'lucide-react';
 import { useAnalyticsStore } from '../../stores/analyticsStore';
 import { THEMES } from './ThemeEngine';
 
@@ -26,6 +26,12 @@ export const WoWComparisonChart: React.FC<WoWComparisonChartProps> = ({
 }) => {
     // Focus Mode state - track which bar is hovered
     const [focusedIndex, setFocusedIndex] = useState<number | null>(null);
+    // Week Report Modal state
+    const [selectedWeekReport, setSelectedWeekReport] = useState<{
+        week: WoWDataPoint;
+        index: number;
+        prevWeek: WoWDataPoint | null;
+    } | null>(null);
     // Calculate insights from real data
     const insights = useMemo(() => {
         if (data.length < 2) return null;
@@ -277,10 +283,19 @@ export const WoWComparisonChart: React.FC<WoWComparisonChartProps> = ({
                                                 {change > 0 ? '+' : ''}{percentChange.toFixed(1)}% ({change > 0 ? '+' : ''}{change})
                                             </span>
                                         </div>
-                                        <div className="flex items-center gap-1 text-cyan-500 cursor-pointer hover:underline">
+                                        <motion.button
+                                            onClick={() => setSelectedWeekReport({
+                                                week,
+                                                index,
+                                                prevWeek: index > 0 ? data[index - 1] : null
+                                            })}
+                                            whileHover={{ scale: 1.05 }}
+                                            whileTap={{ scale: 0.95 }}
+                                            className="flex items-center gap-1 text-cyan-500 cursor-pointer hover:underline"
+                                        >
                                             <span>View Report</span>
                                             <ArrowRight size={12} />
-                                        </div>
+                                        </motion.button>
                                     </div>
                                 </motion.div>
                             </motion.div>
@@ -331,6 +346,148 @@ export const WoWComparisonChart: React.FC<WoWComparisonChartProps> = ({
                     </div>
                 </div>
             )}
+
+            {/* Week Report Modal */}
+            <AnimatePresence>
+                {selectedWeekReport && (
+                    <>
+                        {/* Backdrop */}
+                        <motion.div
+                            initial={{ opacity: 0 }}
+                            animate={{ opacity: 1 }}
+                            exit={{ opacity: 0 }}
+                            onClick={() => setSelectedWeekReport(null)}
+                            className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50"
+                        />
+
+                        {/* Modal */}
+                        <motion.div
+                            initial={{ opacity: 0, scale: 0.9, y: -20 }}
+                            animate={{ opacity: 1, scale: 1, y: 0 }}
+                            exit={{ opacity: 0, scale: 0.9, y: -20 }}
+                            className={`
+                                fixed top-4 left-1/2 -translate-x-1/2 z-50
+                                w-full max-w-md mx-4 p-6 rounded-2xl shadow-2xl
+                                max-h-[90vh] overflow-y-auto
+                                ${isDarkMode
+                                    ? 'bg-slate-900/95 border border-white/10'
+                                    : 'bg-white/95 border border-gray-200'}
+                                backdrop-blur-md
+                            `}
+                        >
+                            {/* Header */}
+                            <div className="flex items-center justify-between mb-6">
+                                <div className="flex items-center gap-3">
+                                    <div className={`p-2 rounded-xl ${isDarkMode ? 'bg-cyan-500/20' : 'bg-cyan-100'}`}>
+                                        <Calendar className="w-5 h-5 text-cyan-500" />
+                                    </div>
+                                    <div>
+                                        <h3 className={`text-lg font-bold ${isDarkMode ? 'text-white' : 'text-slate-900'}`}>
+                                            📊 รายงานประจำสัปดาห์
+                                        </h3>
+                                        <p className={`text-xs ${isDarkMode ? 'text-cyan-400' : 'text-cyan-600'}`}>
+                                            {selectedWeekReport.week.weekLabel}
+                                        </p>
+                                    </div>
+                                </div>
+                                <motion.button
+                                    onClick={() => setSelectedWeekReport(null)}
+                                    whileHover={{ scale: 1.1, rotate: 90 }}
+                                    whileTap={{ scale: 0.9 }}
+                                    className={`p-2 rounded-full ${isDarkMode ? 'hover:bg-white/10' : 'hover:bg-gray-100'}`}
+                                >
+                                    <X className="w-5 h-5" />
+                                </motion.button>
+                            </div>
+
+                            {/* Main Stats */}
+                            <div className={`p-4 rounded-xl mb-4 ${isDarkMode ? 'bg-cyan-500/10 border border-cyan-500/20' : 'bg-cyan-50 border border-cyan-100'}`}>
+                                <div className="flex items-center gap-2 mb-2">
+                                    <Activity className="w-4 h-4 text-cyan-500" />
+                                    <span className={`text-xs font-medium ${isDarkMode ? 'text-cyan-400' : 'text-cyan-600'}`}>
+                                        {metric} ในสัปดาห์นี้
+                                    </span>
+                                </div>
+                                <motion.p
+                                    initial={{ scale: 0 }}
+                                    animate={{ scale: 1 }}
+                                    className={`text-4xl font-black ${isDarkMode ? 'text-white' : 'text-slate-900'}`}
+                                >
+                                    {selectedWeekReport.week.value.toLocaleString()}
+                                </motion.p>
+                            </div>
+
+                            {/* Comparison */}
+                            {selectedWeekReport.prevWeek && (
+                                <div className={`grid grid-cols-2 gap-3 mb-4`}>
+                                    <div className={`p-3 rounded-xl text-center ${isDarkMode ? 'bg-white/5' : 'bg-gray-50'}`}>
+                                        <p className={`text-xs ${isDarkMode ? 'text-slate-400' : 'text-slate-500'}`}>
+                                            สัปดาห์ก่อน
+                                        </p>
+                                        <p className={`text-lg font-bold ${isDarkMode ? 'text-slate-300' : 'text-slate-700'}`}>
+                                            {selectedWeekReport.prevWeek.value.toLocaleString()}
+                                        </p>
+                                    </div>
+                                    <div className={`p-3 rounded-xl text-center ${isDarkMode ? 'bg-white/5' : 'bg-gray-50'}`}>
+                                        <p className={`text-xs ${isDarkMode ? 'text-slate-400' : 'text-slate-500'}`}>
+                                            เปลี่ยนแปลง
+                                        </p>
+                                        {(() => {
+                                            const diff = selectedWeekReport.week.value - selectedWeekReport.prevWeek.value;
+                                            const pct = selectedWeekReport.prevWeek.value > 0
+                                                ? ((diff / selectedWeekReport.prevWeek.value) * 100).toFixed(1)
+                                                : 0;
+                                            return (
+                                                <p className={`text-lg font-bold flex items-center justify-center gap-1 ${diff > 0 ? 'text-green-500' : diff < 0 ? 'text-red-500' : 'text-gray-500'}`}>
+                                                    {diff > 0 ? <TrendingUp size={16} /> : diff < 0 ? <TrendingDown size={16} /> : <Minus size={16} />}
+                                                    {diff > 0 ? '+' : ''}{pct}%
+                                                </p>
+                                            );
+                                        })()}
+                                    </div>
+                                </div>
+                            )}
+
+                            {/* Insights */}
+                            <div className={`p-4 rounded-xl ${isDarkMode ? 'bg-purple-500/10 border border-purple-500/20' : 'bg-purple-50 border border-purple-100'}`}>
+                                <div className="flex items-center gap-2 mb-2">
+                                    <Zap className="w-4 h-4 text-purple-500" />
+                                    <span className={`text-xs font-bold ${isDarkMode ? 'text-purple-400' : 'text-purple-600'}`}>
+                                        AI Insight
+                                    </span>
+                                </div>
+                                <p className={`text-sm ${isDarkMode ? 'text-slate-300' : 'text-slate-700'}`}>
+                                    {selectedWeekReport.prevWeek ? (
+                                        selectedWeekReport.week.value > selectedWeekReport.prevWeek.value ? (
+                                            <>🚀 การเคลื่อนไหวพาเลทเพิ่มขึ้นจากสัปดาห์ก่อน แสดงถึงการหมุนเวียนพาเลทที่คล่องตัวขึ้น!</>
+                                        ) : selectedWeekReport.week.value < selectedWeekReport.prevWeek.value ? (
+                                            <>📉 การเคลื่อนไหวพาเลทลดลง ควรตรวจสอบความต้องการใช้งานของแต่ละสาขา</>
+                                        ) : (
+                                            <>➡️ การหมุนเวียนคงที่ ระบบทำงานเสถียร สมดุลระหว่างสาขาดี</>
+                                        )
+                                    ) : (
+                                        <>📊 ข้อมูลสัปดาห์แรก ยังไม่มีข้อมูลเปรียบเทียบการหมุนเวียน</>
+                                    )}
+                                </p>
+                            </div>
+
+                            {/* Close Button */}
+                            <motion.button
+                                onClick={() => setSelectedWeekReport(null)}
+                                whileHover={{ scale: 1.02 }}
+                                whileTap={{ scale: 0.98 }}
+                                className={`
+                                    w-full mt-4 py-3 rounded-xl font-bold text-sm
+                                    bg-gradient-to-r from-cyan-500 to-purple-500 text-white
+                                    shadow-lg shadow-cyan-500/25 hover:shadow-cyan-500/40 transition-shadow
+                                `}
+                            >
+                                ปิด
+                            </motion.button>
+                        </motion.div>
+                    </>
+                )}
+            </AnimatePresence>
         </motion.div>
     );
 };

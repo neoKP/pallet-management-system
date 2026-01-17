@@ -360,7 +360,7 @@ export const AnalyticsDashboard: React.FC<AnalyticsDashboardProps> = ({
         const trendDirection = kpis.trend === 'up' ? 'เพิ่มขึ้น' : 'ลดลง';
 
         return {
-            text: `ปัจจุบันสาขา ${topBranch?.branchName || '-'} มีสต็อกสูงสุดที่ ${topBranch?.totalStock.toLocaleString()} พาเลท โดยประเภท ${topPallet?.palletName || '-'} เป็นประเภทที่นิยมที่สุด คิดเป็น ${(topPallet?.percentage || 0).toFixed(1)}% ของทั้งหมด กราฟสัปดาห์นี้แสดงแนวโน้ม${trendDirection} ${kpis.trendPercentage}% เมื่อเทียบกับช่วงก่อนหน้า`,
+            text: `สาขา ${topBranch?.branchName || '-'} มีพาเลทในคลังสูงสุดที่ ${topBranch?.totalStock.toLocaleString()} ชิ้น พาเลทประเภท ${topPallet?.palletName || '-'} ถูกใช้งานมากที่สุด คิดเป็น ${(topPallet?.percentage || 0).toFixed(1)}% การหมุนเวียนสัปดาห์นี้${trendDirection} ${kpis.trendPercentage}% เมื่อเทียบกับช่วงก่อน ควรติดตามการกระจายพาเลทระหว่างสาขาให้สมดุล`,
             status: kpis.utilizationRate > 80 ? 'Optimal' : 'Checking'
         };
     }, [branchPerformance, palletAnalysis, kpis]);

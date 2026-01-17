@@ -2,7 +2,7 @@ import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 
 export type DateRangeType = 'day' | 'week' | 'month' | 'quarter' | 'year' | 'custom';
-export type ThemeColor = 'indigo' | 'purple' | 'blue' | 'green' | 'rose' | 'amber';
+export type ThemeColor = 'indigo' | 'purple' | 'blue' | 'green' | 'rose' | 'amber' | 'cyan' | 'emerald' | 'violet';
 
 export interface AnalyticsFilters {
     dateRange: DateRangeType;
