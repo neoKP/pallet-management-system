@@ -249,23 +249,56 @@ export const ActionableInsights: React.FC<ActionableInsightsProps> = ({
                                 animate={{ opacity: 1, x: 0 }}
                                 exit={{ opacity: 0, x: 20 }}
                                 transition={{ delay: index * 0.1 }}
+                                whileHover={{
+                                    y: -5,
+                                    scale: 1.02,
+                                    boxShadow: isDarkMode
+                                        ? '0 20px 40px -10px rgba(0,0,0,0.5)'
+                                        : '0 20px 40px -10px rgba(0,0,0,0.15)'
+                                }}
                                 className={`
-                                    p-4 rounded-xl border transition-all hover:scale-[1.01]
+                                    p-4 rounded-xl border transition-all cursor-pointer relative overflow-hidden
                                     ${styles.bg} ${styles.border}
+                                    ${insight.priority === 'high' ? 'urgency-pulse' : ''}
                                 `}
                             >
-                                <div className="flex items-start gap-3">
-                                    <div className={`mt-0.5 ${styles.icon}`}>
+                                {/* Urgency Pulse Glow for High Priority */}
+                                {insight.priority === 'high' && (
+                                    <motion.div
+                                        className="absolute inset-0 rounded-xl pointer-events-none"
+                                        animate={{
+                                            boxShadow: [
+                                                `inset 0 0 0 2px ${insight.type === 'warning' ? 'rgba(245, 158, 11, 0.3)' : 'rgba(239, 68, 68, 0.3)'}`,
+                                                `inset 0 0 0 2px ${insight.type === 'warning' ? 'rgba(245, 158, 11, 0.8)' : 'rgba(239, 68, 68, 0.8)'}`,
+                                                `inset 0 0 0 2px ${insight.type === 'warning' ? 'rgba(245, 158, 11, 0.3)' : 'rgba(239, 68, 68, 0.3)'}`,
+                                            ],
+                                        }}
+                                        transition={{ duration: 2, repeat: Infinity, ease: 'easeInOut' }}
+                                    />
+                                )}
+
+                                <div className="flex items-start gap-3 relative z-10">
+                                    <motion.div
+                                        className={`mt-0.5 ${styles.icon}`}
+                                        animate={insight.priority === 'high' ? { scale: [1, 1.2, 1] } : {}}
+                                        transition={{ duration: 1.5, repeat: Infinity }}
+                                    >
                                         {insight.icon}
-                                    </div>
+                                    </motion.div>
                                     <div className="flex-1">
                                         <div className="flex items-center gap-2 mb-1">
                                             <h4 className={`text-sm font-bold ${isDarkMode ? 'text-white' : 'text-slate-900'}`}>
                                                 {insight.title}
                                             </h4>
-                                            <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${priority.style}`}>
+                                            <motion.span
+                                                className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${priority.style}`}
+                                                animate={insight.priority === 'high' ? {
+                                                    scale: [1, 1.05, 1],
+                                                } : {}}
+                                                transition={{ duration: 1, repeat: Infinity }}
+                                            >
                                                 {priority.text}
-                                            </span>
+                                            </motion.span>
                                         </div>
                                         <p className={`text-xs ${isDarkMode ? 'text-slate-400' : 'text-slate-600'}`}>
                                             {insight.description}
@@ -274,16 +307,35 @@ export const ActionableInsights: React.FC<ActionableInsightsProps> = ({
                                         {(insight.action || insight.impact) && (
                                             <div className="mt-3 flex flex-wrap gap-2">
                                                 {insight.action && (
-                                                    <div className={`flex items-center gap-1 px-2 py-1 rounded-lg text-xs font-medium ${styles.badge}`}>
-                                                        <Zap className="w-3 h-3" />
-                                                        {insight.action}
-                                                    </div>
+                                                    <motion.div
+                                                        className={`relative flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-bold overflow-hidden cursor-pointer ${styles.badge}`}
+                                                        whileHover={{ scale: 1.05 }}
+                                                        whileTap={{ scale: 0.95 }}
+                                                    >
+                                                        {/* Liquid Gradient Background on Hover */}
+                                                        <motion.div
+                                                            className="absolute inset-0 opacity-0 hover:opacity-100"
+                                                            style={{
+                                                                background: `linear-gradient(90deg, transparent, rgba(255,255,255,0.3), transparent)`,
+                                                                backgroundSize: '200% 100%',
+                                                            }}
+                                                            animate={{
+                                                                backgroundPosition: ['200% 0', '-200% 0'],
+                                                            }}
+                                                            transition={{ duration: 2, repeat: Infinity }}
+                                                        />
+                                                        <Zap className="w-3 h-3 relative z-10" />
+                                                        <span className="relative z-10">{insight.action}</span>
+                                                    </motion.div>
                                                 )}
                                                 {insight.impact && (
-                                                    <div className={`flex items-center gap-1 px-2 py-1 rounded-lg text-xs font-medium ${isDarkMode ? 'bg-white/10 text-white' : 'bg-slate-100 text-slate-700'}`}>
+                                                    <motion.div
+                                                        className={`flex items-center gap-1 px-2 py-1 rounded-lg text-xs font-medium ${isDarkMode ? 'bg-white/10 text-white' : 'bg-slate-100 text-slate-700'}`}
+                                                        whileHover={{ scale: 1.02 }}
+                                                    >
                                                         <Lightbulb className="w-3 h-3" />
                                                         ผลกระทบ: {insight.impact}
-                                                    </div>
+                                                    </motion.div>
                                                 )}
                                             </div>
                                         )}
