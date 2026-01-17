@@ -34,6 +34,7 @@ import {
 import { BRANCHES, PALLET_TYPES } from '../../constants';
 import { isSameDay, startOfWeek, endOfWeek, subWeeks, format, isWithinInterval } from 'date-fns';
 import { th } from 'date-fns/locale';
+import { hexToRgb } from '../../utils/helpers';
 
 // Premium Analytics Components
 import { GaugeChart } from './GaugeChart';
@@ -447,7 +448,20 @@ export const AnalyticsDashboard: React.FC<AnalyticsDashboardProps> = ({
     };
 
     return (
-        <div className={`min-h-screen p-4 md:p-8 transition-colors duration-500 ${isDarkMode ? 'bg-slate-950 text-white font-sans' : 'bg-slate-50 text-slate-900 font-sans'}`}>
+        <div
+            id="analytics-dashboard-root"
+            className={`min-h-screen p-4 md:p-8 transition-colors duration-500 ${isDarkMode ? 'bg-slate-950 text-white font-sans' : 'bg-slate-50 text-slate-900 font-sans'}`}
+        >
+            <style dangerouslySetInnerHTML={{
+                __html: `
+                #analytics-dashboard-root {
+                    --theme-primary: ${currentTheme.primary};
+                    --theme-secondary: ${currentTheme.secondary};
+                    --theme-accent: ${currentTheme.accent || '#ec4899'};
+                    --theme-primary-rgb: ${hexToRgb(currentTheme.primary)};
+                    --theme-secondary-rgb: ${hexToRgb(currentTheme.secondary)};
+                }
+            `}} />
             <div className="max-w-7xl mx-auto space-y-8">
                 {/* Header */}
                 <motion.div
@@ -457,20 +471,11 @@ export const AnalyticsDashboard: React.FC<AnalyticsDashboardProps> = ({
                 >
                     <div className="space-y-1">
                         <div className="flex items-center gap-3">
-                            <div
-                                className="p-2 rounded-xl shadow-lg transition-all duration-500"
-                                style={{
-                                    backgroundColor: currentTheme.primary,
-                                    boxShadow: `0 10px 20px ${currentTheme.primary}40`
-                                }}
-                            >
+                            <div className="p-2 rounded-xl shadow-lg transition-all duration-500 theme-bg-primary theme-shadow-primary">
                                 <Sparkles className="w-8 h-8 text-white" />
                             </div>
                             <h1 className={`text-4xl font-extrabold tracking-tighter ${isDarkMode ? 'text-white' : 'text-slate-900'}`}>
-                                Premium <span
-                                    className="text-transparent bg-clip-text transition-all duration-500"
-                                    style={{ backgroundImage: `linear-gradient(to right, ${currentTheme.primary}, ${currentTheme.secondary})` }}
-                                >
+                                Premium <span className="text-transparent bg-clip-text transition-all duration-500 theme-gradient-primary">
                                     Analytics
                                 </span>
                             </h1>
@@ -488,11 +493,7 @@ export const AnalyticsDashboard: React.FC<AnalyticsDashboardProps> = ({
                             whileHover={{ y: -2, scale: 1.02 }}
                             whileTap={{ scale: 0.98 }}
                             onClick={() => setIsSlicerOpen(true)}
-                            className="flex items-center gap-2 px-4 py-2 rounded-xl font-bold text-xs uppercase tracking-wider transition-all shadow-lg text-white"
-                            style={{
-                                backgroundColor: currentTheme.primary,
-                                boxShadow: `0 4px 12px ${currentTheme.primary}40`
-                            }}
+                            className="flex items-center gap-2 px-4 py-2 rounded-xl font-bold text-xs uppercase tracking-wider transition-all shadow-lg text-white theme-bg-primary theme-shadow-primary"
                         >
                             <Filter className="w-3.5 h-3.5" />
                             Filters
@@ -501,11 +502,7 @@ export const AnalyticsDashboard: React.FC<AnalyticsDashboardProps> = ({
                             whileHover={{ y: -2, scale: 1.02 }}
                             whileTap={{ scale: 0.98 }}
                             onClick={() => setIsThemeOpen(true)}
-                            className="flex items-center gap-2 px-4 py-2 rounded-xl font-bold text-xs uppercase tracking-wider transition-all shadow-lg text-white"
-                            style={{
-                                backgroundColor: currentTheme.accent,
-                                boxShadow: `0 4px 12px ${currentTheme.accent}40`
-                            }}
+                            className="flex items-center gap-2 px-4 py-2 rounded-xl font-bold text-xs uppercase tracking-wider transition-all shadow-lg text-white theme-bg-accent theme-shadow-accent"
                         >
                             <Palette className="w-3.5 h-3.5" />
                             Theme
@@ -531,30 +528,18 @@ export const AnalyticsDashboard: React.FC<AnalyticsDashboardProps> = ({
                             variants={{ hidden: { opacity: 0, scale: 0.98 }, show: { opacity: 1, scale: 1 } }}
                             className={`p-6 rounded-3xl border transition-all duration-500 ${isDarkMode ? 'bg-white/5 border-white/10' : 'bg-white border-slate-100 shadow-sm'} relative overflow-hidden`}
                         >
-                            <div
-                                className="absolute inset-0 opacity-[0.03] pointer-events-none"
-                                style={{ background: `linear-gradient(135deg, ${currentTheme.primary}, ${currentTheme.secondary})` }}
-                            />
+                            <div className="absolute inset-0 opacity-[0.03] pointer-events-none theme-gradient-primary" />
                             <div className="absolute top-0 right-0 p-4">
-                                <span
-                                    className="px-2 py-1 rounded-full text-[10px] font-black uppercase tracking-widest text-white"
-                                    style={{ backgroundColor: currentTheme.primary }}
-                                >
+                                <span className="px-2 py-1 rounded-full text-[10px] font-black uppercase tracking-widest text-white theme-bg-primary">
                                     AI Insight
                                 </span>
                             </div>
                             <div className="flex gap-4 items-start">
-                                <div
-                                    className="p-3 rounded-2xl text-white shadow-lg"
-                                    style={{
-                                        backgroundColor: currentTheme.primary,
-                                        boxShadow: `0 8px 16px ${currentTheme.primary}30`
-                                    }}
-                                >
+                                <div className="p-3 rounded-2xl text-white shadow-lg theme-bg-primary theme-shadow-primary">
                                     <Sparkles className="w-6 h-6" />
                                 </div>
                                 <div className="space-y-1 pr-20">
-                                    <h4 className={`text-sm font-black transition-colors duration-500`} style={{ color: currentTheme.primary }}>Smart Narrative</h4>
+                                    <h4 className={`text-sm font-black transition-colors duration-500 theme-text-primary`}>Smart Narrative</h4>
                                     <p className={`text-base font-medium leading-relaxed ${isDarkMode ? 'text-slate-300' : 'text-slate-700'}`}>
                                         {smartInsight.text}
                                     </p>
@@ -580,8 +565,7 @@ export const AnalyticsDashboard: React.FC<AnalyticsDashboardProps> = ({
                                             <ChevronRight className="w-4 h-4 opacity-50" />
                                             <button
                                                 onClick={() => handleBreadcrumbClick(i)}
-                                                className={i === drillStack.length - 1 ? 'font-black' : ''}
-                                                style={{ color: i === drillStack.length - 1 ? currentTheme.primary : 'inherit' }}
+                                                className={`transition-colors duration-500 ${i === drillStack.length - 1 ? 'font-black theme-text-primary' : ''}`}
                                             >
                                                 {level}
                                             </button>
@@ -593,11 +577,11 @@ export const AnalyticsDashboard: React.FC<AnalyticsDashboardProps> = ({
 
                         {/* KPI Grid */}
                         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6">
-                            <EnhancedKPICard title="รายการรวม" value={kpis.totalTransactions} icon={<Activity />} trend={kpis.trend} trendValue={kpis.trendPercentage} sparklineData={last7DaysData} color={currentTheme.primary} isDarkMode={isDarkMode} delay={0.1} />
-                            <EnhancedKPICard title="สต็อกปัจจุบัน" value={kpis.totalPalletsInStock} suffix="ชิ้น" icon={<Package />} sparklineData={last7DaysData} color={currentTheme.secondary} isDarkMode={isDarkMode} delay={0.2} />
-                            <EnhancedKPICard title="ระหว่างขนส่ง" value={kpis.totalPalletsInTransit} suffix="ชิ้น" icon={<Truck />} sparklineData={last7DaysData} color={currentTheme.accent} isDarkMode={isDarkMode} delay={0.3} />
-                            <EnhancedKPICard title="การใช้สอย" value={kpis.utilizationRate} suffix="%" icon={<TrendingUp />} sparklineData={last7DaysData} color="#10b981" isDarkMode={isDarkMode} delay={0.4} />
-                            <EnhancedKPICard title="ซ่อมบำรุง" value={kpis.maintenanceRate} suffix="%" icon={<Wrench />} sparklineData={last7DaysData} color="#f59e0b" isDarkMode={isDarkMode} delay={0.5} />
+                            <EnhancedKPICard title="รายการรวม" value={kpis.totalTransactions} icon={<Activity />} trend={kpis.trend} trendValue={kpis.trendPercentage} sparklineData={last7DaysData} variant="primary" color={currentTheme.primary} isDarkMode={isDarkMode} delay={0.1} />
+                            <EnhancedKPICard title="สต็อกปัจจุบัน" value={kpis.totalPalletsInStock} suffix="ชิ้น" icon={<Package />} sparklineData={last7DaysData} variant="secondary" color={currentTheme.secondary} isDarkMode={isDarkMode} delay={0.2} />
+                            <EnhancedKPICard title="ระหว่างขนส่ง" value={kpis.totalPalletsInTransit} suffix="ชิ้น" icon={<Truck />} sparklineData={last7DaysData} variant="accent" color={currentTheme.accent} isDarkMode={isDarkMode} delay={0.3} />
+                            <EnhancedKPICard title="การใช้สอย" value={kpis.utilizationRate} suffix="%" icon={<TrendingUp />} sparklineData={last7DaysData} variant="success" color="#10b981" isDarkMode={isDarkMode} delay={0.4} />
+                            <EnhancedKPICard title="ซ่อมบำรุง" value={kpis.maintenanceRate} suffix="%" icon={<Wrench />} sparklineData={last7DaysData} variant="warning" color="#f59e0b" isDarkMode={isDarkMode} delay={0.5} />
                         </div>
 
                         {/* Main Interaction Charts */}

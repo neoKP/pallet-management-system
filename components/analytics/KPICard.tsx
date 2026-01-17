@@ -9,10 +9,35 @@ interface KPICardProps {
     trend?: 'up' | 'down' | 'stable';
     trendValue?: number;
     suffix?: string;
-    color: string;
+    color?: string;
+    variant?: 'primary' | 'secondary' | 'accent';
     isDarkMode: boolean;
     delay?: number;
 }
+
+const VARIANT_STYLES = {
+    primary: {
+        shadow: 'theme-shadow-primary',
+        gradient: 'theme-gradient-overlay-primary',
+        bgSoft: 'theme-bg-primary-soft-20',
+        text: 'theme-text-primary',
+        border: 'theme-border-primary'
+    },
+    secondary: {
+        shadow: 'theme-shadow-secondary',
+        gradient: 'theme-gradient-overlay-secondary',
+        bgSoft: 'theme-bg-secondary-soft-20',
+        text: 'theme-text-secondary',
+        border: 'theme-border-secondary'
+    },
+    accent: {
+        shadow: 'theme-shadow-accent',
+        gradient: 'theme-gradient-overlay-accent',
+        bgSoft: 'theme-bg-accent-soft-20',
+        text: 'theme-text-accent',
+        border: 'border-pink-500' // fallback or define theme-border-accent if needed
+    }
+};
 
 export const KPICard: React.FC<KPICardProps> = ({
     title,
@@ -22,9 +47,11 @@ export const KPICard: React.FC<KPICardProps> = ({
     trendValue,
     suffix = '',
     color,
+    variant,
     isDarkMode,
     delay = 0,
 }) => {
+    const variantStyle = variant ? VARIANT_STYLES[variant] : null;
     // Animated counter using Framer Motion
     const numericValue = typeof value === 'number' ? value : 0;
     const spring = useSpring(0, { stiffness: 50, damping: 20 });
@@ -58,13 +85,14 @@ export const KPICard: React.FC<KPICardProps> = ({
             whileHover={{ scale: 1.05, y: -5 }}
             className={`
         relative overflow-hidden rounded-2xl p-6 cursor-pointer
-        dynamic-transition dynamic-shadow
+        dynamic-transition 
+        ${variantStyle ? variantStyle.shadow : 'dynamic-shadow'}
         ${isDarkMode
                     ? 'bg-white/5 backdrop-blur-xl border border-white/10'
                     : 'bg-white/80 backdrop-blur-xl border border-gray-200'
                 }
       `}
-            style={({
+            style={variantStyle ? undefined : ({
                 '--dynamic-shadow-value': isDarkMode
                     ? `0 8px 32px 0 ${color}26`
                     : '0 4px 16px rgba(0, 0, 0, 0.08)',
@@ -72,25 +100,25 @@ export const KPICard: React.FC<KPICardProps> = ({
         >
             {/* Gradient Background */}
             <motion.div
-                className="absolute inset-0 dynamic-bg"
+                className={`absolute inset-0 ${variantStyle ? variantStyle.gradient : 'dynamic-bg'}`}
                 initial={{ opacity: 0 }}
                 whileHover={{ opacity: 0.1 }}
                 transition={{ duration: 0.3 }}
-                style={({
+                style={variantStyle ? undefined : ({
                     '--dynamic-bg-value': `linear-gradient(135deg, ${color} 0%, transparent 100%)`,
                 } as React.CSSProperties)}
             />
 
             {/* Icon */}
             <motion.div
-                className="inline-flex p-3 rounded-xl mb-4 dynamic-bg-color"
+                className={`inline-flex p-3 rounded-xl mb-4 ${variantStyle ? variantStyle.bgSoft : 'dynamic-bg-color'}`}
                 whileHover={{ scale: 1.1, rotate: 5 }}
                 transition={{ type: 'spring', stiffness: 300 }}
-                style={({ '--dynamic-bg-color-value': `${color}20` } as React.CSSProperties)}
+                style={variantStyle ? undefined : ({ '--dynamic-bg-color-value': `${color}20` } as React.CSSProperties)}
             >
                 <div
-                    className="dynamic-color"
-                    style={({ '--dynamic-color-value': color } as React.CSSProperties)}
+                    className={variantStyle ? variantStyle.text : 'dynamic-color'}
+                    style={variantStyle ? undefined : ({ '--dynamic-color-value': color } as React.CSSProperties)}
                 >
                     {icon}
                 </div>
@@ -131,11 +159,11 @@ export const KPICard: React.FC<KPICardProps> = ({
 
             {/* Shine Effect */}
             <motion.div
-                className="absolute inset-0 pointer-events-none dynamic-bg"
+                className={`absolute inset-0 pointer-events-none ${variantStyle ? variantStyle.gradient : 'dynamic-bg'}`}
                 initial={{ x: '-100%' }}
                 whileHover={{ x: '100%' }}
                 transition={{ duration: 0.6 }}
-                style={({
+                style={variantStyle ? undefined : ({
                     '--dynamic-bg-value': `linear-gradient(90deg, transparent, ${isDarkMode ? 'rgba(255,255,255,0.1)' : 'rgba(255,255,255,0.4)'}, transparent)`,
                 } as React.CSSProperties)}
             />

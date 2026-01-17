@@ -3,6 +3,8 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { BranchId } from '../../types';
 import { BRANCHES } from '../../constants';
 import { ArrowRightLeft, Zap } from 'lucide-react';
+import { useAnalyticsStore } from '../../stores/analyticsStore';
+import { THEMES } from './ThemeEngine';
 
 interface SankeyNode {
     id: string;
@@ -46,49 +48,49 @@ export const SankeyDiagram: React.FC<SankeyDiagramProps> = ({
     const [hoveredNode, setHoveredNode] = useState<string | null>(null);
     const [mousePos, setMousePos] = useState({ x: 0, y: 0 });
 
+    const { themeColor } = useAnalyticsStore();
+    const currentTheme = THEMES.find(t => t.id === themeColor) || THEMES[0];
+
+    // Base constants
     const width = 800;
-    const nodeWidth = 20;
-    const padding = 40;
-    const minNodeHeight = 25;
-    const nodeGap = 12;
+    const nodeWidth = 24;
+    const padding = 60;
+    const minNodeHeight = 32;
+    const nodeGap = 16;
+    const topMargin = 20;
 
-    // Calculate number of unique nodes to determine dynamic height
-    const uniqueSources = new Set(data.filter(d => d.source !== d.dest && d.qty > 0).map(d => d.source)).size;
-    const uniqueTargets = new Set(data.filter(d => d.source !== d.dest && d.qty > 0).map(d => d.dest)).size;
-    const maxNodes = Math.max(uniqueSources, uniqueTargets, 3);
+    // Filter and prepare data
+    const filteredData = useMemo(() => data.filter(d => d.source !== d.dest && d.qty > 0), [data]);
 
-    // Dynamic height: minimum 400, scale up for more nodes
-    const calculatedHeight = Math.max(400, maxNodes * (minNodeHeight + nodeGap) + padding * 2 + 50);
-    const height = calculatedHeight;
-
-    const { nodes, links, totalFlow } = useMemo(() => {
-        // Find unique source and destination nodes
-        const sources = Array.from(new Set(data.map(d => d.source)));
-        const targets = Array.from(new Set(data.map(d => d.dest)));
-
-        // Filter out same source/target if they are just placeholders
-        const filteredData = data.filter(d => d.source !== d.dest && d.qty > 0);
-
-        // Calculate total value per node
+    const { nodes, links, totalFlow, svgHeight } = useMemo(() => {
+        // Calculate totals
         const sourceTotals: Record<string, number> = {};
         const targetTotals: Record<string, number> = {};
-
         filteredData.forEach(d => {
             sourceTotals[d.source] = (sourceTotals[d.source] || 0) + d.qty;
             targetTotals[d.dest] = (targetTotals[d.dest] || 0) + d.qty;
         });
 
-        const totalValue = Object.values(sourceTotals).reduce((a, b) => a + b, 0);
+        const totalValue = Object.values(sourceTotals).reduce((a, b) => a + b, 0) || 1;
+        const sourceEntries = Object.entries(sourceTotals).sort((a, b) => b[1] - a[1]);
+        const targetEntries = Object.entries(targetTotals).sort((a, b) => b[1] - a[1]);
 
-        // Position nodes
+        // CALCULATE ACTUAL HEIGHT NEEDED
+        // We use a fixed "flexible space" of 400px plus the sum of all mandatory minimums and gaps
+        const flexSpace = 300;
+        const sourceReq = sourceEntries.length * (minNodeHeight + nodeGap) + flexSpace;
+        const targetReq = targetEntries.length * (minNodeHeight + nodeGap) + flexSpace;
+        const internalHeight = Math.max(sourceReq, targetReq, 500);
+        const totalSvgHeight = internalHeight + (padding * 2) + topMargin;
+
         const nodes: SankeyNode[] = [];
         const links: SankeyLink[] = [];
 
-        // Source Nodes (Left)
-        let currentY = padding;
-        const sourceEntries = Object.entries(sourceTotals).sort((a, b) => b[1] - a[1]);
+        // Position Source Nodes
+        let currentY = padding + topMargin;
+        const usableHeightS = internalHeight - (sourceEntries.length * nodeGap);
         sourceEntries.forEach(([id, val]) => {
-            const h = Math.max((val / totalValue) * (height - padding * 2), minNodeHeight);
+            const h = Math.max((val / totalValue) * (usableHeightS * 0.8), minNodeHeight);
             const branch = BRANCHES.find(b => b.id === id);
             nodes.push({
                 id,
@@ -96,17 +98,17 @@ export const SankeyDiagram: React.FC<SankeyDiagramProps> = ({
                 x: padding,
                 y: currentY,
                 height: h,
-                color: '#6366f1',
+                color: currentTheme.primary,
                 totalValue: val
             });
             currentY += h + nodeGap;
         });
 
-        // Target Nodes (Right)
-        currentY = padding;
-        const targetEntries = Object.entries(targetTotals).sort((a, b) => b[1] - a[1]);
+        // Position Target Nodes (Right)
+        currentY = padding + topMargin;
+        const usableHeightT = internalHeight - (targetEntries.length * nodeGap);
         targetEntries.forEach(([id, val]) => {
-            const h = Math.max((val / totalValue) * (height - padding * 2), minNodeHeight);
+            const h = Math.max((val / totalValue) * (usableHeightT * 0.8), minNodeHeight);
             const branch = BRANCHES.find(b => b.id === id);
             nodes.push({
                 id: id + '_target',
@@ -114,7 +116,7 @@ export const SankeyDiagram: React.FC<SankeyDiagramProps> = ({
                 x: width - padding - nodeWidth,
                 y: currentY,
                 height: h,
-                color: '#8b5cf6',
+                color: currentTheme.secondary,
                 totalValue: val
             });
             currentY += h + nodeGap;
@@ -131,17 +133,14 @@ export const SankeyDiagram: React.FC<SankeyDiagramProps> = ({
                 if (targetNode) {
                     const linkWidth = Math.max((d.qty / (sourceTotals[sourceNode.id] || 1)) * sourceNode.height, 3);
 
-                    // Get target offset
                     if (targetOffsets[d.dest] === undefined) targetOffsets[d.dest] = 0;
                     const tOffset = targetOffsets[d.dest];
 
-                    // Path with smooth curves
                     const x0 = sourceNode.x + nodeWidth;
                     const y0 = sourceNode.y + sOffset + linkWidth / 2;
                     const x1 = targetNode.x;
                     const y1 = targetNode.y + tOffset + linkWidth / 2;
 
-                    // Create smooth bezier curve
                     const curvature = 0.5;
                     const xi = (x0 + x1) * curvature;
                     const path = `M${x0},${y0} C${xi},${y0} ${x1 - (x1 - x0) * curvature},${y1} ${x1},${y1}`;
@@ -168,8 +167,8 @@ export const SankeyDiagram: React.FC<SankeyDiagramProps> = ({
             });
         });
 
-        return { nodes, links, totalFlow: totalValue };
-    }, [data, width, height]);
+        return { nodes, links, totalFlow: totalValue === 1 && filteredData.length === 0 ? 0 : totalValue, svgHeight: totalSvgHeight };
+    }, [filteredData, currentTheme, width]);
 
     const handleLinkHover = (link: SankeyLink | null, event?: React.MouseEvent) => {
         setHoveredLink(link);
@@ -206,11 +205,15 @@ export const SankeyDiagram: React.FC<SankeyDiagramProps> = ({
                 }`}
         >
             <div className="flex justify-between items-center mb-6">
-                <h3 className={`text-lg font-bold flex items-center gap-2 ${isDarkMode ? 'text-white' : 'text-slate-800'}`}>
-                    <div className="w-1.5 h-6 bg-indigo-500 rounded-full" />
-                    {title}
+                <h3 className={`text-xl font-black flex items-center gap-2 transition-colors duration-500`}>
+                    <div
+                        className="w-2 h-8 rounded-full shadow-lg theme-bg-primary theme-shadow-primary"
+                    />
+                    <span className={isDarkMode ? 'text-white' : 'text-black'}>{title}</span>
                     {totalFlow > 0 && (
-                        <span className="ml-2 text-xs font-normal px-2 py-1 rounded-full bg-indigo-500/20 text-indigo-400">
+                        <span
+                            className="ml-2 text-xs font-bold px-3 py-1 rounded-full shadow-inner theme-bg-soft theme-text-primary"
+                        >
                             {totalFlow.toLocaleString()} total
                         </span>
                     )}
@@ -225,20 +228,20 @@ export const SankeyDiagram: React.FC<SankeyDiagramProps> = ({
                     setMousePos({ x: e.clientX - rect.left, y: e.clientY - rect.top });
                 }}
             >
-                <svg width={width} height={height} viewBox={`0 0 ${width} ${height}`} className="mx-auto">
+                <svg width={width} height={svgHeight} viewBox={`0 0 ${width} ${svgHeight}`} className="mx-auto">
                     <defs>
                         {/* Gradient definitions for normal state */}
                         {links.map((link, i) => (
                             <linearGradient key={`grad-${i}`} id={`grad-${i}`} x1="0%" y1="0%" x2="100%" y2="0%">
-                                <stop offset="0%" stopColor="#6366f1" stopOpacity="0.3" />
-                                <stop offset="100%" stopColor="#8b5cf6" stopOpacity="0.3" />
+                                <stop offset="0%" stopColor={currentTheme.primary} stopOpacity="0.4" />
+                                <stop offset="100%" stopColor={currentTheme.secondary} stopOpacity="0.4" />
                             </linearGradient>
                         ))}
                         {/* Highlighted gradient */}
                         <linearGradient id="grad-highlight" x1="0%" y1="0%" x2="100%" y2="0%">
-                            <stop offset="0%" stopColor="#22d3ee" stopOpacity="0.9" />
-                            <stop offset="50%" stopColor="#a855f7" stopOpacity="0.9" />
-                            <stop offset="100%" stopColor="#ec4899" stopOpacity="0.9" />
+                            <stop offset="0%" stopColor={currentTheme.primary} stopOpacity={1} />
+                            <stop offset="50%" stopColor={currentTheme.accent || '#ec4899'} stopOpacity={1} />
+                            <stop offset="100%" stopColor={currentTheme.secondary} stopOpacity={1} />
                         </linearGradient>
                         {/* Glow filter */}
                         <filter id="glow" x="-50%" y="-50%" width="200%" height="200%">

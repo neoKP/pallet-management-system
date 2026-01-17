@@ -10,11 +10,50 @@ interface EnhancedKPICardProps {
     trend?: 'up' | 'down' | 'stable';
     trendValue?: number;
     sparklineData?: number[];
-    color: string;
+    color?: string;
+    variant?: 'primary' | 'secondary' | 'accent' | 'success' | 'warning';
     isDarkMode: boolean;
     delay?: number;
     onClick?: () => void;
 }
+
+const VARIANT_STYLES = {
+    primary: {
+        shadow: 'theme-shadow-primary',
+        gradient: 'theme-gradient-overlay-primary',
+        text: 'theme-text-primary',
+        bgSoft: 'theme-bg-primary-soft-20',
+        border: 'theme-border-primary'
+    },
+    secondary: {
+        shadow: 'theme-shadow-secondary',
+        gradient: 'theme-gradient-overlay-secondary',
+        text: 'theme-text-secondary',
+        bgSoft: 'theme-bg-secondary-soft-20',
+        border: 'theme-border-secondary'
+    },
+    accent: {
+        shadow: 'theme-shadow-accent',
+        gradient: 'theme-gradient-overlay-accent',
+        text: 'theme-text-accent',
+        bgSoft: 'theme-bg-accent-soft-20',
+        border: 'border-pink-500'
+    },
+    success: {
+        shadow: 'shadow-emerald-500/20',
+        gradient: 'from-emerald-500/10 to-transparent',
+        text: 'text-emerald-500',
+        bgSoft: 'bg-emerald-500/20',
+        border: 'border-emerald-500/50'
+    },
+    warning: {
+        shadow: 'shadow-amber-500/20',
+        gradient: 'from-amber-500/10 to-transparent',
+        text: 'text-amber-500',
+        bgSoft: 'bg-amber-500/20',
+        border: 'border-amber-500/50'
+    }
+};
 
 export const EnhancedKPICard: React.FC<EnhancedKPICardProps> = ({
     title,
@@ -25,10 +64,12 @@ export const EnhancedKPICard: React.FC<EnhancedKPICardProps> = ({
     trendValue,
     sparklineData,
     color,
+    variant,
     isDarkMode,
     delay = 0,
     onClick,
 }) => {
+    const variantStyle = variant ? VARIANT_STYLES[variant] : null;
     const getTrendIcon = () => {
         if (trend === 'up') return '↑';
         if (trend === 'down') return '↓';
@@ -55,14 +96,15 @@ export const EnhancedKPICard: React.FC<EnhancedKPICardProps> = ({
                     : 'bg-gradient-to-br from-white to-gray-50 border border-gray-200'
                 }
                 backdrop-blur-sm shadow-lg hover:shadow-2xl transition-all
+                ${variantStyle?.shadow || ''}
             `}
         >
             {/* Background Glow */}
             <div
-                className="absolute inset-0 opacity-10"
-                style={{
+                className={`absolute inset-0 opacity-10 ${variantStyle?.gradient || ''}`}
+                style={!variantStyle ? {
                     background: `radial-gradient(circle at top right, ${color}, transparent 70%)`,
-                } as React.CSSProperties}
+                } as React.CSSProperties : undefined}
             />
 
             {/* Header */}
@@ -75,12 +117,12 @@ export const EnhancedKPICard: React.FC<EnhancedKPICardProps> = ({
                 <motion.div
                     whileHover={{ rotate: 360 }}
                     transition={{ duration: 0.5 }}
-                    className="p-3 rounded-lg"
-                    style={{
+                    className={`p-3 rounded-lg ${variantStyle?.bgSoft || ''} ${variantStyle?.text || ''}`}
+                    style={!variantStyle ? {
                         backgroundColor: `${color}20`,
                         color,
                         boxShadow: `0 0 20px ${color}30`,
-                    } as React.CSSProperties}
+                    } as React.CSSProperties : undefined}
                 >
                     {icon}
                 </motion.div>
@@ -143,10 +185,10 @@ export const EnhancedKPICard: React.FC<EnhancedKPICardProps> = ({
 
             {/* Glow Effect on Hover */}
             <div
-                className="absolute inset-0 opacity-0 hover:opacity-100 transition-opacity pointer-events-none"
-                style={{
+                className={`absolute inset-0 opacity-0 hover:opacity-100 transition-opacity pointer-events-none ${variantStyle?.gradient || ''}`}
+                style={!variantStyle ? {
                     background: `radial-gradient(circle at center, ${color}10, transparent 70%)`,
-                } as React.CSSProperties}
+                } as React.CSSProperties : undefined}
             />
         </motion.div>
     );

@@ -175,13 +175,12 @@ export const ForecastChart: React.FC<ForecastChartProps> = ({
                 >
                     <div className="flex items-center gap-2 mb-2">
                         {isForecast ? (
-                            <Brain className="w-4 h-4" style={{ color: currentTheme.primary }} />
+                            <Brain className="w-4 h-4 theme-text-primary" />
                         ) : (
-                            <TrendingUp className="w-4 h-4" style={{ color: currentTheme.secondary }} />
+                            <TrendingUp className="w-4 h-4 theme-text-secondary" />
                         )}
                         <p
-                            className={`font-bold text-xs uppercase tracking-wider transition-colors duration-500`}
-                            style={{ color: isDarkMode ? currentTheme.secondary : currentTheme.primary }}
+                            className={`font-bold text-xs uppercase tracking-wider transition-colors duration-500 ${isDarkMode ? 'theme-text-secondary' : 'theme-text-primary'}`}
                         >
                             {new Date(label).toLocaleDateString('th-TH', { month: 'short', day: 'numeric', year: 'numeric' })}
                         </p>
@@ -204,8 +203,7 @@ export const ForecastChart: React.FC<ForecastChartProps> = ({
                                         {labels[entry.dataKey] || entry.dataKey}
                                     </span>
                                     <span
-                                        className={`text-xs font-bold transition-colors duration-500`}
-                                        style={{ color: isDarkMode ? 'white' : 'black' }}
+                                        className={`text-xs font-bold transition-colors duration-500 ${isDarkMode ? 'text-white' : 'text-black'}`}
                                     >
                                         {entry.value.toLocaleString()}
                                     </span>
@@ -217,8 +215,7 @@ export const ForecastChart: React.FC<ForecastChartProps> = ({
                     {isForecast && (
                         <div className={`mt-2 pt-2 border-t ${isDarkMode ? 'border-white/10' : 'border-gray-200'}`}>
                             <span
-                                className="text-[10px] font-medium flex items-center gap-1"
-                                style={{ color: currentTheme.secondary }}
+                                className="text-[10px] font-medium flex items-center gap-1 theme-text-secondary"
                             >
                                 <Sparkles className="w-3 h-3" />
                                 AI Prediction
@@ -250,45 +247,27 @@ export const ForecastChart: React.FC<ForecastChartProps> = ({
                     ? 'bg-gradient-to-br from-slate-900/80 to-slate-900/40 border border-white/10'
                     : 'bg-gradient-to-br from-white to-gray-50 border border-slate-200 shadow-xl'
                 }
-                backdrop-blur-xl
+                backdrop-blur-xl theme-border-left-primary
             `}
-            style={{
-                borderLeft: `4px solid ${currentTheme.primary}`,
-            }}
         >
             {/* AI Scanline Effect */}
             <motion.div
-                className="absolute inset-0 pointer-events-none opacity-[0.05] z-10"
-                style={{
-                    background: `linear-gradient(transparent, ${currentTheme.primary}, transparent)`,
-                    height: '10%',
-                }}
+                className="absolute inset-0 pointer-events-none opacity-[0.05] z-10 theme-scanline"
+                style={{ height: '10%' }}
                 animate={{ top: ['-10%', '110%'] }}
                 transition={{ duration: 4, repeat: Infinity, ease: 'linear' }}
             />
             {/* Header */}
             <div className="flex flex-col md:flex-row md:items-center justify-between mb-6 gap-4">
                 <div className="flex items-center gap-3">
-                    <div
-                        className={`p-2.5 rounded-2xl shadow-lg transition-all duration-500`}
-                        style={{
-                            backgroundColor: currentTheme.primary,
-                            boxShadow: `0 8px 20px ${currentTheme.primary}40`
-                        }}
-                    >
+                    <div className="p-2.5 rounded-2xl shadow-lg transition-all duration-500 theme-bg-primary theme-shadow-primary">
                         <Brain className="w-6 h-6 text-white" />
                     </div>
                     <div>
-                        <h3
-                            className={`text-lg font-black transition-colors duration-500`}
-                            style={{ color: isDarkMode ? 'white' : 'black' }}
-                        >
+                        <h3 className={`text-lg font-black transition-colors duration-500 ${isDarkMode ? 'text-white' : 'text-black'}`}>
                             {title}
                         </h3>
-                        <p
-                            className={`text-xs transition-colors duration-500 font-medium`}
-                            style={{ color: currentTheme.secondary }}
-                        >
+                        <p className="text-xs transition-colors duration-500 font-medium theme-text-secondary">
                             📊 ข้อมูลจริง + 🔮 พยากรณ์ {forecastDays} วันล่วงหน้า
                         </p>
                     </div>

@@ -74,9 +74,7 @@ export const SimpleBarChart: React.FC<SimpleBarChartProps> = ({
                                         style={{
                                             '--dynamic-height-value': `${barHeight}%`,
                                             '--dynamic-bg-color-value': color,
-                                            '--dynamic-shadow-value': isHovered
-                                                ? `0 8px 24px ${color}40`
-                                                : `0 4px 12px ${color}20`,
+                                            '--dynamic-shadow-value': isHovered ? `0 8px 24px ${color}40` : `0 4px 12px ${color}20`,
                                         } as React.CSSProperties}
                                     >
                                         {/* Shine Effect */}
@@ -212,10 +210,10 @@ export const SimplePieChart: React.FC<SimplePieChartProps> = ({
                             >
                                 <div className="flex items-center gap-3">
                                     <div
-                                        className="w-4 h-4 rounded-full transition-transform duration-300 dynamic-bg-color"
+                                        className="w-4 h-4 rounded-full transition-transform duration-300 dynamic-bg-color dynamic-scale"
                                         style={{
                                             '--dynamic-bg-color-value': item.color,
-                                            transform: isHovered ? 'scale(1.2)' : 'scale(1)',
+                                            '--dynamic-scale-value': isHovered ? 1.2 : 1,
                                         } as React.CSSProperties}
                                     />
                                     <span className={`font-medium ${isDarkMode ? 'text-gray-300' : 'text-gray-700'}`}>

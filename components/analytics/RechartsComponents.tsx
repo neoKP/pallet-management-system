@@ -58,36 +58,18 @@ export const RechartsBarChart: React.FC<RechartsBarChartProps> = ({
                     animate={{ opacity: 1, y: 0, scale: 1 }}
                     className={`
                         relative px-5 py-4 rounded-2xl shadow-2xl border backdrop-blur-xl min-w-[180px]
-                        ${isDarkMode
-                            ? 'bg-slate-900/95'
-                            : 'bg-white/95'
-                        }
+                        ${isDarkMode ? 'bg-slate-900/95 border-white/20' : 'bg-white/95 border-gray-200 shadow-xl'}
+                        item-border
                     `}
-                    style={{ borderColor: `${itemColor}40` }}
+                    style={{ '--item-color': itemColor } as React.CSSProperties}
                 >
-                    {/* Glow background */}
-                    <div
-                        className="absolute inset-0 rounded-2xl blur-xl -z-10"
-                        style={{
-                            background: `radial-gradient(circle, ${itemColor}20 0%, transparent 70%)`
-                        }}
-                    />
-
-                    {/* Header with name */}
+                    <div className="absolute inset-0 rounded-2xl blur-xl -z-10 item-glow-bg" />
                     <div className="flex items-center gap-2 mb-3 pb-2 border-b border-white/10">
-                        <div
-                            className="w-3 h-3 rounded-lg shadow-lg"
-                            style={{
-                                backgroundColor: itemColor,
-                                boxShadow: `0 0 12px ${itemColor}`
-                            }}
-                        />
+                        <div className="w-3 h-3 rounded-lg shadow-lg item-bg item-shadow" />
                         <span className={`font-black text-sm ${isDarkMode ? 'text-white' : 'text-slate-900'}`}>
                             {item.name}
                         </span>
                     </div>
-
-                    {/* Value with percentage */}
                     <div className="space-y-2">
                         <div className="flex items-center justify-between">
                             <span className={`text-xs ${isDarkMode ? 'text-slate-400' : 'text-slate-500'}`}>
@@ -101,26 +83,17 @@ export const RechartsBarChart: React.FC<RechartsBarChartProps> = ({
                             <span className={`text-xs ${isDarkMode ? 'text-slate-400' : 'text-slate-500'}`}>
                                 📈 สัดส่วน
                             </span>
-                            <span
-                                className="text-sm font-black px-2 py-0.5 rounded-full"
-                                style={{
-                                    backgroundColor: `${itemColor}20`,
-                                    color: itemColor
-                                }}
-                            >
+                            <span className="text-sm font-black px-2 py-0.5 rounded-full theme-bg-soft item-text">
                                 {percentage}%
                             </span>
                         </div>
                     </div>
-
-                    {/* Mini progress bar */}
                     <div className="mt-3 h-1 rounded-full bg-white/10 overflow-hidden">
                         <motion.div
                             initial={{ width: 0 }}
                             animate={{ width: `${percentage}%` }}
                             transition={{ duration: 0.5, ease: "easeOut" }}
-                            className="h-full rounded-full"
-                            style={{ backgroundColor: itemColor }}
+                            className="h-full rounded-full item-bg"
                         />
                     </div>
                 </motion.div>
@@ -157,11 +130,7 @@ export const RechartsBarChart: React.FC<RechartsBarChartProps> = ({
                     height={height}
                     rx={6}
                     fill={fill}
-                    style={{
-                        transition: 'all 0.3s ease',
-                        transform: isActive ? `scaleY(1.02)` : 'scaleY(1)',
-                        transformOrigin: 'bottom'
-                    }}
+                    className={`bar-rect ${isActive ? 'active' : ''}`}
                 />
             </g>
         );
@@ -179,10 +148,11 @@ export const RechartsBarChart: React.FC<RechartsBarChartProps> = ({
                     ? 'bg-gradient-to-br from-slate-900/50 to-slate-950/50 border border-white/10'
                     : 'bg-white border border-slate-200 shadow-[0_8px_30px_rgb(0,0,0,0.04)]'
                 }
+                ${isHovering ? 'dynamic-shadow shadow-2xl' : ''}
             `}
             style={{
-                boxShadow: isHovering ? `0 20px 40px ${currentTheme.primary}15` : 'none'
-            }}
+                '--dynamic-shadow-value': isHovering ? `0 20px 40px rgba(var(--theme-primary-rgb), 0.15)` : 'none'
+            } as React.CSSProperties}
         >
             {/* Animated background glow */}
             <AnimatePresence>
@@ -191,28 +161,21 @@ export const RechartsBarChart: React.FC<RechartsBarChartProps> = ({
                         initial={{ opacity: 0 }}
                         animate={{ opacity: 1 }}
                         exit={{ opacity: 0 }}
-                        className="absolute inset-0 pointer-events-none"
-                        style={{
-                            background: isDarkMode
-                                ? `radial-gradient(circle at 50% 80%, ${currentTheme.primary}15 0%, transparent 60%)`
-                                : `radial-gradient(circle at 50% 80%, ${currentTheme.primary}08 0%, transparent 60%)`
-                        }}
+                        className="absolute inset-0 pointer-events-none opacity-[0.08] theme-glow-bg"
                     />
                 )}
             </AnimatePresence>
 
             <div className="flex justify-between items-center mb-6 relative z-10">
                 <h3
-                    className={`text-lg font-bold tracking-tight flex items-center gap-2 transition-colors duration-500`}
-                    style={{ color: isDarkMode ? currentTheme.secondary : currentTheme.primary }}
+                    className={`text-lg font-bold tracking-tight flex items-center gap-2 transition-colors duration-500 ${isDarkMode ? 'theme-text-secondary' : 'theme-text-primary'}`}
                 >
                     {title}
                     {isHovering && (
                         <motion.span
                             initial={{ opacity: 0, scale: 0 }}
                             animate={{ opacity: 1, scale: 1 }}
-                            className="text-xs px-2 py-1 rounded-full text-white"
-                            style={{ background: `linear-gradient(to right, ${currentTheme.primary}, ${currentTheme.secondary})` }}
+                            className="text-xs px-2 py-1 rounded-full text-white theme-gradient-primary"
                         >
                             Click to drill
                         </motion.span>
@@ -475,16 +438,14 @@ export const RechartsPieChart: React.FC<RechartsPieChartProps> = ({
 
             <div className="flex items-center justify-between mb-6 relative z-10">
                 <h3
-                    className={`text-lg font-bold flex items-center gap-2 transition-colors duration-500`}
-                    style={{ color: isDarkMode ? currentTheme.secondary : currentTheme.primary }}
+                    className={`text-lg font-bold flex items-center gap-2 transition-colors duration-500 ${isDarkMode ? 'theme-text-secondary' : 'theme-text-primary'}`}
                 >
                     {title}
                     {isHovering && (
                         <motion.span
                             initial={{ opacity: 0, scale: 0 }}
                             animate={{ opacity: 1, scale: 1 }}
-                            className="text-xs px-2 py-1 rounded-full text-white"
-                            style={{ background: `linear-gradient(to right, ${currentTheme.primary}, ${currentTheme.secondary})` }}
+                            className="text-xs px-2 py-1 rounded-full text-white theme-gradient-bg"
                         >
                             Hover segments
                         </motion.span>
@@ -573,29 +534,15 @@ export const RechartsPieChart: React.FC<RechartsPieChartProps> = ({
                                     whileHover={{ scale: 1.05 }}
                                     className={`
                                         flex items-center gap-2 px-3 py-1.5 rounded-full cursor-pointer transition-all
-                                        ${isActive
-                                            ? 'bg-white/10 shadow-lg'
-                                            : 'bg-transparent hover:bg-white/5'
-                                        }
+                                        ${isActive ? 'bg-white/10 shadow-lg item-shadow' : 'bg-transparent hover:bg-white/5'}
                                     `}
-                                    style={{
-                                        boxShadow: isActive ? `0 0 20px ${entry.color}30` : 'none'
-                                    }}
+                                    style={{ '--item-color': entry.color } as React.CSSProperties}
                                 >
-                                    <div
-                                        className="w-2.5 h-2.5 rounded-full"
-                                        style={{
-                                            backgroundColor: entry.color,
-                                            boxShadow: isActive ? `0 0 8px ${entry.color}` : 'none'
-                                        }}
-                                    />
+                                    <div className="w-2.5 h-2.5 rounded-full item-bg item-shadow" />
                                     <span className={`text-xs font-medium ${isDarkMode ? 'text-slate-400' : 'text-slate-600'}`}>
                                         {entry.name}
                                     </span>
-                                    <span
-                                        className="text-xs font-black"
-                                        style={{ color: entry.color }}
-                                    >
+                                    <span className="text-xs font-black item-text">
                                         {percentage}%
                                     </span>
                                 </motion.div>
@@ -667,25 +614,16 @@ export const RechartsLineChart: React.FC<RechartsLineChartProps> = ({
                     style={{ borderColor: `${currentTheme.primary}40` }}
                 >
                     {/* Animated glow background */}
-                    <div
-                        className="absolute inset-0 rounded-2xl blur-xl -z-10"
-                        style={{ background: `linear-gradient(to right, ${currentTheme.primary}15, ${currentTheme.secondary}15)` }}
-                    />
+                    <div className="absolute inset-0 rounded-2xl blur-xl -z-10 theme-gradient-bg-soft" />
 
                     {/* Date header with icon */}
                     <div className="flex items-center gap-2 mb-3 pb-2 border-b border-white/10">
-                        <div
-                            className="p-1.5 rounded-lg shadow-lg"
-                            style={{ background: `linear-gradient(to right, ${currentTheme.primary}, ${currentTheme.secondary})` }}
-                        >
+                        <div className="p-1.5 rounded-lg shadow-lg theme-gradient-bg">
                             <svg className="w-3.5 h-3.5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
                             </svg>
                         </div>
-                        <span
-                            className={`font-black text-sm`}
-                            style={{ color: isDarkMode ? currentTheme.secondary : currentTheme.primary }}
-                        >
+                        <span className={`font-black text-sm ${isDarkMode ? 'theme-text-secondary' : 'theme-text-primary'}`}>
                             {label}
                         </span>
                     </div>
@@ -708,14 +646,8 @@ export const RechartsLineChart: React.FC<RechartsLineChartProps> = ({
                                     transition={{ delay: index * 0.05 }}
                                     className="flex items-center justify-between gap-4"
                                 >
-                                    <div className="flex items-center gap-2">
-                                        <div
-                                            className="w-2 h-2 rounded-full shadow-lg"
-                                            style={{
-                                                backgroundColor: entry.color,
-                                                boxShadow: `0 0 8px ${entry.color}`
-                                            }}
-                                        />
+                                    <div className="flex items-center gap-2" style={{ '--item-color': entry.color } as React.CSSProperties}>
+                                        <div className="w-2 h-2 rounded-full shadow-lg item-bg item-shadow" />
                                         <span className={`text-xs font-medium ${isDarkMode ? 'text-slate-400' : 'text-slate-600'}`}>
                                             {labels[entry.dataKey] || entry.name}
                                         </span>
@@ -740,10 +672,7 @@ export const RechartsLineChart: React.FC<RechartsLineChartProps> = ({
                             <span className={`text-xs font-bold uppercase tracking-wider ${isDarkMode ? 'text-slate-500' : 'text-slate-400'}`}>
                                 รวมทั้งหมด
                             </span>
-                            <span
-                                className={`text-lg font-black bg-clip-text text-transparent`}
-                                style={{ backgroundImage: `linear-gradient(to right, ${currentTheme.primary}, ${currentTheme.secondary})` }}
-                            >
+                            <span className="text-lg font-black bg-clip-text text-transparent theme-gradient-text">
                                 {total.toLocaleString()}
                             </span>
                         </div>
