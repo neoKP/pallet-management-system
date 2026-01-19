@@ -16,6 +16,7 @@ import TransactionTimelineModal from '../movements/TransactionTimelineModal';
 import DocumentPreviewModal from '../movements/DocumentPreviewModal';
 import StockVisualizer from './StockVisualizer';
 import RecentTransactionsTable from './RecentTransactionsTable';
+import InTransitTable from './InTransitTable';
 import { handleExportToExcel } from '../../utils/excelExport';
 import { BRANCHES } from '../../constants';
 // @ts-ignore
@@ -370,6 +371,12 @@ const Dashboard: React.FC<DashboardProps> = ({ stock, selectedBranch, transactio
                     Object.entries(stockOverview.confirmed).map(([k, v]) => [k, v + (stockOverview.pending[k] || 0)])
                 )}
                 totalStock={stats.totalStock}
+            />
+
+            {/* In-Transit Table */}
+            <InTransitTable
+                transactions={transactions}
+                selectedBranch={selectedBranch}
             />
 
             <RecentTransactionsTable
