@@ -5,7 +5,7 @@
 ### **Total: 6 Premium Components**
 
 | # | Component | File | Status | Features |
-|---|-----------|------|--------|----------|
+|---|---|---|---|---|
 | 1 | **GaugeChart** | `GaugeChart.tsx` | ✅ Complete | Animated needle, color-coded, status badges |
 | 2 | **Sparkline** | `Sparkline.tsx` | ✅ Complete | Mini trend chart, gradient fill, animated |
 | 3 | **HeatmapCalendar** | `HeatmapCalendar.tsx` | ✅ Complete | 12-week grid, color intensity, tooltips |
@@ -15,9 +15,9 @@
 
 ---
 
-## 📁 **Project Structure**
+### **Project Structure**
 
-```
+```text
 components/analytics/
 ├── AnalyticsDashboard.tsx      (Main Dashboard - TO UPDATE)
 ├── KPICard.tsx                 (Original - Keep for reference)

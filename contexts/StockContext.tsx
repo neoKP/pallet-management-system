@@ -367,12 +367,14 @@ export const StockProvider: React.FC<StockProviderProps> = ({ children }) => {
         note: string;
         branchId: BranchId;
         targetBranchId?: BranchId;
+        targetPalletId?: PalletId;
     }) => {
         const now = new Date();
         const dateStr = now.toISOString().split('T')[0];
         const timestamp = now.toISOString();
 
         const targetBranch = data.targetBranchId || data.branchId;
+        const finalTargetPallet = data.targetPalletId || 'general';
 
         const docNo = generateDocNo('MAINTENANCE', data.branchId, targetBranch, dateStr);
 
@@ -385,10 +387,11 @@ export const StockProvider: React.FC<StockProviderProps> = ({ children }) => {
             status: 'COMPLETED',
             source: data.branchId,
             dest: targetBranch,
-            palletId: data.items[0]?.palletId || 'unknown' as PalletId,
+            palletId: finalTargetPallet,
             qty: data.fixedQty + data.scrappedQty,
             note: data.note,
-            noteExtended: `REPAIR: ${data.fixedQty}, SCRAP: ${data.scrappedQty}`
+            noteExtended: `REPAIR: ${data.fixedQty}, SCRAP: ${data.scrappedQty}`,
+            originalPalletId: data.items[0]?.palletId // track first item as reference
         } as Transaction;
 
         const nextStock = { ...stock };
@@ -401,7 +404,7 @@ export const StockProvider: React.FC<StockProviderProps> = ({ children }) => {
         }
         if (nextStock[targetBranch]) {
             const t = { ...nextStock[targetBranch] } as Record<PalletId, number>;
-            if (data.fixedQty > 0) t['general'] = (t['general'] || 0) + data.fixedQty;
+            if (data.fixedQty > 0) t[finalTargetPallet] = (t[finalTargetPallet] || 0) + data.fixedQty;
             nextStock[targetBranch] = t;
         }
 

@@ -224,10 +224,10 @@ export const ActionableInsights: React.FC<ActionableInsightsProps> = ({
                 </div>
                 <div>
                     <h3 className={`text-lg font-bold ${isDarkMode ? 'text-white' : 'text-slate-900'}`}>
-                        🧠 Actionable AI Insights
+                        🧠 Intelligence Operational Insights
                     </h3>
                     <p className={`text-xs ${isDarkMode ? 'text-emerald-400' : 'text-emerald-600'}`}>
-                        คำแนะนำเชิงปฏิบัติอัตโนมัติจากระบบ AI
+                        คำแนะนำเชิงปฏิบัติโดยวิเคราะห์จากข้อมูลจริง (Real-time Analytics)
                     </p>
                 </div>
                 <div className={`ml-auto px-3 py-1 rounded-full text-xs font-bold ${isDarkMode ? 'bg-emerald-500/20 text-emerald-400' : 'bg-emerald-100 text-emerald-600'}`}>

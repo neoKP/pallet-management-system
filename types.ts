@@ -150,6 +150,7 @@ export interface BatchMaintenanceData {
   fixedQty: number;
   scrappedQty: number;
   note: string;
+  targetPalletId?: PalletId;
 }
 
 /**

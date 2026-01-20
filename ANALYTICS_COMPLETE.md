@@ -86,7 +86,7 @@
 
 ### **Dark Mode (Default)**
 
-```
+```markdown
 Background: linear-gradient(135deg, #0f172a → #581c87 → #0f172a)
 Cards: bg-white/5 + backdrop-blur-xl + border-white/10
 Primary: #6366f1 (Indigo) → #8b5cf6 (Purple)
@@ -97,7 +97,7 @@ Danger: #ef4444 (Red)
 
 ### **Light Mode**
 
-```
+```markdown
 Background: linear-gradient(135deg, #f9fafb → #dbeafe → #f9fafb)
 Cards: bg-white/80 + backdrop-blur-xl + border-gray-200 + shadow-lg
 Primary: #6366f1 (Indigo) → #8b5cf6 (Purple)
@@ -106,7 +106,7 @@ Primary: #6366f1 (Indigo) → #8b5cf6 (Purple)
 
 ### **Animations**
 
-```
+```markdown
 KPI Cards:
   - Fade in + Slide up (Stagger 0-300ms)
   - Spring counter animation
@@ -332,4 +332,4 @@ Click: 🔄 Reset button - Top right corner
 
 ---
 
-# 🎊 **ขอบคุณที่ไว้วางใจครับ!**
+## 🎊 **ขอบคุณที่ไว้วางใจครับ!**

@@ -83,19 +83,17 @@ const Sidebar: React.FC<SidebarProps> = ({
                 )}
 
                 {/* Maintenance Menu */}
-                {(selectedBranch === 'hub_nw' || currentUser?.branchId === 'hub_nw') && (
-                    <button
-                        onClick={() => setActiveTab('maintenance')}
-                        title={isCollapsed ? 'Maintenance' : ''}
-                        className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200 font-bold group ${activeTab === 'maintenance'
-                            ? 'bg-blue-600 text-white shadow-lg shadow-blue-200'
-                            : 'text-slate-500 hover:bg-slate-50 hover:text-blue-600'
-                            } ${isCollapsed ? 'justify-center px-0' : ''}`}
-                    >
-                        <Wrench size={20} className={activeTab === 'maintenance' ? 'text-white' : 'text-slate-400 group-hover:text-blue-600'} />
-                        {!isCollapsed && <span className="whitespace-nowrap animate-in fade-in slide-in-from-left-2 duration-300">Maintenance</span>}
-                    </button>
-                )}
+                <button
+                    onClick={() => setActiveTab('maintenance')}
+                    title={isCollapsed ? 'Maintenance' : ''}
+                    className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200 font-bold group ${activeTab === 'maintenance'
+                        ? 'bg-blue-600 text-white shadow-lg shadow-blue-200'
+                        : 'text-slate-500 hover:bg-slate-50 hover:text-blue-600'
+                        } ${isCollapsed ? 'justify-center px-0' : ''}`}
+                >
+                    <Wrench size={20} className={activeTab === 'maintenance' ? 'text-white' : 'text-slate-400 group-hover:text-blue-600'} />
+                    {!isCollapsed && <span className="whitespace-nowrap animate-in fade-in slide-in-from-left-2 duration-300">Maintenance</span>}
+                </button>
 
                 {/* Settings Menu */}
                 {currentUser?.role === 'ADMIN' && (

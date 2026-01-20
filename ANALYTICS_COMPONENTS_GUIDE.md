@@ -10,7 +10,7 @@
 
 ### **Phase 2: Advanced Visualizations**
 
-4. ✅ **WaterfallChart** - Flow visualization (Start → Changes → End)
+1. ✅ **WaterfallChart** - Flow visualization (Start → Changes → End)
 2. ✅ **ComparisonCard** - Current vs Previous comparison
 3. ✅ **EnhancedKPICard** - KPI Card with integrated Sparkline
 
@@ -362,7 +362,7 @@ delay={0.2}    // Third card
 ## ✨ **Features Summary**
 
 | Component | Animations | Interactive | Responsive | Dark Mode |
-|-----------|-----------|-------------|------------|-----------|
+|---|---|---|---|---|
 | GaugeChart | ✅ Needle | ✅ Hover | ✅ Yes | ✅ Yes |
 | Sparkline | ✅ Line Draw | ❌ No | ✅ Yes | ✅ Yes |
 | HeatmapCalendar | ✅ Cell Pop | ✅ Hover | ✅ Scroll | ✅ Yes |

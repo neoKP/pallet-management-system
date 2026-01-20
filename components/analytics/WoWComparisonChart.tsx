@@ -453,7 +453,7 @@ export const WoWComparisonChart: React.FC<WoWComparisonChartProps> = ({
                                 <div className="flex items-center gap-2 mb-2">
                                     <Zap className="w-4 h-4 text-purple-500" />
                                     <span className={`text-xs font-bold ${isDarkMode ? 'text-purple-400' : 'text-purple-600'}`}>
-                                        AI Insight
+                                        Operational Intelligence Insight
                                     </span>
                                 </div>
                                 <p className={`text-sm ${isDarkMode ? 'text-slate-300' : 'text-slate-700'}`}>

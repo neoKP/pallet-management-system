@@ -138,10 +138,11 @@ export default function App() {
             />
           )}
 
-          {activeTab === 'maintenance' && (selectedBranch === 'hub_nw' || currentUser?.branchId === 'hub_nw') && (
+          {activeTab === 'maintenance' && (
             <MaintenanceTab
               stock={stock}
               selectedBranch={'hub_nw'}
+              transactions={transactions}
               onBatchMaintenance={processBatchMaintenance}
               onAddTransaction={addTransaction}
             />

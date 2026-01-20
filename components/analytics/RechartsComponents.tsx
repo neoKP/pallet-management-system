@@ -15,12 +15,17 @@ import {
     Legend,
     ResponsiveContainer,
     LabelList,
+    Line,
+    ReferenceLine,
     Brush,
     Sector,
+    ComposedChart,
+    ReferenceDot,
 } from 'recharts';
-import { ChartDataPoint, TimeSeriesData } from '../../services/analyticsService';
+import { ChartDataPoint, TimeSeriesData, PartnerBalanceData, LoscamRentalData } from '../../services/analyticsService';
 import { useAnalyticsStore } from '../../stores/analyticsStore';
 import { THEMES } from './ThemeEngine';
+import { TrendingUp, Truck, Package, Trash2, Skull, AlertTriangle, Sparkles, Activity } from 'lucide-react';
 
 interface RechartsBarChartProps {
     data: ChartDataPoint[];
@@ -143,12 +148,12 @@ export const RechartsBarChart: React.FC<RechartsBarChartProps> = ({
             onMouseEnter={() => setIsHovering(true)}
             onMouseLeave={() => { setIsHovering(false); setActiveIndex(null); }}
             className={`
-                group rounded-2xl p-6 relative overflow-hidden transition-all duration-500
+                group rounded-[3rem] p-8 xl:p-10 relative overflow-hidden transition-all duration-700
                 ${isDarkMode
-                    ? 'bg-gradient-to-br from-slate-900/50 to-slate-950/50 border border-white/10'
-                    : 'bg-white border border-slate-200 shadow-[0_8px_30px_rgb(0,0,0,0.04)]'
+                    ? 'bg-slate-950 border border-white/10 shadow-[0_20px_50px_rgba(0,0,0,0.5)]'
+                    : 'bg-white border border-slate-200 shadow-[0_20px_50px_rgba(0,0,0,0.05)]'
                 }
-                ${isHovering ? 'dynamic-shadow shadow-2xl' : ''}
+                ${isHovering ? 'dynamic-shadow' : ''}
             `}
             style={{
                 '--dynamic-shadow-value': isHovering ? `0 20px 40px rgba(var(--theme-primary-rgb), 0.15)` : 'none'
@@ -168,18 +173,12 @@ export const RechartsBarChart: React.FC<RechartsBarChartProps> = ({
 
             <div className="flex justify-between items-center mb-6 relative z-10">
                 <h3
-                    className={`text-lg font-bold tracking-tight flex items-center gap-2 transition-colors duration-500 ${isDarkMode ? 'theme-text-secondary' : 'theme-text-primary'}`}
+                    className={`text-2xl font-black tracking-tighter flex items-center gap-3 transition-colors duration-500 ${isDarkMode ? 'text-white' : 'text-slate-900'}`}
                 >
+                    <div className={`p-2 rounded-xl ${isDarkMode ? 'bg-indigo-500/20' : 'bg-indigo-50'}`}>
+                        <TrendingUp className="w-5 h-5 text-indigo-500" />
+                    </div>
                     {title}
-                    {isHovering && (
-                        <motion.span
-                            initial={{ opacity: 0, scale: 0 }}
-                            animate={{ opacity: 1, scale: 1 }}
-                            className="text-xs px-2 py-1 rounded-full text-white theme-gradient-primary"
-                        >
-                            Click to drill
-                        </motion.span>
-                    )}
                 </h3>
 
                 {/* Quick stats */}
@@ -197,7 +196,7 @@ export const RechartsBarChart: React.FC<RechartsBarChartProps> = ({
                 </AnimatePresence>
             </div>
 
-            <ResponsiveContainer width="100%" height={300}>
+            <ResponsiveContainer width="100%" height={400}>
                 <BarChart
                     data={data as any}
                     margin={{ top: 20, right: 30, left: 0, bottom: 0 }}
@@ -409,15 +408,12 @@ export const RechartsPieChart: React.FC<RechartsPieChartProps> = ({
             onMouseEnter={() => setIsHovering(true)}
             onMouseLeave={() => setIsHovering(false)}
             className={`
-                rounded-2xl p-6 relative overflow-hidden transition-all duration-500
+                group rounded-[3rem] p-8 xl:p-10 relative overflow-hidden transition-all duration-700
                 ${isDarkMode
-                    ? 'bg-slate-900/50 backdrop-blur-xl border border-white/10'
-                    : 'bg-white border border-slate-200 shadow-sm'
+                    ? 'bg-slate-950 border border-white/10 shadow-[0_20px_50px_rgba(0,0,0,0.5)]'
+                    : 'bg-white border border-slate-200 shadow-[0_20px_50px_rgba(0,0,0,0.05)]'
                 }
             `}
-            style={{
-                boxShadow: isHovering ? `0 20px 40px ${currentTheme.primary}15` : 'none'
-            }}
         >
             {/* Animated background glow */}
             <AnimatePresence>
@@ -438,18 +434,12 @@ export const RechartsPieChart: React.FC<RechartsPieChartProps> = ({
 
             <div className="flex items-center justify-between mb-6 relative z-10">
                 <h3
-                    className={`text-lg font-bold flex items-center gap-2 transition-colors duration-500 ${isDarkMode ? 'theme-text-secondary' : 'theme-text-primary'}`}
+                    className={`text-2xl font-black tracking-tighter flex items-center gap-3 transition-colors duration-500 ${isDarkMode ? 'text-white' : 'text-slate-900'}`}
                 >
+                    <div className={`p-2 rounded-xl ${isDarkMode ? 'bg-amber-500/20' : 'bg-amber-50'}`}>
+                        <Sparkles className="w-5 h-5 text-amber-500" />
+                    </div>
                     {title}
-                    {isHovering && (
-                        <motion.span
-                            initial={{ opacity: 0, scale: 0 }}
-                            animate={{ opacity: 1, scale: 1 }}
-                            className="text-xs px-2 py-1 rounded-full text-white theme-gradient-bg"
-                        >
-                            Hover segments
-                        </motion.span>
-                    )}
                 </h3>
 
                 {/* Total badge */}
@@ -471,7 +461,7 @@ export const RechartsPieChart: React.FC<RechartsPieChartProps> = ({
                 </AnimatePresence>
             </div>
 
-            <ResponsiveContainer width="100%" height={300}>
+            <ResponsiveContainer width="100%" height={400}>
                 <PieChart>
                     <defs>
                         <filter id="segmentGlow">
@@ -576,16 +566,13 @@ export const RechartsLineChart: React.FC<RechartsLineChartProps> = ({
         const { cx, cy, fill } = props;
         return (
             <g>
-                {/* Outer glow ring */}
                 <circle cx={cx} cy={cy} r={12} fill={fill} opacity={0.2}>
                     <animate attributeName="r" values="8;14;8" dur="1.5s" repeatCount="indefinite" />
                     <animate attributeName="opacity" values="0.3;0.1;0.3" dur="1.5s" repeatCount="indefinite" />
                 </circle>
-                {/* Middle glow */}
                 <circle cx={cx} cy={cy} r={8} fill={fill} opacity={0.4}>
                     <animate attributeName="r" values="6;10;6" dur="1.5s" repeatCount="indefinite" />
                 </circle>
-                {/* Core dot */}
                 <circle cx={cx} cy={cy} r={5} fill={fill} stroke="#fff" strokeWidth={2}>
                     <animate attributeName="r" values="4;6;4" dur="1s" repeatCount="indefinite" />
                 </circle>
@@ -593,7 +580,7 @@ export const RechartsLineChart: React.FC<RechartsLineChartProps> = ({
         );
     };
 
-    // Premium tooltip with animations
+    // Premium tooltip
     const CustomTooltip = ({ active, payload, label }: any) => {
         if (active && payload && payload.length) {
             const total = payload.reduce((sum: number, entry: any) => sum + (entry.value || 0), 0);
@@ -603,79 +590,48 @@ export const RechartsLineChart: React.FC<RechartsLineChartProps> = ({
                     initial={{ opacity: 0, y: 10, scale: 0.9 }}
                     animate={{ opacity: 1, y: 0, scale: 1 }}
                     exit={{ opacity: 0, y: -10, scale: 0.9 }}
-                    transition={{ duration: 0.2, ease: "easeOut" }}
                     className={`
-                        relative px-5 py-4 rounded-2xl shadow-2xl border backdrop-blur-xl min-w-[200px]
-                        ${isDarkMode
-                            ? 'bg-slate-900/95'
-                            : 'bg-white/95'
-                        }
+                        relative px-5 py-4 rounded-2xl shadow-2xl border backdrop-blur-xl min-w-[220px]
+                        ${isDarkMode ? 'bg-slate-900/95 border-white/10' : 'bg-white/95 border-slate-200'}
                     `}
                     style={{ borderColor: `${currentTheme.primary}40` }}
                 >
-                    {/* Animated glow background */}
-                    <div className="absolute inset-0 rounded-2xl blur-xl -z-10 theme-gradient-bg-soft" />
-
-                    {/* Date header with icon */}
                     <div className="flex items-center gap-2 mb-3 pb-2 border-b border-white/10">
-                        <div className="p-1.5 rounded-lg shadow-lg theme-gradient-bg">
-                            <svg className="w-3.5 h-3.5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                            </svg>
+                        <div className="p-1.5 rounded-lg theme-gradient-bg">
+                            <Activity className="w-3.5 h-3.5 text-white" />
                         </div>
-                        <span className={`font-black text-sm ${isDarkMode ? 'theme-text-secondary' : 'theme-text-primary'}`}>
+                        <span className={`font-black text-sm ${isDarkMode ? 'text-white' : 'text-slate-900'}`}>
                             {label}
                         </span>
                     </div>
 
-                    {/* Data entries with animations */}
                     <div className="space-y-2">
                         {payload.map((entry: any, index: number) => {
                             const labels: Record<string, string> = {
                                 in: '📥 รับเข้า',
                                 out: '📤 จ่ายออก',
                                 maintenance: '🔧 ซ่อมบำรุง',
+                                scrapped: '🗑️ เสีย/ทิ้ง',
                             };
-                            const percentage = total > 0 ? Math.round((entry.value / total) * 100) : 0;
-
                             return (
-                                <motion.div
-                                    key={index}
-                                    initial={{ x: -10, opacity: 0 }}
-                                    animate={{ x: 0, opacity: 1 }}
-                                    transition={{ delay: index * 0.05 }}
-                                    className="flex items-center justify-between gap-4"
-                                >
-                                    <div className="flex items-center gap-2" style={{ '--item-color': entry.color } as React.CSSProperties}>
-                                        <div className="w-2 h-2 rounded-full shadow-lg item-bg item-shadow" />
+                                <div key={index} className="flex items-center justify-between gap-4">
+                                    <div className="flex items-center gap-2">
+                                        <div className="w-2 h-2 rounded-full" style={{ backgroundColor: entry.color }} />
                                         <span className={`text-xs font-medium ${isDarkMode ? 'text-slate-400' : 'text-slate-600'}`}>
                                             {labels[entry.dataKey] || entry.name}
                                         </span>
                                     </div>
-                                    <div className="flex items-center gap-2">
-                                        <span className={`text-sm font-black ${isDarkMode ? 'text-white' : 'text-slate-900'}`}>
-                                            {entry.value.toLocaleString()}
-                                        </span>
-                                        <span className={`text-[10px] px-1.5 py-0.5 rounded-full ${isDarkMode ? 'bg-white/10 text-slate-400' : 'bg-slate-100 text-slate-500'
-                                            }`}>
-                                            {percentage}%
-                                        </span>
-                                    </div>
-                                </motion.div>
+                                    <span className={`text-sm font-black ${isDarkMode ? 'text-white' : 'text-slate-900'}`}>
+                                        {entry.value.toLocaleString()}
+                                    </span>
+                                </div>
                             );
                         })}
                     </div>
 
-                    {/* Total summary */}
-                    <div className={`mt-3 pt-2 border-t ${isDarkMode ? 'border-white/10' : 'border-gray-200'}`}>
-                        <div className="flex items-center justify-between">
-                            <span className={`text-xs font-bold uppercase tracking-wider ${isDarkMode ? 'text-slate-500' : 'text-slate-400'}`}>
-                                รวมทั้งหมด
-                            </span>
-                            <span className="text-lg font-black bg-clip-text text-transparent theme-gradient-text">
-                                {total.toLocaleString()}
-                            </span>
-                        </div>
+                    <div className="mt-3 pt-2 border-t border-white/10 flex justify-between items-center">
+                        <span className="text-[10px] uppercase font-bold text-slate-500">รวมทั้งหมด</span>
+                        <span className="text-lg font-black theme-gradient-text">{total.toLocaleString()}</span>
                     </div>
                 </motion.div>
             );
@@ -683,52 +639,20 @@ export const RechartsLineChart: React.FC<RechartsLineChartProps> = ({
         return null;
     };
 
-    // Custom cursor with glow effect
     const CustomCursor = (props: any) => {
         const { points, width, height } = props;
         if (!points || points.length === 0) return null;
-
         const x = points[0].x;
-
         return (
             <g>
-                {/* Glowing vertical line */}
                 <defs>
                     <linearGradient id="cursorGradient" x1="0" y1="0" x2="0" y2="1">
                         <stop offset="0%" stopColor={currentTheme.primary} stopOpacity={0} />
-                        <stop offset="30%" stopColor={currentTheme.primary} stopOpacity={0.5} />
-                        <stop offset="70%" stopColor={currentTheme.secondary} stopOpacity={0.5} />
-                        <stop offset="100%" stopColor={currentTheme.secondary} stopOpacity={0} />
+                        <stop offset="50%" stopColor={currentTheme.primary} stopOpacity={0.5} />
+                        <stop offset="100%" stopColor={currentTheme.primary} stopOpacity={0} />
                     </linearGradient>
-                    <filter id="cursorGlow">
-                        <feGaussianBlur stdDeviation="3" result="coloredBlur" />
-                        <feMerge>
-                            <feMergeNode in="coloredBlur" />
-                            <feMergeNode in="SourceGraphic" />
-                        </feMerge>
-                    </filter>
                 </defs>
-
-                {/* Main glow line */}
-                <line
-                    x1={x}
-                    y1={0}
-                    x2={x}
-                    y2={height - 50}
-                    stroke="url(#cursorGradient)"
-                    strokeWidth={3}
-                    filter="url(#cursorGlow)"
-                />
-
-                {/* Subtle background highlight */}
-                <rect
-                    x={x - 25}
-                    y={0}
-                    width={50}
-                    height={height - 50}
-                    fill={isDarkMode ? 'rgba(99, 102, 241, 0.05)' : 'rgba(99, 102, 241, 0.03)'}
-                    rx={4}
-                />
+                <line x1={x} y1={0} x2={x} y2={height - 30} stroke="url(#cursorGradient)" strokeWidth={2} />
             </g>
         );
     };
@@ -738,193 +662,590 @@ export const RechartsLineChart: React.FC<RechartsLineChartProps> = ({
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             onMouseEnter={() => setIsHovering(true)}
-            onMouseLeave={() => { setIsHovering(false); setActiveIndex(null); }}
+            onMouseLeave={() => setIsHovering(false)}
             className={`
-                col-span-1 lg:col-span-2 rounded-2xl p-6 relative overflow-hidden transition-all duration-500
+                group rounded-[3rem] p-8 xl:p-10 relative overflow-hidden transition-all duration-700
                 ${isDarkMode
-                    ? 'bg-slate-900/40 border border-white/10'
-                    : 'bg-white border border-slate-200 shadow-sm'
+                    ? 'bg-slate-950 border border-white/10 shadow-[0_20px_50px_rgba(0,0,0,0.5)]'
+                    : 'bg-white border border-slate-200 shadow-[0_20px_50px_rgba(0,0,0,0.05)]'
                 }
-                ${isHovering ? 'shadow-2xl shadow-indigo-500/10' : ''}
             `}
         >
-            {/* Animated background gradient on hover */}
-            <AnimatePresence>
-                {isHovering && (
-                    <motion.div
-                        initial={{ opacity: 0 }}
-                        animate={{ opacity: 1 }}
-                        exit={{ opacity: 0 }}
-                        className="absolute inset-0 pointer-events-none"
-                        style={{
-                            background: isDarkMode
-                                ? 'radial-gradient(circle at 50% 50%, rgba(99, 102, 241, 0.05) 0%, transparent 70%)'
-                                : 'radial-gradient(circle at 50% 50%, rgba(99, 102, 241, 0.02) 0%, transparent 70%)'
-                        }}
-                    />
-                )}
-            </AnimatePresence>
-
-            <div className="flex items-center justify-between mb-6 relative z-10">
-                <h3 className={`text-lg font-bold flex items-center gap-2 ${isDarkMode ? 'text-indigo-400' : 'text-slate-900'}`}>
+            <div className="flex items-center justify-between mb-8 relative z-10">
+                <h3 className={`text-2xl font-black tracking-tighter flex items-center gap-3 ${isDarkMode ? 'text-white' : 'text-slate-900'}`}>
+                    <div className={`p-2 rounded-xl ${isDarkMode ? 'bg-indigo-500/20' : 'bg-indigo-50'}`}>
+                        <TrendingUp className="w-5 h-5 text-indigo-500" />
+                    </div>
                     {title}
-                    {isHovering && (
-                        <motion.span
-                            initial={{ opacity: 0, scale: 0 }}
-                            animate={{ opacity: 1, scale: 1 }}
-                            className="text-xs px-2 py-1 rounded-full bg-gradient-to-r from-cyan-500/20 to-purple-500/20 text-cyan-400"
-                        >
-                            Interactive
-                        </motion.span>
-                    )}
                 </h3>
-
-                {/* Quick stats on hover */}
-                <AnimatePresence>
-                    {isHovering && data.length > 0 && (
-                        <motion.div
-                            initial={{ opacity: 0, x: 20 }}
-                            animate={{ opacity: 1, x: 0 }}
-                            exit={{ opacity: 0, x: 20 }}
-                            className="flex items-center gap-4"
-                        >
-                            <div className="text-right">
-                                <div className={`text-[10px] uppercase tracking-wider ${isDarkMode ? 'text-slate-500' : 'text-slate-400'}`}>
-                                    Peak Value
-                                </div>
-                                <div className={`text-sm font-black ${isDarkMode ? 'text-cyan-400' : 'text-indigo-600'}`}>
-                                    {Math.max(...data.map(d => Math.max(d.in, d.out, d.maintenance))).toLocaleString()}
-                                </div>
-                            </div>
-                        </motion.div>
-                    )}
-                </AnimatePresence>
             </div>
 
-            <ResponsiveContainer width="100%" height={350}>
-                <AreaChart
-                    data={data}
-                    onMouseMove={(state: any) => {
-                        if (state.activeTooltipIndex !== undefined) {
-                            setActiveIndex(state.activeTooltipIndex);
-                        }
-                    }}
-                    onMouseLeave={() => setActiveIndex(null)}
-                >
+            <ResponsiveContainer width="100%" height={400}>
+                <AreaChart data={data}>
                     <defs>
-                        {/* Enhanced gradients with glow effect */}
-                        <linearGradient id="colorInEnhanced" x1="0" y1="0" x2="0" y2="1">
-                            <stop offset="0%" stopColor="#3b82f6" stopOpacity={isHovering ? 0.5 : 0.3} />
-                            <stop offset="50%" stopColor="#3b82f6" stopOpacity={isHovering ? 0.2 : 0.1} />
-                            <stop offset="100%" stopColor="#3b82f6" stopOpacity={0} />
+                        <linearGradient id="colorIn" x1="0" y1="0" x2="0" y2="1">
+                            <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.3} />
+                            <stop offset="95%" stopColor="#3b82f6" stopOpacity={0} />
                         </linearGradient>
-                        <linearGradient id="colorOutEnhanced" x1="0" y1="0" x2="0" y2="1">
-                            <stop offset="0%" stopColor="#f59e0b" stopOpacity={isHovering ? 0.5 : 0.3} />
-                            <stop offset="50%" stopColor="#f59e0b" stopOpacity={isHovering ? 0.2 : 0.1} />
-                            <stop offset="100%" stopColor="#f59e0b" stopOpacity={0} />
+                        <linearGradient id="colorOut" x1="0" y1="0" x2="0" y2="1">
+                            <stop offset="5%" stopColor="#f59e0b" stopOpacity={0.3} />
+                            <stop offset="95%" stopColor="#f59e0b" stopOpacity={0} />
                         </linearGradient>
-                        <linearGradient id="colorMaintenanceEnhanced" x1="0" y1="0" x2="0" y2="1">
-                            <stop offset="0%" stopColor="#8b5cf6" stopOpacity={isHovering ? 0.5 : 0.3} />
-                            <stop offset="50%" stopColor="#8b5cf6" stopOpacity={isHovering ? 0.2 : 0.1} />
-                            <stop offset="100%" stopColor="#8b5cf6" stopOpacity={0} />
-                        </linearGradient>
-                        {/* Line glow filters */}
-                        <filter id="lineGlow">
-                            <feGaussianBlur stdDeviation="2" result="coloredBlur" />
-                            <feMerge>
-                                <feMergeNode in="coloredBlur" />
-                                <feMergeNode in="SourceGraphic" />
-                            </feMerge>
-                        </filter>
                     </defs>
-
                     <CartesianGrid vertical={false} strokeDasharray="3 3" stroke={isDarkMode ? '#ffffff08' : '#00000008'} />
-
                     <XAxis
                         dataKey="date"
                         axisLine={false}
                         tickLine={false}
-                        stroke={isDarkMode ? '#64748b' : '#94a3b8'}
-                        tick={{ fill: isDarkMode ? '#64748b' : '#64748b', fontSize: 11, fontWeight: isHovering ? 600 : 400 }}
+                        tick={{ fill: isDarkMode ? '#64748b' : '#94a3b8', fontSize: 11 }}
                         tickFormatter={(value) => {
-                            if (typeof value === 'string' && value.includes('.')) return value;
                             const date = new Date(value);
                             return isNaN(date.getTime()) ? value : date.toLocaleDateString('th-TH', { month: 'short', day: 'numeric' });
                         }}
                     />
-
-                    <YAxis
-                        axisLine={false}
-                        tickLine={false}
-                        stroke={isDarkMode ? '#64748b' : '#94a3b8'}
-                        tick={{ fill: isDarkMode ? '#64748b' : '#64748b', fontSize: 11 }}
-                    />
-
-                    <Tooltip
-                        content={<CustomTooltip />}
-                        cursor={<CustomCursor />}
-                    />
-
-                    <Legend
-                        verticalAlign="top"
-                        align="right"
-                        iconType="circle"
-                        height={36}
-                        formatter={(value) => {
-                            const labels: Record<string, string> = {
-                                in: 'รับเข้า',
-                                out: 'จ่ายออก',
-                                maintenance: 'ซ่อมบำรุง',
-                            };
-                            return <span className={`text-xs font-bold transition-all ${isDarkMode ? 'text-slate-400' : 'text-slate-600'}`}>{labels[value] || value}</span>;
-                        }}
-                    />
-
-                    {/* Areas with enhanced effects */}
+                    <YAxis axisLine={false} tickLine={false} tick={{ fill: isDarkMode ? '#64748b' : '#94a3b8', fontSize: 11 }} />
+                    <Tooltip cursor={<CustomCursor />} content={<CustomTooltip />} />
                     <Area
                         type="monotone"
                         dataKey="in"
-                        stroke={currentTheme.primary}
-                        strokeWidth={isHovering ? 4 : 3}
-                        fill="url(#colorInEnhanced)"
-                        animationDuration={2000}
+                        stroke="#3b82f6"
+                        strokeWidth={3}
+                        fillOpacity={1}
+                        fill="url(#colorIn)"
                         activeDot={renderActiveDot}
-                        filter={isHovering ? "url(#lineGlow)" : undefined}
                     />
                     <Area
                         type="monotone"
                         dataKey="out"
                         stroke="#f59e0b"
-                        strokeWidth={isHovering ? 4 : 3}
-                        fill="url(#colorOutEnhanced)"
-                        animationDuration={2000}
+                        strokeWidth={3}
+                        fillOpacity={1}
+                        fill="url(#colorOut)"
                         activeDot={renderActiveDot}
-                        filter={isHovering ? "url(#lineGlow)" : undefined}
-                    />
-                    <Area
-                        type="monotone"
-                        dataKey="maintenance"
-                        stroke={currentTheme.secondary}
-                        strokeWidth={isHovering ? 4 : 3}
-                        fill="url(#colorMaintenanceEnhanced)"
-                        animationDuration={2000}
-                        activeDot={renderActiveDot}
-                        filter={isHovering ? "url(#lineGlow)" : undefined}
-                    />
-
-                    <Brush
-                        dataKey="date"
-                        height={30}
-                        stroke={currentTheme.primary}
-                        fill={isDarkMode ? '#1e293b' : '#f8fafc'}
-                        tickFormatter={(value) => {
-                            if (typeof value === 'string' && value.includes('.')) return value.split(' ')[0];
-                            const date = new Date(value);
-                            return isNaN(date.getTime()) ? value : date.toLocaleDateString('th-TH', { day: 'numeric' });
-                        }}
                     />
                 </AreaChart>
             </ResponsiveContainer>
+        </motion.div>
+    );
+};
+
+interface PartnerBalanceChartProps {
+    data: PartnerBalanceData[];
+    title: string;
+    isDarkMode: boolean;
+    showOnlyBalance?: boolean;
+}
+
+export const PartnerBalanceChart: React.FC<PartnerBalanceChartProps> = ({
+    data,
+    title,
+    isDarkMode,
+    showOnlyBalance = false,
+}) => {
+    const { themeColor } = useAnalyticsStore();
+    const currentTheme = THEMES.find(t => t.id === themeColor) || THEMES[0];
+    const [isHovering, setIsHovering] = useState(false);
+
+    // Find Max/Min for Balance
+    const maxBalance = data.length > 0 ? Math.max(...data.map(d => d.balance)) : 0;
+    const minBalance = data.length > 0 ? Math.min(...data.map(d => d.balance)) : 0;
+
+    const maxPoint = data.find(d => d.balance === maxBalance);
+    const minPoint = data.find(d => d.balance === minBalance);
+
+    const CustomTooltip = ({ active, payload, label }: any) => {
+        if (active && payload && payload.length) {
+            const receive = payload.find((p: any) => p.dataKey === 'receive')?.value || 0;
+            const dispatch = payload.find((p: any) => p.dataKey === 'dispatch')?.value || 0;
+            const balance = payload.find((p: any) => p.dataKey === 'balance')?.value || 0;
+
+            return (
+                <motion.div
+                    initial={{ opacity: 0, scale: 0.9, y: 10 }}
+                    animate={{ opacity: 1, scale: 1, y: 0 }}
+                    className={`p-5 rounded-[1.5rem] border backdrop-blur-xl shadow-2xl ${isDarkMode ? 'bg-slate-950/90 border-white/20' : 'bg-white/95 border-slate-200'} relative overflow-hidden min-w-[220px]`}
+                >
+                    <div className="absolute top-0 right-0 w-24 h-24 bg-amber-500/10 blur-3xl rounded-full -mr-12 -mt-12" />
+
+                    <p className={`text-[10px] font-black uppercase tracking-widest mb-4 ${isDarkMode ? 'text-slate-500' : 'text-slate-400'}`}>
+                        📅 {new Date(label).toLocaleDateString('th-TH', { dateStyle: 'long' })}
+                    </p>
+
+                    <div className="space-y-3 relative z-10">
+                        <div className="flex justify-between items-center bg-emerald-500/5 p-2 rounded-xl">
+                            <span className="text-[10px] font-black text-emerald-500 uppercase">Receive</span>
+                            <span className={`text-sm font-black ${isDarkMode ? 'text-white' : 'text-slate-900'}`}>{receive.toLocaleString()}</span>
+                        </div>
+                        <div className="flex justify-between items-center bg-red-500/5 p-2 rounded-xl">
+                            <span className="text-[10px] font-black text-red-500 uppercase">Dispatch</span>
+                            <span className={`text-sm font-black ${isDarkMode ? 'text-white' : 'text-slate-900'}`}>{dispatch.toLocaleString()}</span>
+                        </div>
+
+                        <div className={`mt-2 pt-3 border-t ${isDarkMode ? 'border-white/10' : 'border-slate-100'}`}>
+                            <div className="flex justify-between items-end">
+                                <span className="text-[10px] font-black text-amber-500 uppercase">Net Balance</span>
+                                <div className="flex items-baseline gap-1">
+                                    <span className="text-xl font-black text-amber-500 tracking-tighter">{balance.toLocaleString()}</span>
+                                    <span className="text-[10px] font-bold text-amber-500/50">Pallets</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </motion.div>
+            );
+        }
+        return null;
+    };
+
+    const totalActivity = data.reduce((sum, d) => sum + d.receive + d.dispatch, 0);
+
+    return (
+        <motion.div
+            initial={{ opacity: 0, y: 30 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.8 }}
+            className={`
+                group rounded-[3rem] p-8 xl:p-10 relative overflow-hidden transition-all duration-700
+                ${isDarkMode
+                    ? 'bg-slate-950 border border-white/10 shadow-[0_20px_50px_rgba(0,0,0,0.5)]'
+                    : 'bg-white border border-slate-200 shadow-[0_20px_50px_rgba(0,0,0,0.05)]'
+                }
+            `}
+        >
+            {/* Animated Pallet Flow Background */}
+            <div className="absolute inset-0 pointer-events-none opacity-[0.05] overflow-hidden">
+                {[...Array(12)].map((_, i) => (
+                    <motion.div
+                        key={i}
+                        animate={{
+                            x: i % 2 === 0 ? [-100, 800] : [800, -100],
+                            y: [Math.random() * 500, Math.random() * 500],
+                            rotate: [0, 360],
+                            opacity: [0, 1, 0]
+                        }}
+                        transition={{
+                            duration: 20 + Math.random() * 10,
+                            repeat: Infinity,
+                            delay: i * 2,
+                            ease: "linear"
+                        }}
+                        className="absolute"
+                        style={{ top: `${(i / 12) * 100}%` }}
+                    >
+                        <Package className="w-10 h-10 text-amber-500" />
+                    </motion.div>
+                ))}
+            </div>
+
+            <div className="relative z-10 flex flex-col xl:flex-row justify-between items-start xl:items-center gap-8 mb-10">
+                <div className="space-y-2">
+                    <div className="flex items-center gap-5">
+                        <motion.div
+                            whileHover={{ scale: 1.15, rotate: -8, y: -5 }}
+                            className="p-4 rounded-[2rem] bg-gradient-to-br from-amber-400 to-amber-600 shadow-[0_15px_30px_rgba(245,158,11,0.4)] ring-8 ring-amber-500/10"
+                        >
+                            <Truck className="w-8 h-8 text-white" />
+                        </motion.div>
+                        <div>
+                            <h3 className={`text-3xl font-black tracking-tighter ${isDarkMode ? 'text-white' : 'text-slate-900'}`}>{title}</h3>
+                            <div className="flex items-center gap-2 mt-1">
+                                <span className="flex h-2 w-2 rounded-full bg-amber-500" />
+                                <p className={`text-[10px] font-black uppercase tracking-widest ${isDarkMode ? 'text-slate-500' : 'text-slate-400'}`}>
+                                    Partner Equity & Possession Tracking
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div className="flex flex-wrap items-center gap-5 w-full xl:w-auto">
+                    <motion.div
+                        whileHover={{ y: -5 }}
+                        className={`flex-1 xl:flex-none px-8 py-5 rounded-[2rem] border backdrop-blur-2xl ${isDarkMode ? 'bg-amber-500/5 border-amber-500/20' : 'bg-amber-50/50 border-amber-200 shadow-sm'}`}
+                    >
+                        <span className="text-[10px] font-black uppercase tracking-widest text-amber-600/70 block mb-1">Max Possession</span>
+                        <div className="flex items-baseline gap-1.5">
+                            <span className="text-3xl font-black text-amber-600 tracking-tighter">{maxBalance.toLocaleString()}</span>
+                            <span className="text-xs font-bold text-amber-600/30">MAX</span>
+                        </div>
+                    </motion.div>
+
+                    <motion.div
+                        whileHover={{ y: -5 }}
+                        className={`flex-1 xl:flex-none px-8 py-5 rounded-[2rem] border backdrop-blur-2xl ${isDarkMode ? 'bg-emerald-500/5 border-emerald-500/20' : 'bg-emerald-50/50 border-emerald-200 shadow-sm'}`}
+                    >
+                        <span className="text-[10px] font-black uppercase tracking-widest text-emerald-600/70 block mb-1">Total Activity</span>
+                        <div className="flex items-baseline gap-1.5">
+                            <span className="text-3xl font-black text-emerald-600 tracking-tighter">{totalActivity.toLocaleString()}</span>
+                            <span className="text-xs font-bold text-emerald-600/30">VOL</span>
+                        </div>
+                    </motion.div>
+                </div>
+            </div>
+
+            <div className="relative h-[400px] w-full">
+                <ResponsiveContainer width="100%" height="100%">
+                    <ComposedChart data={data}>
+                        <defs>
+                            <linearGradient id="balanceGradientWow" x1="0" y1="0" x2="0" y2="1">
+                                <stop offset="5%" stopColor="#f59e0b" stopOpacity={0.4} />
+                                <stop offset="95%" stopColor="#f59e0b" stopOpacity={0} />
+                            </linearGradient>
+                            <filter id="balanceLineGlow" x="-20%" y="-20%" width="140%" height="140%">
+                                <feGaussianBlur stdDeviation="5" result="blur" />
+                                <feComposite in="SourceGraphic" in2="blur" operator="over" />
+                            </filter>
+                        </defs>
+                        <CartesianGrid vertical={false} strokeDasharray="6 6" stroke={isDarkMode ? '#ffffff0a' : '#0000000a'} />
+                        <XAxis
+                            dataKey="date"
+                            axisLine={false}
+                            tickLine={false}
+                            tick={{ fontSize: 11, fill: '#64748b', fontWeight: 700 }}
+                            tickFormatter={(val) => {
+                                const d = new Date(val);
+                                return `${d.getDate()}/${d.getMonth() + 1}`;
+                            }}
+                        />
+                        <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 11, fill: '#64748b', fontWeight: 700 }} />
+                        <Tooltip content={<CustomTooltip />} cursor={{ stroke: '#f59e0b', strokeWidth: 2, strokeDasharray: '5 5' }} />
+                        <Legend
+                            verticalAlign="top"
+                            align="right"
+                            iconType="circle"
+                            wrapperStyle={{ fontSize: '12px', fontWeight: '900', paddingBottom: '40px', textTransform: 'uppercase', color: '#64748b' }}
+                        />
+
+                        {!showOnlyBalance && (
+                            <>
+                                <Bar dataKey="receive" name="RECEIVE" fill="#10b981" radius={[8, 8, 0, 0]} barSize={22} animationDuration={1500} />
+                                <Bar dataKey="dispatch" name="DISPATCH" fill="#ef4444" radius={[8, 8, 0, 0]} barSize={22} animationDuration={1800} />
+                            </>
+                        )}
+
+                        <Area
+                            type="monotone"
+                            dataKey="balance"
+                            name="NET BALANCE"
+                            fill="url(#balanceGradientWow)"
+                            stroke="#f59e0b"
+                            strokeWidth={6}
+                            dot={false}
+                            filter="url(#balanceLineGlow)"
+                            animationDuration={2500}
+                        />
+
+                        {maxPoint && (
+                            <ReferenceDot
+                                x={maxPoint.date}
+                                y={maxPoint.balance}
+                                r={10}
+                                fill="#f59e0b"
+                                stroke="#fff"
+                                strokeWidth={4}
+                                className="animate-pulse shadow-2xl"
+                            />
+                        )}
+
+                        {minPoint && (
+                            <ReferenceDot
+                                x={minPoint.date}
+                                y={minPoint.balance}
+                                r={10}
+                                fill="#ef4444"
+                                stroke="#fff"
+                                strokeWidth={4}
+                                className="animate-pulse shadow-2xl"
+                            />
+                        )}
+                    </ComposedChart>
+                </ResponsiveContainer>
+            </div>
+        </motion.div>
+    );
+};
+
+interface LoscamRentalChartProps {
+    data: LoscamRentalData[];
+    title: string;
+    isDarkMode: boolean;
+}
+
+export const LoscamRentalChart: React.FC<LoscamRentalChartProps> = ({
+    data,
+    title,
+    isDarkMode,
+}) => {
+    const total7DayCost = data.reduce((sum, d) => sum + d.cost, 0);
+    const maxQty = data.length > 0 ? Math.max(...data.map(d => d.quantity)) : 0;
+
+    const CustomTooltip = ({ active, payload, label }: any) => {
+        if (active && payload && payload.length) {
+            const qty = payload[0].value;
+            const cost = payload[1].value;
+            const pricePerUnit = qty > 2000 ? 1.10 : 1.40;
+
+            return (
+                <div className={`p-5 rounded-[1.5rem] border backdrop-blur-xl shadow-2xl ${isDarkMode ? 'bg-slate-950/90 border-white/20' : 'bg-white/95 border-slate-200'} relative overflow-hidden min-w-[200px]`}>
+                    <div className="absolute top-0 right-0 w-24 h-24 bg-red-500/10 blur-3xl rounded-full -mr-12 -mt-12" />
+
+                    <p className={`text-[10px] font-black uppercase tracking-widest mb-3 ${isDarkMode ? 'text-slate-500' : 'text-slate-400'}`}>
+                        {new Date(label).toLocaleDateString('th-TH', { dateStyle: 'long' })}
+                    </p>
+
+                    <div className="space-y-3 relative z-10">
+                        <div className="flex justify-between items-end">
+                            <div className="flex flex-col">
+                                <span className={`text-[9px] font-bold uppercase tracking-tight ${isDarkMode ? 'text-slate-500' : 'text-slate-400'}`}>Total Quantity</span>
+                                <span className="text-xl font-black text-red-500 tracking-tighter leading-none">{qty.toLocaleString()}</span>
+                            </div>
+                            <div className="flex flex-col items-end">
+                                <span className={`text-[9px] font-bold uppercase tracking-tight ${isDarkMode ? 'text-slate-500' : 'text-slate-400'}`}>Rate/Day</span>
+                                <span className={`text-xs font-black px-1.5 py-0.5 rounded ${qty > 2000 ? 'bg-emerald-500/20 text-emerald-500' : 'bg-amber-500/20 text-amber-500'}`}>
+                                    {pricePerUnit.toFixed(2)} ฿
+                                </span>
+                            </div>
+                        </div>
+
+                        <div className={`mt-2 pt-3 border-t ${isDarkMode ? 'border-white/10' : 'border-slate-100'}`}>
+                            <div className="flex justify-between items-center">
+                                <span className={`text-[10px] font-black uppercase ${isDarkMode ? 'text-slate-300' : 'text-slate-600'}`}>Daily Rental</span>
+                                <div className="flex items-baseline gap-1">
+                                    <span className="text-2xl font-black text-emerald-500 tracking-tighter leading-none">{cost.toLocaleString()}</span>
+                                    <span className="text-xs font-bold text-emerald-500/50">฿</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            );
+        }
+        return null;
+    };
+
+    return (
+        <motion.div
+            initial={{ opacity: 0, scale: 0.95, y: 30 }}
+            animate={{ opacity: 1, scale: 1, y: 0 }}
+            className={`
+                rounded-[3rem] p-8 xl:p-10 relative overflow-hidden transition-all duration-700
+                ${isDarkMode
+                    ? 'bg-slate-950 border border-white/10 shadow-[0_20px_50px_rgba(0,0,0,0.5)]'
+                    : 'bg-white border border-slate-200 shadow-[0_20px_50px_rgba(0,0,0,0.05)]'
+                }
+                group
+            `}
+        >
+            <div className="relative z-10 flex flex-col xl:flex-row justify-between items-start xl:items-center gap-8 mb-10">
+                <div className="space-y-2">
+                    <div className="flex items-center gap-4">
+                        <div className="p-4 rounded-[1.25rem] bg-gradient-to-br from-red-500 to-rose-600 shadow-[0_10px_25px_rgba(239,68,68,0.4)]">
+                            <Truck className="w-8 h-8 text-white" />
+                        </div>
+                        <div>
+                            <h3 className={`text-3xl font-black tracking-tighter ${isDarkMode ? 'text-white' : 'text-slate-900'}`}>{title}</h3>
+                            <div className="flex items-center gap-2 mt-1">
+                                <span className="flex h-2 w-2 rounded-full bg-red-500 animate-pulse" />
+                                <p className={`text-[10px] font-black uppercase tracking-[0.2em] ${isDarkMode ? 'text-slate-500' : 'text-slate-400'}`}>
+                                    Loscam Red Financial Intelligence
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div className="flex items-center gap-4 w-full xl:w-auto">
+                    <div className={`px-6 py-4 rounded-3xl border ${isDarkMode ? 'bg-white/5 border-white/10' : 'bg-slate-50 border-slate-200'}`}>
+                        <span className={`text-[10px] font-black uppercase tracking-widest ${isDarkMode ? 'text-slate-500' : 'text-slate-400'}`}>Weekly Total</span>
+                        <div className="flex items-baseline gap-1 mt-1">
+                            <span className="text-2xl font-black text-emerald-500 tracking-tighter">{total7DayCost.toLocaleString()}</span>
+                            <span className="text-[10px] font-bold text-emerald-500/60 font-mono">฿</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <ResponsiveContainer width="100%" height={400}>
+                <ComposedChart data={data}>
+                    <defs>
+                        <linearGradient id="qtyGradient" x1="0" y1="0" x2="0" y2="1">
+                            <stop offset="0%" stopColor="#ef4444" stopOpacity={0.6} />
+                            <stop offset="100%" stopColor="#ef4444" stopOpacity={0.05} />
+                        </linearGradient>
+                        <filter id="glow" x="-20%" y="-20%" width="140%" height="140%">
+                            <feGaussianBlur stdDeviation="3" result="blur" />
+                            <feComposite in="SourceGraphic" in2="blur" operator="over" />
+                        </filter>
+                    </defs>
+                    <CartesianGrid vertical={false} strokeDasharray="3 3" stroke={isDarkMode ? '#ffffff05' : '#00000005'} />
+                    <XAxis
+                        dataKey="date"
+                        axisLine={false}
+                        tickLine={false}
+                        tick={{ fontSize: 10, fill: '#64748b' }}
+                        tickFormatter={(val) => {
+                            const d = new Date(val);
+                            return `${d.getDate()}/${d.getMonth() + 1}`;
+                        }}
+                    />
+                    <YAxis
+                        yAxisId="left"
+                        axisLine={false}
+                        tickLine={false}
+                        tick={{ fontSize: 10, fill: '#64748b' }}
+                    />
+                    <YAxis
+                        yAxisId="right"
+                        orientation="right"
+                        axisLine={false}
+                        tickLine={false}
+                        tick={{ fontSize: 10, fill: '#10b981' }}
+                    />
+                    <Tooltip content={<CustomTooltip />} />
+
+                    <Bar
+                        yAxisId="left"
+                        dataKey="quantity"
+                        name="Quantity"
+                        fill="url(#qtyGradient)"
+                        radius={[10, 10, 0, 0]}
+                        barSize={40}
+                        animationDuration={1500}
+                    />
+
+                    <Line
+                        yAxisId="right"
+                        type="monotone"
+                        dataKey="cost"
+                        name="Rental Cost"
+                        stroke="#10b981"
+                        strokeWidth={6}
+                        dot={{ r: 5, fill: '#10b981', strokeWidth: 3, stroke: isDarkMode ? '#1e293b' : '#fff' }}
+                        activeDot={{ r: 8, fill: '#10b981', filter: 'url(#glow)' }}
+                        animationDuration={2000}
+                    />
+                </ComposedChart>
+            </ResponsiveContainer>
+        </motion.div>
+    );
+};
+
+interface WasteDamageAnalysisProps {
+    data: ChartDataPoint[];
+    summary: {
+        sevenDays: number;
+        mtd: number;
+        ytd: number;
+    };
+    title: string;
+    isDarkMode: boolean;
+}
+
+export const WasteDamageAnalysis: React.FC<WasteDamageAnalysisProps> = ({
+    data,
+    summary,
+    title,
+    isDarkMode,
+}) => {
+    return (
+        <motion.div
+            initial={{ opacity: 0, scale: 0.9 }}
+            animate={{ opacity: 1, scale: 1 }}
+            transition={{ duration: 0.8 }}
+            className={`
+                group rounded-[3rem] p-8 xl:p-10 relative overflow-hidden transition-all duration-700
+                ${isDarkMode
+                    ? 'bg-slate-950 border border-red-500/20 shadow-[0_20px_50px_rgba(0,0,0,0.5)]'
+                    : 'bg-white border border-red-100 shadow-[0_20px_50px_rgba(239,68,68,0.05)]'
+                }
+            `}
+        >
+            <div className="relative z-10 flex flex-col gap-10">
+                <div className="flex flex-col xl:flex-row justify-between items-start xl:items-center gap-6">
+                    <div className="flex items-center gap-6">
+                        <div className="p-4 rounded-[1.5rem] bg-gradient-to-br from-rose-500 to-red-700 shadow-[0_15px_30px_rgba(225,29,72,0.4)]">
+                            <Trash2 className="w-8 h-8 text-white" />
+                        </div>
+                        <div>
+                            <h3 className={`text-3xl font-black tracking-tighter ${isDarkMode ? 'text-white' : 'text-slate-900'}`}>{title}</h3>
+                            <div className="flex items-center gap-2 mt-1">
+                                <span className="flex h-2 w-2 rounded-full bg-red-500 animate-pulse" />
+                                <p className={`text-[10px] font-black uppercase tracking-widest ${isDarkMode ? 'text-slate-500' : 'text-slate-400'}`}>
+                                    Asset Depreciation & Loss Intelligence
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div className="flex items-center gap-4 w-full xl:w-auto">
+                        <div className={`px-6 py-4 rounded-3xl border ${isDarkMode ? 'bg-red-500/5 border-red-500/20' : 'bg-red-50 border-red-100'}`}>
+                            <span className="text-[10px] font-black uppercase tracking-widest text-red-500/60 block mb-1">MTD Waste</span>
+                            <div className="flex items-baseline gap-1 mt-1">
+                                <span className="text-2xl font-black text-rose-500 tracking-tighter">{summary.mtd.toLocaleString()}</span>
+                                <span className="text-[10px] font-bold text-rose-500/50 uppercase">PCS</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div className="relative h-[400px]">
+                    <ResponsiveContainer width="100%" height="100%">
+                        <ComposedChart data={data}>
+                            <defs>
+                                <linearGradient id="scrappedTrendGradient" x1="0" y1="0" x2="0" y2="1">
+                                    <stop offset="5%" stopColor="#f43f5e" stopOpacity={0.4} />
+                                    <stop offset="95%" stopColor="#f43f5e" stopOpacity={0} />
+                                </linearGradient>
+                                <filter id="glowScrap">
+                                    <feGaussianBlur stdDeviation="4" result="blur" />
+                                    <feComposite in="SourceGraphic" in2="blur" operator="over" />
+                                </filter>
+                            </defs>
+                            <CartesianGrid vertical={false} strokeDasharray="3 3" stroke={isDarkMode ? '#ffffff08' : '#00000008'} />
+                            <XAxis
+                                dataKey="name"
+                                axisLine={false}
+                                tickLine={false}
+                                tick={{ fontSize: 11, fill: '#64748b' }}
+                            />
+                            <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 11, fill: '#64748b' }} />
+                            <Tooltip
+                                cursor={{ stroke: '#f43f5e', strokeWidth: 2, strokeDasharray: '5 5' }}
+                                content={({ active, payload, label }) => {
+                                    if (active && payload && payload.length) {
+                                        return (
+                                            <div className={`p-4 rounded-2xl border backdrop-blur-xl shadow-2xl ${isDarkMode ? 'bg-slate-950/90 border-white/20' : 'bg-white/95 border-slate-200'} min-w-[180px]`}>
+                                                <p className="text-[10px] font-black uppercase tracking-widest text-slate-500 mb-3">{label}</p>
+                                                <div className="flex justify-between items-baseline">
+                                                    <span className="text-[10px] font-black text-rose-500 uppercase">Scrapped</span>
+                                                    <span className="text-xl font-black text-rose-500">{payload[0].value.toLocaleString()}</span>
+                                                </div>
+                                            </div>
+                                        );
+                                    }
+                                    return null;
+                                }}
+                            />
+                            <Bar
+                                dataKey="value"
+                                fill="#f43f5e"
+                                radius={[10, 10, 0, 0]}
+                                barSize={40}
+                                animationDuration={1500}
+                                filter="url(#glowScrap)"
+                            />
+                            <Area
+                                type="monotone"
+                                dataKey="value"
+                                stroke="#f43f5e"
+                                strokeWidth={4}
+                                fill="url(#scrappedTrendGradient)"
+                                animationDuration={2500}
+                            />
+                        </ComposedChart>
+                    </ResponsiveContainer>
+                </div>
+            </div>
         </motion.div>
     );
 };

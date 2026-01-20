@@ -5,7 +5,7 @@ import { Transaction, Stock, BranchId, PalletId } from '../../types';
 import Swal from 'sweetalert2';
 import { useAnalyticsStore } from '../../stores/analyticsStore';
 import { DateRangeSelector } from './DateRangeSelector';
-import { RechartsBarChart, RechartsPieChart, RechartsLineChart } from './RechartsComponents';
+import { RechartsBarChart, RechartsPieChart, RechartsLineChart, PartnerBalanceChart, LoscamRentalChart, WasteDamageAnalysis } from './RechartsComponents';
 import {
     calculateKPIs,
     getStatusDistribution,
@@ -13,6 +13,12 @@ import {
     getTimeSeriesData,
     getBranchPerformance,
     getPalletTypeAnalysis,
+    getScrappedAnalysis,
+    getScrappedByBranch,
+    getPartnerBalanceAnalysis,
+    getPartnerSummary,
+    getPartnerPalletTypeSummary,
+    getLoscamRentalAnalysis,
     ChartDataPoint,
     HeatmapData,
     WaterfallDataPoint,
@@ -31,7 +37,7 @@ import {
     ChevronRight,
     Filter,
 } from 'lucide-react';
-import { BRANCHES, PALLET_TYPES } from '../../constants';
+import { BRANCHES, PALLET_TYPES, EXTERNAL_PARTNERS } from '../../constants';
 import { isSameDay, startOfWeek, endOfWeek, subWeeks, format, isWithinInterval } from 'date-fns';
 import { th } from 'date-fns/locale';
 import { hexToRgb } from '../../utils/helpers';
@@ -77,11 +83,12 @@ export const AnalyticsDashboard: React.FC<AnalyticsDashboardProps> = ({
     }>({ title: '', transactions: [] });
     const [drillStack, setDrillStack] = useState<string[]>([]);
     const [isLoading, setIsLoading] = useState(true);
+    const [activePartnerId, setActivePartnerId] = useState<string>('all');
+    const [partnerRange, setPartnerRange] = useState<'7d' | 'all'>('7d');
 
-    // Simulate initial data loading for Phase 4 Aesthetics
+    // Initial loading state handle
     React.useEffect(() => {
-        const timer = setTimeout(() => setIsLoading(false), 1500);
-        return () => clearTimeout(timer);
+        setIsLoading(false); // Data is already in state
     }, []);
 
     // Create lookup maps
@@ -175,6 +182,55 @@ export const AnalyticsDashboard: React.FC<AnalyticsDashboardProps> = ({
         [filteredTransactions, stock, filters.startDate, filters.endDate, palletNames, palletColors]
     );
 
+    const scrappedAnalysis = useMemo(() =>
+        getScrappedAnalysis(filteredTransactions, filters.startDate, filters.endDate, palletNames, palletColors),
+        [filteredTransactions, filters.startDate, filters.endDate, palletNames, palletColors]
+    );
+
+    const partnerBalanceData = useMemo(() => {
+        let start = filters.startDate;
+        if (partnerRange === '7d') {
+            start = new Date();
+            start.setDate(start.getDate() - 7);
+            start.setHours(0, 0, 0, 0);
+        }
+        return getPartnerBalanceAnalysis(transactions, activePartnerId, start, filters.endDate);
+    }, [transactions, activePartnerId, filters.startDate, filters.endDate, partnerRange]);
+
+    const partnerSummaryData = useMemo(() => {
+        if (activePartnerId === 'all') {
+            return getPartnerSummary(transactions, EXTERNAL_PARTNERS);
+        } else {
+            const palletInfo: Record<string, { name: string, color: string }> = {};
+            PALLET_TYPES.forEach(pt => {
+                const hexColor = pt.color.includes('bg-') ?
+                    (pt.color.includes('red') ? '#ef4444' :
+                        pt.color.includes('yellow') ? '#facc15' :
+                            pt.color.includes('blue') ? '#3b82f6' :
+                                pt.color.includes('orange') ? '#f97316' :
+                                    pt.color.includes('gray') ? '#94a3b8' :
+                                        pt.color.includes('teal') ? '#14b8a6' : '#6366f1') : '#6366f1';
+                palletInfo[pt.id] = { name: pt.name, color: hexColor };
+            });
+            return getPartnerPalletTypeSummary(transactions, activePartnerId, palletInfo);
+        }
+    }, [transactions, activePartnerId]);
+
+    const scrappedByBranchData = useMemo(() =>
+        getScrappedByBranch(transactions, filters.startDate, filters.endDate, branchNames),
+        [transactions, filters.startDate, filters.endDate, branchNames]
+    );
+
+    const totalScrappedSelected = useMemo(() =>
+        scrappedByBranchData.reduce((sum, item) => sum + item.value, 0),
+        [scrappedByBranchData]
+    );
+
+    const loscamRentalData = useMemo(() =>
+        getLoscamRentalAnalysis(transactions, stock),
+        [transactions, stock]
+    );
+
     // Premium Analytics Data - 7-Day Performance (Real Data Only)
     const last7DaysData = useMemo(() => {
         const days = Array.from({ length: 7 }, (_, i) => {
@@ -209,6 +265,12 @@ export const AnalyticsDashboard: React.FC<AnalyticsDashboardProps> = ({
             const inQty = dayTransactions.filter(t => t.type === 'IN').reduce((sum, t) => sum + t.qty, 0);
             const outQty = dayTransactions.filter(t => t.type === 'OUT').reduce((sum, t) => sum + t.qty, 0);
             const maintenanceQty = dayTransactions.filter(t => t.type === 'MAINTENANCE').reduce((sum, t) => sum + t.qty, 0);
+            const scrappedQty = dayTransactions
+                .filter(t => t.type === 'MAINTENANCE')
+                .reduce((sum, t) => {
+                    const match = t.noteExtended?.match(/SCRAP:\s*(\d+)/);
+                    return sum + (match ? parseInt(match[1]) : 0);
+                }, 0);
 
             const dateLabel = `${date.getDate()} ${thaiMonths[date.getMonth()]}`;
 
@@ -217,6 +279,7 @@ export const AnalyticsDashboard: React.FC<AnalyticsDashboardProps> = ({
                 in: inQty,
                 out: outQty,
                 maintenance: maintenanceQty,
+                scrapped: scrappedQty,
                 total: inQty + outQty + maintenanceQty,
             };
         });
@@ -351,9 +414,47 @@ export const AnalyticsDashboard: React.FC<AnalyticsDashboardProps> = ({
         return weekData;
     }, [transactions]);
 
+    // NEW: Periodic Scrapped Summaries
+    const { scrapped7Days, scrappedMTD, scrappedYTD } = useMemo(() => {
+        const now = new Date();
+        const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+        const startOfYear = new Date(now.getFullYear(), 0, 1);
+        const sevenDaysAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+
+        const getScrap = (tx: Transaction) => {
+            if (tx.type !== 'MAINTENANCE' || tx.status !== 'COMPLETED') return 0;
+            const match = tx.noteExtended?.match(/SCRAP:\s*(\d+)/);
+            return match ? parseInt(match[1]) : 0;
+        };
+
+        const s7d = transactions.filter(t => new Date(t.date) >= sevenDaysAgo).reduce((sum, t) => sum + getScrap(t), 0);
+        const mtd = transactions.filter(t => new Date(t.date) >= startOfMonth).reduce((sum, t) => sum + getScrap(t), 0);
+        const ytd = transactions.filter(t => new Date(t.date) >= startOfYear).reduce((sum, t) => sum + getScrap(t), 0);
+
+        return { scrapped7Days: s7d, scrappedMTD: mtd, scrappedYTD: ytd };
+    }, [transactions]);
+
+    // NEW: Monthly Scrapped Trend
+    const monthlyScrappedData = useMemo(() => {
+        const thisYear = new Date().getFullYear();
+        const MONTH_LABELS = ['ม.ค.', 'ก.พ.', 'มี.ค.', 'เม.ย.', 'พ.ค.', 'มิ.ย.', 'ก.ค.', 'ส.ค.', 'ก.ย.', 'ต.ค.', 'พ.ย.', 'ธ.ค.'];
+        const data = MONTH_LABELS.map(name => ({ name, value: 0 }));
+
+        transactions.forEach(t => {
+            const date = new Date(t.date);
+            if (date.getFullYear() === thisYear && t.type === 'MAINTENANCE' && t.status === 'COMPLETED') {
+                const match = t.noteExtended?.match(/SCRAP:\s*(\d+)/);
+                if (match) {
+                    data[date.getMonth()].value += parseInt(match[1]);
+                }
+            }
+        });
+        return data;
+    }, [transactions]);
+
     const [highlightedItem, setHighlightedItem] = useState<string | null>(null);
 
-    // Simulated "AI Insight" generation logic
+    // Intelligence Summary based on actual operational data
     const smartInsight = useMemo(() => {
         const topBranch = branchPerformance[0];
         const topPallet = palletAnalysis[0];
@@ -604,6 +705,115 @@ export const AnalyticsDashboard: React.FC<AnalyticsDashboardProps> = ({
                                 highlightedItem={highlightedItem}
                                 onBarClick={handleChartClick}
                             />
+                            <motion.div
+                                whileHover={{ y: -5 }}
+                                className={`p-8 rounded-[2rem] border flex flex-col items-center justify-center text-center gap-6 relative overflow-hidden ${isDarkMode ? 'bg-slate-900/40 border-red-500/20 shadow-2xl' : 'bg-white border-red-100 shadow-xl'}`}
+                            >
+                                {/* Decorative Glow */}
+                                <div className="absolute -top-24 -right-24 w-48 h-48 bg-red-500/10 blur-[80px] rounded-full" />
+
+                                <div className={`p-6 rounded-3xl ${isDarkMode ? 'bg-red-500/10 border border-red-500/20' : 'bg-red-50'}`}>
+                                    <Wrench className="w-12 h-12 text-red-500 animate-pulse" />
+                                </div>
+
+                                <div>
+                                    <p className={`text-xs font-black uppercase tracking-[0.2em] mb-3 ${isDarkMode ? 'text-slate-500' : 'text-slate-400'}`}>
+                                        สรุปยอดพาเลทที่เสีย/ทิ้งรวม
+                                    </p>
+                                    <h3 className={`text-7xl font-black tracking-tighter ${isDarkMode ? 'text-white' : 'text-slate-900'}`}>
+                                        {totalScrappedSelected.toLocaleString()}
+                                        <span className="text-3xl ml-3 text-red-500/50 font-bold uppercase">QTY</span>
+                                    </h3>
+                                </div>
+
+                                <div className={`px-4 py-2 rounded-full text-[10px] font-black uppercase tracking-widest ${isDarkMode ? 'bg-red-500/10 text-red-400' : 'bg-red-50 text-red-600'}`}>
+                                    Total Damage Analysis
+                                </div>
+                            </motion.div>
+                        </div>
+
+                        <WasteDamageAnalysis
+                            data={monthlyScrappedData}
+                            summary={{
+                                sevenDays: scrapped7Days,
+                                mtd: scrappedMTD,
+                                ytd: scrappedYTD
+                            }}
+                            title="🗑️ วิเคราะห์พาเลทเสีย/ทิ้ง (Loss Analytics)"
+                            isDarkMode={isDarkMode}
+                        />
+
+                        <div className="space-y-4">
+                            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+                                <div className="flex items-center gap-3">
+                                    <RefreshCw className="w-8 h-8 text-blue-500" />
+                                    <h2 className={`text-2xl font-black ${isDarkMode ? 'text-white' : 'text-slate-900'}`}>Partner Borrow-Return</h2>
+                                </div>
+
+                                <div className="flex items-center gap-4">
+                                    <div className={`p-1 rounded-xl flex items-center ${isDarkMode ? 'bg-slate-900 border border-white/10' : 'bg-slate-100'}`}>
+                                        <button
+                                            onClick={() => setPartnerRange('7d')}
+                                            className={`px-3 py-1.5 rounded-lg text-[10px] font-black tracking-tighter transition-all ${partnerRange === '7d' ? (isDarkMode ? 'bg-blue-600 text-white shadow-lg' : 'bg-white text-blue-600 shadow-sm') : (isDarkMode ? 'text-slate-500 hover:text-slate-300' : 'text-slate-500 hover:text-slate-700')}`}
+                                        >
+                                            7 วันล่าสุด
+                                        </button>
+                                        <button
+                                            onClick={() => setPartnerRange('all')}
+                                            className={`px-3 py-1.5 rounded-lg text-[10px] font-black tracking-tighter transition-all ${partnerRange === 'all' ? (isDarkMode ? 'bg-blue-600 text-white shadow-lg' : 'bg-white text-blue-600 shadow-sm') : (isDarkMode ? 'text-slate-500 hover:text-slate-300' : 'text-slate-500 hover:text-slate-700')}`}
+                                        >
+                                            ตามที่เลือก
+                                        </button>
+                                    </div>
+
+                                    <div className="flex items-center gap-2">
+                                        <label className={`text-xs font-bold uppercase tracking-wider ${isDarkMode ? 'text-slate-500' : 'text-slate-400'}`}>Select Partner:</label>
+                                        <select
+                                            value={activePartnerId}
+                                            onChange={(e) => setActivePartnerId(e.target.value)}
+                                            className={`px-4 py-2 rounded-xl text-sm font-bold border outline-none transition-all ${isDarkMode ? 'bg-slate-900 border-white/10 text-white focus:border-blue-500' : 'bg-white border-slate-200 text-slate-700 focus:border-blue-500 shadow-sm'}`}
+                                            title="เลือกคู่ค้าภายนอก"
+                                        >
+                                            <option value="all">📊 สรุปยอดรวม (ทุกเจ้า)</option>
+                                            {EXTERNAL_PARTNERS.map(p => (
+                                                <option key={p.id} value={p.id}>{p.name}</option>
+                                            ))}
+                                        </select>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                                <PartnerBalanceChart
+                                    data={partnerBalanceData}
+                                    title={activePartnerId === 'all'
+                                        ? "🤝 แนวโน้มยอดรวมพาเลทสะสม (Market Balance)"
+                                        : `🤝 สรุปยอดยืม–คืน: ${EXTERNAL_PARTNERS.find(p => p.id === activePartnerId)?.name || activePartnerId}`
+                                    }
+                                    isDarkMode={isDarkMode}
+                                    showOnlyBalance={activePartnerId === 'all'}
+                                />
+                                <RechartsBarChart
+                                    data={partnerSummaryData}
+                                    title={activePartnerId === 'all'
+                                        ? "📊 ยอดรวมพาเลทคงค้างแยกตามเจ้า (Net Balance)"
+                                        : `📊 ยอดคงค้างแยกตามประเภท: ${EXTERNAL_PARTNERS.find(p => p.id === activePartnerId)?.name || activePartnerId}`
+                                    }
+                                    isDarkMode={isDarkMode}
+                                />
+                            </div>
+                        </div>
+
+                        <div className="space-y-4 pt-6">
+                            <div className="flex items-center gap-3">
+                                <Activity className="w-8 h-8 text-rose-500" />
+                                <h2 className={`text-2xl font-black ${isDarkMode ? 'text-white' : 'text-slate-900'}`}>Loscam Rental Analysis</h2>
+                            </div>
+                            <LoscamRentalChart
+                                data={loscamRentalData}
+                                title="📊 วิเคราะห์ค่าเช่าพาเลท Loscam (รายวัน/7 วันล่าสุด)"
+                                isDarkMode={isDarkMode}
+                            />
                         </div>
 
                         {/* Deep Insights */}
@@ -617,19 +827,19 @@ export const AnalyticsDashboard: React.FC<AnalyticsDashboardProps> = ({
 
                                 <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
                                     <GaugeChart value={kpis.utilizationRate} max={100} title="ประสิทธิภาพการหมุนเวียน" isDarkMode={isDarkMode} />
-                                    <GaugeChart value={kpis.totalPalletsInStock} max={2000} title="ความจุคลังพาเลท" color="#8b5cf6" isDarkMode={isDarkMode} />
+                                    <GaugeChart value={kpis.totalPalletsInStock} max={2000} title="ปริมาณสต็อกปัจจุบัน" color="#8b5cf6" isDarkMode={isDarkMode} />
                                     <ComparisonCard title="การเคลื่อนไหวประจำเดือน" currentValue={kpis.totalTransactions} previousValue={previousMonthTransactions} icon={<Activity />} color="#6366f1" isDarkMode={isDarkMode} />
                                 </div>
 
-                                {/* AI-Powered Forecast Section */}
+                                {/* Statistical Forecast Section */}
                                 <div className="space-y-4">
                                     <div className="flex items-center gap-3">
                                         <Brain className="w-8 h-8 text-purple-500" />
-                                        <h2 className={`text-2xl font-black ${isDarkMode ? 'text-white' : 'text-slate-900'}`}>Predictive Intelligence</h2>
+                                        <h2 className={`text-2xl font-black ${isDarkMode ? 'text-white' : 'text-slate-900'}`}>Statistical Forecast Intelligence</h2>
                                     </div>
                                     <ForecastChart
                                         historicalData={forecastHistoricalData}
-                                        title="🔮 พยากรณ์การหมุนเวียนพาเลท (AI)"
+                                        title="🔮 พยากรณ์การหมุนเวียนพาเลท (Statistical)"
                                         isDarkMode={isDarkMode}
                                         forecastDays={7}
                                     />
@@ -718,6 +928,6 @@ export const AnalyticsDashboard: React.FC<AnalyticsDashboardProps> = ({
                 transactions={drillThroughData.transactions}
                 isDarkMode={isDarkMode}
             />
-        </div>
+        </div >
     );
 };

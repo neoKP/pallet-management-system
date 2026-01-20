@@ -23,6 +23,7 @@ export function useMaintenanceLogic(
     const [batchItems, setBatchItems] = useState<{ palletId: PalletId; qty: number }[]>([]);
     const [fixedQty, setFixedQty] = useState(0);
     const [scrappedQty, setScrappedQty] = useState(0);
+    const [targetPalletId, setTargetPalletId] = useState<PalletId>('general');
     const [note, setNote] = useState('');
 
     const pendingStock = stock['maintenance_stock'] || {};
@@ -105,6 +106,7 @@ export function useMaintenanceLogic(
                 items: batchItems,
                 fixedQty,
                 scrappedQty,
+                targetPalletId,
                 note,
                 branchId: 'maintenance_stock'
             }) as any);
@@ -112,6 +114,7 @@ export function useMaintenanceLogic(
             setBatchItems([]);
             setFixedQty(0);
             setScrappedQty(0);
+            setTargetPalletId('general');
             setNote('');
             Swal.fire({
                 icon: 'success',
@@ -137,6 +140,7 @@ export function useMaintenanceLogic(
         batchItems, addBatchItem, removeBatchItem, updateBatchItem,
         fixedQty, setFixedQty,
         scrappedQty, setScrappedQty,
+        targetPalletId, setTargetPalletId,
         note, setNote,
         pendingStock, totalProcessed,
         handleInboundSubmit, handleSubmit

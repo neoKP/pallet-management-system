@@ -13,6 +13,8 @@ interface RepairProcessFormProps {
     setFixedQty: (val: number) => void;
     scrappedQty: number;
     setScrappedQty: (val: number) => void;
+    targetPalletId: PalletId;
+    setTargetPalletId: (val: PalletId) => void;
     totalProcessed: number;
     onSubmit: (e: React.FormEvent) => void;
 }
@@ -27,6 +29,8 @@ const RepairProcessForm: React.FC<RepairProcessFormProps> = ({
     setFixedQty,
     scrappedQty,
     setScrappedQty,
+    targetPalletId,
+    setTargetPalletId,
     totalProcessed,
     onSubmit
 }) => {
@@ -113,25 +117,46 @@ const RepairProcessForm: React.FC<RepairProcessFormProps> = ({
                 </div>
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                    <div className="bg-green-50/50 p-4 rounded-2xl border border-green-100">
-                        <label className="block text-xs font-black text-green-700 mb-2 uppercase tracking-wider">
-                            <CheckCircle2 size={14} className="inline mr-1" />
-                            ซ่อมแล้ว (แปลงเป็น General)
-                        </label>
-                        <input
-                            type="number"
-                            value={fixedQty}
-                            onChange={(e) => {
-                                const val = parseInt(e.target.value) || 0;
-                                setFixedQty(val);
-                                if (val <= totalProcessed) setScrappedQty(totalProcessed - val);
-                            }}
-                            className="w-full px-4 py-3 rounded-xl bg-white border border-green-200 text-green-700 font-black text-lg focus:ring-4 focus:ring-green-500/10 focus:border-green-500 outline-none transition-all"
-                            placeholder="0"
-                        />
+                    <div className="bg-green-50/50 p-4 rounded-2xl border border-green-100 flex flex-col gap-3">
+                        <div>
+                            <label className="block text-xs font-black text-green-700 mb-2 uppercase tracking-wider">
+                                <CheckCircle2 size={14} className="inline mr-1" />
+                                ซ่อมเสร็จแล้ว (คลังปกติ)
+                            </label>
+                            <input
+                                type="number"
+                                value={fixedQty}
+                                onChange={(e) => {
+                                    const val = parseInt(e.target.value) || 0;
+                                    setFixedQty(val);
+                                    if (val <= totalProcessed) setScrappedQty(totalProcessed - val);
+                                }}
+                                className="w-full px-4 py-3 rounded-xl bg-white border border-green-200 text-green-700 font-black text-lg focus:ring-4 focus:ring-green-500/10 focus:border-green-500 outline-none transition-all"
+                                placeholder="0"
+                            />
+                        </div>
+                        <div>
+                            <label className="block text-[10px] font-bold text-slate-500 mb-1 uppercase">ประเภทเมื่อซ่อมเสร็จ</label>
+                            <select
+                                value={targetPalletId}
+                                onChange={(e) => setTargetPalletId(e.target.value as PalletId)}
+                                className="w-full px-3 py-2 rounded-lg bg-white border border-green-100 text-slate-700 text-xs font-bold outline-none focus:border-green-400 transition-all"
+                                title="เลือกประเภทพาเลทเมื่อซ่อมเสร็จ"
+                            >
+                                {PALLET_TYPES.filter(p => {
+                                    // Logic: เฉพาะพาเลทไม้เท่านั้นที่แปลงได้หลากหลาย
+                                    // ถ้าของที่เอามาซ่อมเป็นไม้ ให้เลือกไม้ได้ทุุกอัน
+                                    // ถ้าเป็นพลาสติก ให้ล็อกไว้ที่พลาสติก
+                                    const firstItemMaterial = PALLET_TYPES.find(pt => pt.id === batchItems[0]?.palletId)?.material || 'wood';
+                                    return p.material === firstItemMaterial;
+                                }).map(p => (
+                                    <option key={p.id} value={p.id}>{p.name}</option>
+                                ))}
+                            </select>
+                        </div>
                     </div>
 
-                    <div className="bg-red-50/50 p-4 rounded-2xl border border-red-100">
+                    <div className="bg-red-50/50 p-4 rounded-2xl border border-red-100 flex flex-col justify-center">
                         <label className="block text-xs font-black text-red-700 mb-2 uppercase tracking-wider">
                             <XCircle size={14} className="inline mr-1" />
                             เสีย/ทิ้ง

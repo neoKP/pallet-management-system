@@ -4,15 +4,17 @@ import { Stock, BranchId, Transaction } from '../../types';
 import { useMaintenanceLogic } from '../../hooks/useMaintenanceLogic';
 import RepairInboundForm from './RepairInboundForm';
 import RepairProcessForm from './RepairProcessForm';
+import ScrappedReportTable from './ScrappedReportTable';
 
 interface MaintenanceTabProps {
     stock: Stock;
     selectedBranch: BranchId;
+    transactions: Transaction[];
     onBatchMaintenance: (data: any) => void;
     onAddTransaction: (transaction: Partial<Transaction>) => void;
 }
 
-const MaintenanceTab: React.FC<MaintenanceTabProps> = ({ stock, selectedBranch, onBatchMaintenance, onAddTransaction }) => {
+const MaintenanceTab: React.FC<MaintenanceTabProps> = ({ stock, selectedBranch, transactions, onBatchMaintenance, onAddTransaction }) => {
     const logic = useMaintenanceLogic(stock, selectedBranch, onBatchMaintenance, onAddTransaction);
 
     return (
@@ -52,10 +54,16 @@ const MaintenanceTab: React.FC<MaintenanceTabProps> = ({ stock, selectedBranch, 
                     setFixedQty={logic.setFixedQty}
                     scrappedQty={logic.scrappedQty}
                     setScrappedQty={logic.setScrappedQty}
+                    targetPalletId={logic.targetPalletId}
+                    setTargetPalletId={logic.setTargetPalletId}
                     totalProcessed={logic.totalProcessed}
                     onSubmit={logic.handleSubmit}
                 />
             )}
+
+            <div className="pt-8 mt-8 border-t-2 border-slate-100">
+                <ScrappedReportTable transactions={transactions} />
+            </div>
         </div>
     );
 };
