@@ -56,6 +56,8 @@ const MaintenanceTab: React.FC<MaintenanceTabProps> = ({ stock, selectedBranch, 
                     setScrappedQty={logic.setScrappedQty}
                     targetPalletId={logic.targetPalletId}
                     setTargetPalletId={logic.setTargetPalletId}
+                    targetBranchId={logic.targetBranchId}
+                    setTargetBranchId={logic.setTargetBranchId}
                     totalProcessed={logic.totalProcessed}
                     onSubmit={logic.handleSubmit}
                 />

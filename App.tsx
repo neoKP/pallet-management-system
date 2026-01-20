@@ -141,7 +141,7 @@ export default function App() {
           {activeTab === 'maintenance' && (
             <MaintenanceTab
               stock={stock}
-              selectedBranch={'hub_nw'}
+              selectedBranch={selectedBranch === 'ALL' ? (currentUser?.branchId || 'hub_nw') : selectedBranch}
               transactions={transactions}
               onBatchMaintenance={processBatchMaintenance}
               onAddTransaction={addTransaction}

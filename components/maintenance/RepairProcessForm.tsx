@@ -1,7 +1,7 @@
 import React from 'react';
 import { Hammer, Plus, Trash2, CheckCircle2, XCircle, Save } from 'lucide-react';
-import { PALLET_TYPES } from '../../constants';
-import { PalletId } from '../../types';
+import { PALLET_TYPES, BRANCHES } from '../../constants';
+import { PalletId, BranchId } from '../../types';
 
 interface RepairProcessFormProps {
     pendingStock: Record<string, number>;
@@ -15,6 +15,8 @@ interface RepairProcessFormProps {
     setScrappedQty: (val: number) => void;
     targetPalletId: PalletId;
     setTargetPalletId: (val: PalletId) => void;
+    targetBranchId: BranchId;
+    setTargetBranchId: (val: BranchId) => void;
     totalProcessed: number;
     onSubmit: (e: React.FormEvent) => void;
 }
@@ -31,6 +33,8 @@ const RepairProcessForm: React.FC<RepairProcessFormProps> = ({
     setScrappedQty,
     targetPalletId,
     setTargetPalletId,
+    targetBranchId,
+    setTargetBranchId,
     totalProcessed,
     onSubmit
 }) => {
@@ -152,6 +156,20 @@ const RepairProcessForm: React.FC<RepairProcessFormProps> = ({
                                 }).map(p => (
                                     <option key={p.id} value={p.id}>{p.name}</option>
                                 ))}
+                            </select>
+                        </div>
+                        <div>
+                            <label className="block text-[10px] font-bold text-slate-500 mb-1 uppercase">สาขาปลายทาง</label>
+                            <select
+                                value={targetBranchId}
+                                onChange={(e) => setTargetBranchId(e.target.value as BranchId)}
+                                className="w-full px-3 py-2 rounded-lg bg-white border border-green-100 text-slate-700 text-xs font-bold outline-none focus:border-green-400 transition-all"
+                                title="เลือกสาขาที่จะรับเข้า"
+                            >
+                                {BRANCHES.map(b => (
+                                    <option key={b.id} value={b.id}>{b.name}</option>
+                                ))}
+                                <option value="maintenance_stock">คลังซ่อม (คงสต๊อกไว้ที่เดิม)</option>
                             </select>
                         </div>
                     </div>

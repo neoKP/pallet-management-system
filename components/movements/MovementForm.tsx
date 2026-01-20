@@ -90,7 +90,7 @@ const MovementForm: React.FC<MovementFormProps> = ({
                                 {branch.name}
                             </option>
                         ))}
-                        {EXTERNAL_PARTNERS.map(partner => (
+                        {selectedBranch !== 'maintenance_stock' && EXTERNAL_PARTNERS.map(partner => (
                             <option key={partner.id} value={partner.id} className="text-slate-900">
                                 {partner.name}
                             </option>

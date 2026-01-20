@@ -1,10 +1,10 @@
 import React from 'react';
 import { ArrowDownToLine } from 'lucide-react';
-import { PALLET_TYPES } from '../../constants';
-import { PalletId } from '../../types';
+import { PALLET_TYPES, BRANCHES } from '../../constants';
+import { PalletId, BranchId } from '../../types';
 
 interface RepairInboundFormProps {
-    form: { palletId: PalletId; qty: string; note: string };
+    form: { palletId: PalletId; qty: string; note: string; sourceBranchId: BranchId };
     onChange: (form: any) => void;
     onSubmit: (e: React.FormEvent) => void;
 }
@@ -17,6 +17,19 @@ const RepairInboundForm: React.FC<RepairInboundFormProps> = ({ form, onChange, o
                 รับพาเลทเสียเข้าคลังซ่อม
             </h2>
             <form onSubmit={onSubmit} className="space-y-4">
+                <div>
+                    <label className="block text-sm font-bold text-slate-700 mb-2">ต้นทาง (จากสาขา)</label>
+                    <select
+                        value={form.sourceBranchId}
+                        onChange={e => onChange({ ...form, sourceBranchId: e.target.value as BranchId })}
+                        className="w-full px-4 py-3 rounded-xl bg-slate-50 border border-slate-300 text-slate-900 focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none transition-all"
+                        title="สาขาที่ส่งพาเลทเสียมา"
+                    >
+                        {BRANCHES.map(b => (
+                            <option key={b.id} value={b.id}>{b.name}</option>
+                        ))}
+                    </select>
+                </div>
                 <div>
                     <label className="block text-sm font-bold text-slate-700 mb-2">ประเภทพาเลทเสีย</label>
                     <select

@@ -16,7 +16,8 @@ export function useMaintenanceLogic(
     const [inboundForm, setInboundForm] = useState({
         palletId: 'loscam_red' as PalletId,
         qty: '',
-        note: ''
+        note: '',
+        sourceBranchId: selectedBranch as BranchId
     });
 
     // Process State
@@ -24,6 +25,7 @@ export function useMaintenanceLogic(
     const [fixedQty, setFixedQty] = useState(0);
     const [scrappedQty, setScrappedQty] = useState(0);
     const [targetPalletId, setTargetPalletId] = useState<PalletId>('general');
+    const [targetBranchId, setTargetBranchId] = useState<BranchId>(selectedBranch);
     const [note, setNote] = useState('');
 
     const pendingStock = stock['maintenance_stock'] || {};
@@ -37,7 +39,7 @@ export function useMaintenanceLogic(
         try {
             await (onAddTransaction({
                 type: 'OUT',
-                source: selectedBranch,
+                source: inboundForm.sourceBranchId,
                 dest: 'maintenance_stock',
                 palletId: inboundForm.palletId,
                 qty: qty,
@@ -107,6 +109,7 @@ export function useMaintenanceLogic(
                 fixedQty,
                 scrappedQty,
                 targetPalletId,
+                targetBranchId,
                 note,
                 branchId: 'maintenance_stock'
             }) as any);
@@ -115,6 +118,7 @@ export function useMaintenanceLogic(
             setFixedQty(0);
             setScrappedQty(0);
             setTargetPalletId('general');
+            setTargetBranchId(selectedBranch);
             setNote('');
             Swal.fire({
                 icon: 'success',
@@ -141,6 +145,7 @@ export function useMaintenanceLogic(
         fixedQty, setFixedQty,
         scrappedQty, setScrappedQty,
         targetPalletId, setTargetPalletId,
+        targetBranchId, setTargetBranchId,
         note, setNote,
         pendingStock, totalProcessed,
         handleInboundSubmit, handleSubmit

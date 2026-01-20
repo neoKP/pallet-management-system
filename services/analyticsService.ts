@@ -630,7 +630,7 @@ export const getLoscamRentalAnalysis = (
 ): LoscamRentalData[] => {
     // 1. Identify valid internal branches vs partners
     const validBranchIds: BranchId[] = ['hub_nw', 'kpp', 'plk', 'cm', 'ekp', 'ms', 'maintenance_stock'];
-    const partnerIds = EXTERNAL_PARTNERS.map(p => p.id);
+    const partnerIds = EXTERNAL_PARTNERS.filter(p => p.type !== 'provider').map(p => p.id);
     const palletId: PalletId = 'loscam_red';
 
     // 2. Calculate CURRENT total in system (Possession)
