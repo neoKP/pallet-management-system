@@ -270,6 +270,17 @@ export const SankeyDiagram: React.FC<SankeyDiagramProps> = ({
                                 <feMergeNode in="SourceGraphic" />
                             </feMerge>
                         </filter>
+                        {/* Rainbow Ribbon Gradient */}
+                        <linearGradient id="grad-rainbow-ribbon" x1="0%" y1="0%" x2="100%" y2="0%" gradientUnits="userSpaceOnUse">
+                            <stop offset="0%" stopColor="#ff0000" />
+                            <stop offset="14%" stopColor="#ff7f00" />
+                            <stop offset="28%" stopColor="#ffff00" />
+                            <stop offset="42%" stopColor="#00ff00" />
+                            <stop offset="56%" stopColor="#0000ff" />
+                            <stop offset="70%" stopColor="#4b0082" />
+                            <stop offset="84%" stopColor="#9400d3" />
+                            <stop offset="100%" stopColor="#ff0000" />
+                        </linearGradient>
                     </defs>
 
                     {/* Links - Background layer (all dimmed when something is hovered) */}
@@ -288,6 +299,56 @@ export const SankeyDiagram: React.FC<SankeyDiagramProps> = ({
                             transition={{ duration: 1.5, delay: i * 0.05 }}
                             className="pointer-events-none"
                         />
+                    ))}
+
+                    {/* Rainbow Ribbon - "Lively Flow" layer */}
+                    {links.map((link, i) => (
+                        <motion.path
+                            key={`link-rainbow-${i}`}
+                            d={link.path}
+                            stroke="url(#grad-rainbow-ribbon)"
+                            strokeWidth={link.width * 0.8}
+                            fill="none"
+                            initial={{ pathLength: 0, opacity: 0 }}
+                            animate={{
+                                pathLength: 1,
+                                opacity: isLinkHighlighted(link) ? 0.6 : 0,
+                                strokeDashoffset: [0, -40],
+                            }}
+                            transition={{
+                                pathLength: { duration: 1.5, delay: i * 0.05 },
+                                opacity: { duration: 0.5 },
+                                strokeDashoffset: { duration: 3, repeat: Infinity, ease: "linear" }
+                            }}
+                            strokeDasharray="20, 20"
+                            className="pointer-events-none"
+                            style={{
+                                mixBlendMode: isDarkMode ? 'screen' : 'multiply',
+                                filter: 'blur(1px)'
+                            }}
+                        />
+                    ))}
+
+                    {/* Global Moving Particles - "The Running Effect" */}
+                    {links.map((link, i) => (
+                        <circle
+                            key={`running-particle-${i}`}
+                            r={2.5}
+                            fill={isDarkMode ? '#ffffff' : '#3b82f6'}
+                            style={{
+                                filter: 'drop-shadow(0 0 3px rgba(255, 255, 255, 0.8))',
+                                opacity: isLinkHighlighted(link) ? 0.9 : 0,
+                                transition: 'opacity 0.3s ease-in-out'
+                            }}
+                        >
+                            <animateMotion
+                                dur={`${2.5 + (i % 3)}s`}
+                                repeatCount="indefinite"
+                                path={link.path}
+                                rotate="auto"
+                                begin={`${i * 0.2}s`}
+                            />
+                        </circle>
                     ))}
 
                     {/* Links - Interactive layer with hover effects */}

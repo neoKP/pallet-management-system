@@ -9,6 +9,14 @@ export interface KPIMetrics {
     utilizationRate: number;
     maintenanceRate: number;
     totalScrapped: number;
+    totalIn: number;
+    totalInTrend: number;
+    totalOut: number;
+    totalOutTrend: number;
+    totalActivity: number;
+    totalActivityTrend: number;
+    maxPossession: number;
+    maxPossessionTrend: number;
     trend: 'up' | 'down' | 'stable';
     trendPercentage: number;
 }
@@ -165,6 +173,14 @@ export const calculateKPIs = (
                 const match = t.noteExtended?.match(/SCRAP:\s*(\d+)/);
                 return sum + (match ? parseInt(match[1]) : 0);
             }, 0),
+        totalIn: filteredTransactions.filter(t => t.type === 'IN').reduce((sum, t) => sum + t.qty, 0),
+        totalInTrend: Math.round(((filteredTransactions.filter(t => t.type === 'IN').reduce((sum, t) => sum + t.qty, 0) - previousTransactions.filter(t => t.type === 'IN').reduce((sum, t) => sum + t.qty, 0)) / (previousTransactions.filter(t => t.type === 'IN').reduce((sum, t) => sum + t.qty, 0) || 1)) * 100 * 10) / 10,
+        totalOut: filteredTransactions.filter(t => t.type === 'OUT').reduce((sum, t) => sum + t.qty, 0),
+        totalOutTrend: Math.round(((filteredTransactions.filter(t => t.type === 'OUT').reduce((sum, t) => sum + t.qty, 0) - previousTransactions.filter(t => t.type === 'OUT').reduce((sum, t) => sum + t.qty, 0)) / (previousTransactions.filter(t => t.type === 'OUT').reduce((sum, t) => sum + t.qty, 0) || 1)) * 100 * 10) / 10,
+        totalActivity: totalMovements,
+        totalActivityTrend: Math.round(((totalMovements - previousTransactions.reduce((sum, t) => sum + t.qty, 0)) / (previousTransactions.reduce((sum, t) => sum + t.qty, 0) || 1)) * 100 * 10) / 10,
+        maxPossession: totalPalletsInStock + totalPalletsInTransit,
+        maxPossessionTrend: 0, // Hard to calculate without daily snapshots
         trend,
         trendPercentage: Math.abs(Math.round(trendPercentage * 10) / 10),
     };

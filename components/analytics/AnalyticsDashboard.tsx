@@ -36,6 +36,8 @@ import {
     Truck,
     ChevronRight,
     Filter,
+    ArrowDownCircle,
+    ArrowUpCircle,
 } from 'lucide-react';
 import { BRANCHES, PALLET_TYPES, EXTERNAL_PARTNERS } from '../../constants';
 import { isSameDay, startOfWeek, endOfWeek, subWeeks, format, isWithinInterval } from 'date-fns';
@@ -60,6 +62,37 @@ import { ThemeEngine, THEMES } from './ThemeEngine';
 import { DrillThroughModal } from './DrillThroughModal';
 import { Filter as FilterIcon, Brain, Palette } from 'lucide-react';
 import { GlobalSpotlight } from './GlobalSpotlight';
+
+const ExecutivePillCard = ({ title, value, suffix, color, trend, isDarkMode }: any) => (
+    <motion.div
+        whileHover={{ scale: 1.02 }}
+        className={`p-6 rounded-[2.5rem] border flex flex-col items-center justify-center text-center gap-1 relative overflow-hidden transition-all duration-500 h-32 ${isDarkMode ? 'bg-slate-900/60 border-white/10 shadow-2xl' : 'bg-white border-slate-100 shadow-xl'
+            }`}
+    >
+        <div
+            className="absolute inset-0 opacity-[0.05]"
+            style={{ background: `radial-gradient(circle at center, ${color}, transparent)` }}
+        />
+        <div className="flex items-center gap-2 relative z-10">
+            <p className="text-[10px] font-black uppercase tracking-[0.2em] mb-1" style={{ color }}>
+                {title}
+            </p>
+            {trend !== undefined && (
+                <span className={`text-[10px] font-bold ${trend >= 0 ? 'text-green-500' : 'text-red-500'}`}>
+                    {trend >= 0 ? '↑' : '↓'} {Math.abs(trend)}%
+                </span>
+            )}
+        </div>
+        <div className="flex items-baseline gap-2 relative z-10">
+            <h3 className={`text-5xl font-black tracking-tighter ${isDarkMode ? 'text-white' : 'text-slate-900'}`}>
+                {value.toLocaleString()}
+            </h3>
+            <span className={`text-xs font-black uppercase tracking-widest opacity-40 ${isDarkMode ? 'text-white' : 'text-slate-900'}`}>
+                {suffix}
+            </span>
+        </div>
+    </motion.div>
+);
 
 interface AnalyticsDashboardProps {
     transactions: Transaction[];
@@ -232,18 +265,32 @@ export const AnalyticsDashboard: React.FC<AnalyticsDashboardProps> = ({
     );
 
     // Premium Analytics Data - 7-Day Performance (Real Data Only)
-    const last7DaysData = useMemo(() => {
+    const { last7DaysData, last7DaysIn, last7DaysOut } = useMemo(() => {
         const days = Array.from({ length: 7 }, (_, i) => {
             const date = new Date();
             date.setDate(date.getDate() - (6 - i));
             return date;
         });
 
-        return days.map(date =>
+        const counts = days.map(date =>
             transactions.filter((t: Transaction) =>
                 isSameDay(new Date(t.date), date)
             ).length
         );
+
+        const inQtys = days.map(date =>
+            transactions.filter((t: Transaction) =>
+                t.type === 'IN' && isSameDay(new Date(t.date), date)
+            ).reduce((sum, t) => sum + t.qty, 0)
+        );
+
+        const outQtys = days.map(date =>
+            transactions.filter((t: Transaction) =>
+                t.type === 'OUT' && isSameDay(new Date(t.date), date)
+            ).reduce((sum, t) => sum + t.qty, 0)
+        );
+
+        return { last7DaysData: counts, last7DaysIn: inQtys, last7DaysOut: outQtys };
     }, [transactions]);
 
     // 7-Day Performance Focus - Detailed Time Series (Real Data)
@@ -650,6 +697,26 @@ export const AnalyticsDashboard: React.FC<AnalyticsDashboardProps> = ({
                             </div>
                         </motion.div>
 
+                        {/* Executive Highlights */}
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                            <ExecutivePillCard
+                                title="MAX POSSESSION"
+                                value={kpis.maxPossession}
+                                suffix="MAX"
+                                color="#f97316"
+                                isDarkMode={isDarkMode}
+                                trend={kpis.maxPossessionTrend}
+                            />
+                            <ExecutivePillCard
+                                title="TOTAL ACTIVITY"
+                                value={kpis.totalActivity}
+                                suffix="VOL"
+                                color="#10b981"
+                                isDarkMode={isDarkMode}
+                                trend={kpis.totalActivityTrend}
+                            />
+                        </div>
+
                         {/* Control Bar */}
                         <motion.div variants={{ hidden: { opacity: 0, y: 10 }, show: { opacity: 1, y: 0 } }} className="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-4">
                             <DateRangeSelector
@@ -679,12 +746,14 @@ export const AnalyticsDashboard: React.FC<AnalyticsDashboardProps> = ({
                         </motion.div>
 
                         {/* KPI Grid */}
-                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6">
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 xl:grid-cols-7 gap-6">
                             <EnhancedKPICard title="การเคลื่อนไหวรวม" value={kpis.totalTransactions} icon={<Activity />} trend={kpis.trend} trendValue={kpis.trendPercentage} sparklineData={last7DaysData} variant="primary" color={currentTheme.primary} isDarkMode={isDarkMode} delay={0.1} />
                             <EnhancedKPICard title="พาเลทในคลัง" value={kpis.totalPalletsInStock} suffix="ชิ้น" icon={<Package />} sparklineData={last7DaysData} variant="secondary" color={currentTheme.secondary} isDarkMode={isDarkMode} delay={0.2} />
                             <EnhancedKPICard title="ระหว่างทาง" value={kpis.totalPalletsInTransit} suffix="ชิ้น" icon={<Truck />} sparklineData={last7DaysData} variant="accent" color={currentTheme.accent} isDarkMode={isDarkMode} delay={0.3} />
-                            <EnhancedKPICard title="อัตราหมุนเวียน" value={kpis.utilizationRate} suffix="%" icon={<TrendingUp />} sparklineData={last7DaysData} variant="success" color="#10b981" isDarkMode={isDarkMode} delay={0.4} />
-                            <EnhancedKPICard title="เข้าซ่อมบำรุง" value={kpis.maintenanceRate} suffix="%" icon={<Wrench />} sparklineData={last7DaysData} variant="warning" color="#f59e0b" isDarkMode={isDarkMode} delay={0.5} />
+                            <EnhancedKPICard title="ยอดรับรวม" value={kpis.totalIn} suffix="ชิ้น" icon={<ArrowDownCircle />} trend={kpis.totalInTrend >= 0 ? 'up' : 'down'} trendValue={kpis.totalInTrend} sparklineData={last7DaysIn} variant="success" color="#10b981" isDarkMode={isDarkMode} delay={0.35} />
+                            <EnhancedKPICard title="ยอดจ่ายรวม" value={kpis.totalOut} suffix="ชิ้น" icon={<ArrowUpCircle />} trend={kpis.totalOutTrend >= 0 ? 'up' : 'down'} trendValue={kpis.totalOutTrend} sparklineData={last7DaysOut} variant="warning" color="#f59e0b" isDarkMode={isDarkMode} delay={0.4} />
+                            <EnhancedKPICard title="อัตราหมุนเวียน" value={kpis.utilizationRate} suffix="%" icon={<TrendingUp />} sparklineData={last7DaysData} variant="primary" color="#6366f1" isDarkMode={isDarkMode} delay={0.45} />
+                            <EnhancedKPICard title="เข้าซ่อมบำรุง" value={kpis.maintenanceRate} suffix="%" icon={<Wrench />} sparklineData={last7DaysData} variant="accent" color="#ec4899" isDarkMode={isDarkMode} delay={0.5} />
                         </div>
 
                         {/* Main Interaction Charts */}
