@@ -195,6 +195,12 @@ export const StockProvider: React.FC<StockProviderProps> = ({ children }) => {
             const originalTx = transactions.find(t => t.id === item.id);
             const isNew = !originalTx;
 
+            // Skip if the original transaction is already COMPLETED to prevent doubling
+            if (originalTx && originalTx.status === 'COMPLETED') {
+                console.warn(`Transaction ${item.id} is already COMPLETED. Skipping stock update.`);
+                return;
+            }
+
             let correctionNote = item.note || '';
             let originalPalletId: PalletId | undefined;
             let originalQty: number | undefined;
@@ -222,6 +228,27 @@ export const StockProvider: React.FC<StockProviderProps> = ({ children }) => {
             };
             finalTxs.push(updatedTx);
 
+            // --- STOCK ADJUSTMENT LOGIC ---
+
+            // 1. Handle Source Correction (If edited or split)
+            // If it's an update to an existing transaction, we must "refund" the original deduction 
+            // from the source branch and re-deduct the new amount.
+            if (originalTx && originalTx.source && nextStock[originalTx.source as BranchId]) {
+                const s = { ...nextStock[originalTx.source as BranchId] } as Record<PalletId, number>;
+                s[originalTx.palletId] = (s[originalTx.palletId] || 0) + originalTx.qty; // Refund
+                nextStock[originalTx.source as BranchId] = s;
+            }
+
+            // 2. Handle New Source Deduction (For both original edits and new splits/items)
+            // If the source is a managed branch, deduct the confirmed amount.
+            if (updatedTx.source && nextStock[updatedTx.source as BranchId]) {
+                const s = { ...nextStock[updatedTx.source as BranchId] } as Record<PalletId, number>;
+                s[updatedTx.palletId] = (s[updatedTx.palletId] || 0) - updatedTx.qty; // New deduction
+                nextStock[updatedTx.source as BranchId] = s;
+            }
+
+            // 3. Handle Destination Addition
+            // Add the confirmed amount to the destination branch.
             if (updatedTx.dest && nextStock[updatedTx.dest as BranchId]) {
                 const d = { ...nextStock[updatedTx.dest as BranchId] } as Record<PalletId, number>;
                 d[updatedTx.palletId] = (d[updatedTx.palletId] || 0) + updatedTx.qty;
@@ -229,10 +256,12 @@ export const StockProvider: React.FC<StockProviderProps> = ({ children }) => {
             }
         });
 
+        if (finalTxs.length === 0) return;
+
         await firebaseService.addMovementBatch(finalTxs, nextStock);
 
         if (config?.telegramChatId) {
-            results.forEach(tx => {
+            finalTxs.forEach(tx => {
                 const sourceName = BRANCHES.find(b => b.id === tx.source)?.name || tx.source;
                 const destName = BRANCHES.find(b => b.id === tx.dest)?.name || tx.dest;
                 const message = telegramService.formatMovementNotification({ ...tx, type: 'IN', items: [{ palletId: tx.palletId, qty: tx.qty }] }, sourceName, destName);
@@ -324,7 +353,7 @@ export const StockProvider: React.FC<StockProviderProps> = ({ children }) => {
 
     const confirmTransaction = useCallback(async (txId: number) => {
         const tx = transactions.find(t => t.id === txId);
-        if (!tx) return;
+        if (!tx || tx.status === 'COMPLETED') return;
 
         const updatedTx: Transaction = { ...tx, status: 'COMPLETED', receivedAt: new Date().toISOString() };
         const nextStock = { ...stock };
@@ -345,16 +374,16 @@ export const StockProvider: React.FC<StockProviderProps> = ({ children }) => {
         const updatedTx: Transaction = { ...tx, status: 'CANCELLED' };
         const nextStock = { ...stock };
 
-        if (updatedTx.source && nextStock[updatedTx.source as BranchId]) {
-            const s = { ...nextStock[updatedTx.source as BranchId] } as Record<PalletId, number>;
-            s[updatedTx.palletId] = (s[updatedTx.palletId] || 0) + updatedTx.qty;
-            nextStock[updatedTx.source as BranchId] = s;
+        if (tx.source && nextStock[tx.source as BranchId]) {
+            const s = { ...nextStock[tx.source as BranchId] } as Record<PalletId, number>;
+            s[tx.palletId] = (s[tx.palletId] || 0) + tx.qty;
+            nextStock[tx.source as BranchId] = s;
         }
 
-        if (updatedTx.status === 'COMPLETED' && updatedTx.dest && nextStock[updatedTx.dest as BranchId]) {
-            const d = { ...nextStock[updatedTx.dest as BranchId] } as Record<PalletId, number>;
-            d[updatedTx.palletId] = (d[updatedTx.palletId] || 0) - updatedTx.qty;
-            nextStock[updatedTx.dest as BranchId] = d;
+        if (tx.status === 'COMPLETED' && tx.dest && nextStock[tx.dest as BranchId]) {
+            const d = { ...nextStock[tx.dest as BranchId] } as Record<PalletId, number>;
+            d[tx.palletId] = (d[tx.palletId] || 0) - tx.qty;
+            nextStock[tx.dest as BranchId] = d;
         }
 
         await firebaseService.addMovementBatch([updatedTx], nextStock);
