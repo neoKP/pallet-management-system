@@ -279,7 +279,8 @@ export const QuickLoopRecord: React.FC<QuickLoopRecordProps> = ({ selectedBranch
                                                     const yellowQty = Math.round(getLiability(p.id, 'loscam_yellow'));
                                                     const isMain = p.id === 'loscam_wangnoi';
                                                     const displayName = isMain ? 'Loscam (Main)' : p.name.replace('บ. ', '');
-                                                    const hasAnyDebt = redQty !== 0 || blueQty !== 0 || yellowQty !== 0;
+                                                    const hiqQty = Math.round(getLiability(p.id, 'hiq'));
+                                                    const hasAnyDebt = redQty !== 0 || blueQty !== 0 || yellowQty !== 0 || hiqQty !== 0;
 
                                                     return (
                                                         <motion.button
@@ -306,6 +307,7 @@ export const QuickLoopRecord: React.FC<QuickLoopRecordProps> = ({ selectedBranch
                                                                     {redQty !== 0 && <p className="text-sm font-black tracking-tight flex items-center gap-2"><span className="w-2.5 h-2.5 rounded-full bg-red-500 shadow-[0_0_8px_rgba(239,68,68,0.5)]" /> {redQty.toLocaleString()}</p>}
                                                                     {blueQty !== 0 && <p className="text-sm font-black tracking-tight flex items-center gap-2"><span className="w-2.5 h-2.5 rounded-full bg-blue-500 shadow-[0_0_8px_rgba(59,130,246,0.5)]" /> {blueQty.toLocaleString()}</p>}
                                                                     {yellowQty !== 0 && <p className="text-sm font-black tracking-tight flex items-center gap-2"><span className="w-2.5 h-2.5 rounded-full bg-yellow-400 shadow-[0_0_8px_rgba(250,204,21,0.5)]" /> {yellowQty.toLocaleString()}</p>}
+                                                                    {hiqQty !== 0 && <p className="text-sm font-black tracking-tight flex items-center gap-2"><span className="w-2.5 h-2.5 rounded-full bg-orange-500 shadow-[0_0_8px_rgba(249,115,22,0.5)]" /> {hiqQty.toLocaleString()}</p>}
                                                                     {!hasAnyDebt && <p className="text-xs font-black opacity-30 uppercase tracking-widest text-center mt-2">Balanced</p>}
                                                                 </div>
                                                             </div>
