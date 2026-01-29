@@ -53,12 +53,21 @@ export default function App() {
     setActiveTab
   );
 
-  const canViewAll = !!currentUser;
+  // Only Admin can view all branches; regular users see only their own branch
+  const canViewAll = currentUser?.role === 'ADMIN';
 
   useEffect(() => {
     if (currentUser) {
-      if (!selectedBranch || (selectedBranch !== 'ALL' && !BRANCHES.some(b => b.id === selectedBranch))) {
-        setSelectedBranch('ALL');
+      if (currentUser.role === 'ADMIN') {
+        // Admin defaults to ALL if no valid selection
+        if (!selectedBranch || (selectedBranch !== 'ALL' && !BRANCHES.some(b => b.id === selectedBranch))) {
+          setSelectedBranch('ALL');
+        }
+      } else {
+        // Non-admin users are locked to their own branch
+        if (currentUser.branchId && currentUser.branchId !== selectedBranch) {
+          setSelectedBranch(currentUser.branchId as BranchId);
+        }
       }
     }
   }, [currentUser, selectedBranch]);
