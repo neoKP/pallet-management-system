@@ -19,6 +19,14 @@ import {
     getPartnerSummary,
     getPartnerPalletTypeSummary,
     getLoscamRentalAnalysis,
+    getCentralizedReturnAnalysis,
+    getSinoAgingAnalysis,
+    getLogisticInsight,
+    getQuickLoopPerformance,
+    getPeakHourAnalysis,
+    getHubTransferEfficiency,
+    getBranchPalletBreakdown,
+    getPartnerVelocity,
     ChartDataPoint,
     HeatmapData,
     WaterfallDataPoint,
@@ -62,19 +70,22 @@ import { ThemeEngine, THEMES } from './ThemeEngine';
 import { DrillThroughModal } from './DrillThroughModal';
 import { Filter as FilterIcon, Brain, Palette } from 'lucide-react';
 import { GlobalSpotlight } from './GlobalSpotlight';
+import { AgingRentalReport } from './AgingRentalReport';
+import { ExecutivePalletSummary } from './ExecutivePalletSummary';
+import { getAgingRentalAnalysis } from '../../services/analyticsService';
 
 const ExecutivePillCard = ({ title, value, suffix, color, trend, isDarkMode }: any) => (
     <motion.div
         whileHover={{ scale: 1.02 }}
         className={`p-6 rounded-[2.5rem] border flex flex-col items-center justify-center text-center gap-1 relative overflow-hidden transition-all duration-500 h-32 ${isDarkMode ? 'bg-slate-900/60 border-white/10 shadow-2xl' : 'bg-white border-slate-100 shadow-xl'
             }`}
+        style={{ '--pill-color': color } as React.CSSProperties}
     >
         <div
-            className="absolute inset-0 opacity-[0.05]"
-            style={{ background: `radial-gradient(circle at center, ${color}, transparent)` }}
+            className="absolute inset-0 opacity-[0.05] bg-[radial-gradient(circle_at_center,var(--pill-color),transparent)]"
         />
         <div className="flex items-center gap-2 relative z-10">
-            <p className="text-[10px] font-black uppercase tracking-[0.2em] mb-1" style={{ color }}>
+            <p className="text-[10px] font-black uppercase tracking-[0.2em] mb-1 text-[var(--pill-color)]">
                 {title}
             </p>
             {trend !== undefined && (
@@ -116,6 +127,7 @@ export const AnalyticsDashboard: React.FC<AnalyticsDashboardProps> = ({
     }>({ title: '', transactions: [] });
     const [drillStack, setDrillStack] = useState<string[]>([]);
     const [isLoading, setIsLoading] = useState(true);
+    const [activeTab, setActiveTab] = useState<'overview' | 'aging'>('overview');
     const [activePartnerId, setActivePartnerId] = useState<string>('all');
     const [partnerRange, setPartnerRange] = useState<'7d' | 'all'>('7d');
 
@@ -262,6 +274,52 @@ export const AnalyticsDashboard: React.FC<AnalyticsDashboardProps> = ({
     const loscamRentalData = useMemo(() =>
         getLoscamRentalAnalysis(transactions, stock),
         [transactions, stock]
+    );
+
+    // NEW: Centralized Return Insight (Hub NW focus)
+    const centralizedReturnData = useMemo(() =>
+        getCentralizedReturnAnalysis(transactions, ['sino', 'neo_corp', 'loscam_wangnoi']),
+        [transactions]
+    );
+
+    // NEW: Sino Aging Analysis
+    const sinoAgingData = useMemo(() =>
+        getSinoAgingAnalysis(transactions),
+        [transactions]
+    );
+
+    // NEW: Logistic & Truck Insight
+    const logisticData = useMemo(() =>
+        getLogisticInsight(filteredTransactions),
+        [filteredTransactions]
+    );
+
+    // NEW: Performance Insight
+    const quickLoopPerformance = useMemo(() =>
+        getQuickLoopPerformance(filteredTransactions),
+        [filteredTransactions]
+    );
+
+    // NEW: Peak Hours
+    const peakHourData = useMemo(() =>
+        getPeakHourAnalysis(filteredTransactions),
+        [filteredTransactions]
+    );
+
+    // NEW: Sai 3 Specifics
+    const sai3StockBreakdown = useMemo(() =>
+        getBranchPalletBreakdown(stock, 'sai3', palletNames, palletColors),
+        [stock, palletNames, palletColors]
+    );
+
+    const sai3PartnerVelocity = useMemo(() =>
+        getPartnerVelocity(transactions, ['lamsoon', 'ufc', 'loxley', 'kopee']),
+        [transactions]
+    );
+
+    const sai3PendingTransfer = useMemo(() =>
+        getHubTransferEfficiency(transactions),
+        [transactions]
     );
 
     // Premium Analytics Data - 7-Day Performance (Real Data Only)
@@ -596,6 +654,11 @@ export const AnalyticsDashboard: React.FC<AnalyticsDashboardProps> = ({
         }
     };
 
+    const agingAnalysis = useMemo(() =>
+        getAgingRentalAnalysis(transactions),
+        [transactions]
+    );
+
     return (
         <div
             id="analytics-dashboard-root"
@@ -636,6 +699,20 @@ export const AnalyticsDashboard: React.FC<AnalyticsDashboardProps> = ({
                     </div>
 
                     <div className="flex flex-wrap items-center gap-2 p-1 bg-slate-900/5 dark:bg-white/5 rounded-2xl backdrop-blur-md border border-black/5 dark:border-white/10">
+                        <div className="flex bg-slate-200/50 dark:bg-slate-800/50 p-1 rounded-xl mr-2">
+                            <button
+                                onClick={() => setActiveTab('overview')}
+                                className={`px-4 py-1.5 rounded-lg text-xs font-black transition-all ${activeTab === 'overview' ? 'bg-white dark:bg-slate-700 text-blue-600 shadow-sm' : 'text-slate-500'}`}
+                            >
+                                Overview
+                            </button>
+                            <button
+                                onClick={() => setActiveTab('aging')}
+                                className={`px-4 py-1.5 rounded-lg text-xs font-black transition-all ${activeTab === 'aging' ? 'bg-white dark:bg-slate-700 text-blue-600 shadow-sm' : 'text-slate-500'}`}
+                            >
+                                Aging & Rental
+                            </button>
+                        </div>
                         <motion.button whileHover={{ y: -2 }} whileTap={{ scale: 0.95 }} onClick={handleExportPDF} className={`px-4 py-2 rounded-xl font-bold text-xs uppercase tracking-wider transition-all ${isDarkMode ? 'bg-white/5 text-slate-300 hover:bg-white/10' : 'bg-white text-slate-600 shadow-sm hover:shadow-md'}`}>PDF</motion.button>
                         <motion.button whileHover={{ y: -2 }} whileTap={{ scale: 0.95 }} onClick={handleExportExcel} className={`px-4 py-2 rounded-xl font-bold text-xs uppercase tracking-wider transition-all ${isDarkMode ? 'bg-white/5 text-slate-300 hover:bg-white/10' : 'bg-white text-slate-600 shadow-sm hover:shadow-md'}`}>Excel</motion.button>
                         <div className="w-px h-6 bg-slate-500/20 mx-1" />
@@ -663,6 +740,8 @@ export const AnalyticsDashboard: React.FC<AnalyticsDashboardProps> = ({
 
                 {isLoading ? (
                     <AnalyticsSkeleton isDarkMode={isDarkMode} />
+                ) : activeTab === 'aging' ? (
+                    <AgingRentalReport transactions={transactions} isDarkMode={isDarkMode} />
                 ) : (
                     <motion.div
                         initial="hidden"
@@ -673,6 +752,9 @@ export const AnalyticsDashboard: React.FC<AnalyticsDashboardProps> = ({
                         }}
                         className="space-y-8"
                     >
+                        {/* Executive Pallet Summary */}
+                        <ExecutivePalletSummary analysis={agingAnalysis} />
+
                         {/* Smart Narrative Insight Overlay */}
                         <motion.div
                             variants={{ hidden: { opacity: 0, scale: 0.98 }, show: { opacity: 1, scale: 1 } }}
@@ -771,9 +853,72 @@ export const AnalyticsDashboard: React.FC<AnalyticsDashboardProps> = ({
                                 data={palletAnalysis.map(p => ({ name: p.palletName, value: p.totalStock, color: palletColors[p.palletId] }))}
                                 title="🎨 สัดส่วนพาเลทแยกตามประเภท"
                                 isDarkMode={isDarkMode}
-                                highlightedItem={highlightedItem}
                                 onBarClick={handleChartClick}
                             />
+                        </div>
+
+                        {/* NEW: Hub NW Specialized Analytics */}
+                        <div className="space-y-6">
+                            <div className="flex items-center gap-3">
+                                <div className="p-1.5 rounded-lg bg-blue-500 text-white shadow-lg">
+                                    <Truck className="w-5 h-5" />
+                                </div>
+                                <h2 className="text-xl font-black tracking-tight">Hub NW & Logistics Intelligence</h2>
+                            </div>
+
+                            <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+                                <RechartsPieChart data={centralizedReturnData} title="🔄 การรวมศูนย์การคืน (Hub NW vs สาขา)" isDarkMode={isDarkMode} />
+                                <RechartsPieChart data={sinoAgingData} title="⏳ Sino Aging Status (Grace Period)" isDarkMode={isDarkMode} />
+                                <RechartsBarChart data={logisticData} title="🚛 วิเคราะห์ประเภทรถขนส่ง" isDarkMode={isDarkMode} />
+                            </div>
+                        </div>
+
+                        {/* NEW: Sai 3 Operational Analytics */}
+                        <div className="space-y-6">
+                            <div className="flex items-center gap-3">
+                                <div className="p-1.5 rounded-lg bg-emerald-500 text-white shadow-lg">
+                                    <Activity className="w-5 h-5" />
+                                </div>
+                                <h2 className="text-xl font-black tracking-tight">Sai 3 Performance & Partner Velocity</h2>
+                            </div>
+
+                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                                <EnhancedKPICard
+                                    title="โอนย้ายรอส่ง Hub"
+                                    value={sai3PendingTransfer}
+                                    suffix="ชิ้น"
+                                    icon={<Truck />}
+                                    variant="warning"
+                                    color="#f59e0b"
+                                    isDarkMode={isDarkMode}
+                                />
+                                <div className="lg:col-span-3 grid grid-cols-1 md:grid-cols-3 gap-6">
+                                    <RechartsBarChart data={sai3PartnerVelocity} title="⚡ ความเร็วพาร์ทเนอร์สาย 3" isDarkMode={isDarkMode} />
+                                    <RechartsPieChart data={sai3StockBreakdown} title="🎨 สต็อกสีพาเลทสาย 3" isDarkMode={isDarkMode} />
+                                    <RechartsLineChart
+                                        data={peakHourData.map(h => ({
+                                            date: h.hour,
+                                            total: h.activity,
+                                            in: 0,
+                                            out: 0,
+                                            maintenance: 0,
+                                            scrapped: 0
+                                        }))}
+                                        title="⏱️ ช่วงเวลาลงรายการหนาแน่น"
+                                        isDarkMode={isDarkMode}
+                                    />
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* Operational Efficiency */}
+                        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                            <RechartsPieChart data={quickLoopPerformance} title="⚡ ประสิทธิภาพ Quick Loop" isDarkMode={isDarkMode} />
+                            <LoscamRentalChart data={loscamRentalData} title="💰 วิเคราะห์ต้นทุนเช่าพาเลท (Loscam)" isDarkMode={isDarkMode} />
+                        </div>
+
+                        {/* Scrapped Summary */}
+                        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
                             <motion.div
                                 whileHover={{ y: -5 }}
                                 className={`p-8 rounded-[2rem] border flex flex-col items-center justify-center text-center gap-6 relative overflow-hidden ${isDarkMode ? 'bg-slate-900/40 border-red-500/20 shadow-2xl' : 'bg-white border-red-100 shadow-xl'}`}
@@ -799,6 +944,12 @@ export const AnalyticsDashboard: React.FC<AnalyticsDashboardProps> = ({
                                     Total Damage Analysis
                                 </div>
                             </motion.div>
+                            <RechartsBarChart
+                                data={scrappedByBranchData}
+                                title="🏛️ พาเลทเสียแยกตามสาขา"
+                                isDarkMode={isDarkMode}
+                                onBarClick={handleChartClick}
+                            />
                         </div>
 
                         <WasteDamageAnalysis

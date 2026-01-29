@@ -73,12 +73,38 @@ const MovementForm: React.FC<MovementFormProps> = ({
                 </div>
 
                 <div>
-                    <label className="block text-sm font-bold text-slate-700 mb-2">
-                        {transactionType === 'IN' ? 'รับจาก' : 'จ่ายไปยัง'}
-                    </label>
+                    <div className="flex justify-between items-center mb-2">
+                        <label className="block text-sm font-bold text-slate-700">
+                            {transactionType === 'IN' ? 'รับจาก' : 'จ่ายไปยัง'}
+                        </label>
+                        {selectedBranch === 'sai3' && (
+                            <div className="flex gap-1">
+                                {EXTERNAL_PARTNERS.filter(p => ['lamsoon', 'ufc', 'loxley', 'kopee'].includes(p.id)).map(p => (
+                                    <button
+                                        key={p.id}
+                                        type="button"
+                                        onClick={() => setTarget(p.id)}
+                                        className={`text-[10px] px-2 py-1 rounded-full border transition-all ${target === p.id ? 'bg-blue-600 text-white border-blue-600' : 'bg-white text-slate-500 border-slate-200'}`}
+                                    >
+                                        {p.name.replace('บ. ', '')}
+                                    </button>
+                                ))}
+                            </div>
+                        )}
+                    </div>
                     <select
                         value={target}
-                        onChange={(e) => setTarget(e.target.value)}
+                        onChange={(e) => {
+                            const val = e.target.value;
+                            setTarget(val);
+
+                            // Version 2.0.0: Auto-Destination Logic for Hub NW
+                            if (selectedBranch === 'hub_nw' && transactionType === 'IN') {
+                                if (val === 'loscam_wangnoi') {
+                                    // Normally handle secondary auto-logic in hook, but we could pre-fill note or UI hint
+                                }
+                            }
+                        }}
                         className="w-full px-4 py-3 rounded-xl bg-slate-50 border border-slate-300 text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-500"
                         title={transactionType === 'IN' ? 'เลือกต้นทาง' : 'เลือกปลายทาง'}
                         aria-label={transactionType === 'IN' ? 'Select source' : 'Select destination'}
@@ -90,7 +116,32 @@ const MovementForm: React.FC<MovementFormProps> = ({
                                 {branch.name}
                             </option>
                         ))}
-                        {selectedBranch !== 'maintenance_stock' && EXTERNAL_PARTNERS.map(partner => (
+                        {selectedBranch !== 'maintenance_stock' && EXTERNAL_PARTNERS.filter(p => {
+                            // Version 2.3.0: Detailed Branch & Partner Access Control
+
+                            // Rule 0: Global 'No OUT to Neo Corp'
+                            if (transactionType === 'OUT' && p.id === 'neo_corp') return false;
+
+                            // Rule 1: Lamsoon (IN: Sai3 only, OUT: Sai3 & Hub NW)
+                            if (p.id === 'lamsoon') {
+                                if (transactionType === 'IN' && selectedBranch !== 'sai3') return false;
+                                if (transactionType === 'OUT' && !['sai3', 'hub_nw'].includes(selectedBranch)) return false;
+                            }
+
+                            // Rule 2: UFC, Loxley, Kopee (Strictly Sai3 Only for both IN/OUT)
+                            if (['ufc', 'loxley', 'kopee'].includes(p.id)) {
+                                if (selectedBranch !== 'sai3') return false;
+                            }
+
+                            // Rule 3: Existing Loscam Red enforcement context check
+                            const hasLascamRed = items.some(item => item.palletId === 'loscam_red');
+                            if (hasLascamRed) {
+                                if (transactionType === 'IN') return p.id === 'neo_corp';
+                                if (transactionType === 'OUT') return p.id === 'loscam_wangnoi';
+                            }
+
+                            return true;
+                        }).map(partner => (
                             <option key={partner.id} value={partner.id} className="text-slate-900">
                                 {partner.name}
                             </option>

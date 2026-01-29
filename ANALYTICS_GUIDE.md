@@ -105,7 +105,7 @@ Analytics Dashboard เป็นระบบ Business Intelligence แบบ Pow
 
 ### **Dark Mode**
 
-```
+```text
 พื้นหลัง: Gradient (Navy Blue → Purple → Navy Blue)
 Cards: Glassmorphism (bg-white/5 + backdrop-blur)
 สีหลัก: Indigo (#6366f1) → Purple (#8b5cf6)
@@ -113,7 +113,7 @@ Cards: Glassmorphism (bg-white/5 + backdrop-blur)
 
 ### **Light Mode**
 
-```
+```text
 พื้นหลัง: Gradient (Gray → Blue → Gray)
 Cards: White/80 + Shadow
 สีหลัก: Indigo (#6366f1) → Purple (#8b5cf6)
@@ -211,7 +211,7 @@ analyticsService.ts
 
 ### **Components**
 
-```
+```bash
 components/analytics/
 ├── AnalyticsDashboard.tsx (Main)
 ├── KPICard.tsx (Glassmorphism Cards)

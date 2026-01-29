@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react';
+import React, { useMemo } from 'react';
 import {
     AlertCircle,
     Package,
@@ -8,19 +8,23 @@ import {
     ShieldCheck,
     Recycle
 } from 'lucide-react';
-import { Stock, BranchId, Transaction, PalletId, User } from '../../types';
-import { useStock } from '../../contexts/StockContext';
+import { Stock, BranchId, Transaction, User, PalletId } from '../../types';
 import StatsCard from './StatsCard';
-import StockAdjustmentModal from './StockAdjustmentModal';
-import TransactionTimelineModal from '../movements/TransactionTimelineModal';
-import DocumentPreviewModal from '../movements/DocumentPreviewModal';
 import StockVisualizer from './StockVisualizer';
-import RecentTransactionsTable from './RecentTransactionsTable';
-import InTransitTable from './InTransitTable';
-import { handleExportToExcel } from '../../utils/excelExport';
-import { BRANCHES } from '../../constants';
-// @ts-ignore
-import Swal from 'sweetalert2';
+import { BRANCHES, EXTERNAL_PARTNERS, PALLET_TYPES } from '../../constants';
+import { getAgingRentalAnalysis } from '../../services/analyticsService';
+import { useStock } from '../../contexts/StockContext';
+import {
+    AreaChart,
+    Area,
+    XAxis,
+    YAxis,
+    CartesianGrid,
+    Tooltip,
+    ResponsiveContainer
+} from 'recharts';
+import { format, subDays, isSameDay } from 'date-fns';
+import { th } from 'date-fns/locale';
 
 interface DashboardProps {
     stock: Stock;
@@ -30,63 +34,97 @@ interface DashboardProps {
     currentUser: User | null;
 }
 
-const Dashboard: React.FC<DashboardProps> = ({ stock, selectedBranch, transactions, addTransaction, currentUser }) => {
-    const { deleteTransaction } = useStock();
-    const [isAdjModalOpen, setIsAdjModalOpen] = useState(false);
+const DashboardTrendChart = ({ transactions, selectedBranch }: { transactions: Transaction[], selectedBranch: string }) => {
+    const data = useMemo(() => {
+        const days = Array.from({ length: 14 }, (_, i) => subDays(new Date(), 13 - i));
 
-    // Timeline State
-    const [timelineTxs, setTimelineTxs] = useState<Transaction[] | null>(null);
+        return days.map(date => {
+            const dayTxs = transactions.filter(t =>
+                isSameDay(new Date(t.date), date) &&
+                (selectedBranch === 'ALL' || t.source === selectedBranch || t.dest === selectedBranch)
+            );
 
-    // Print State
-    const [isPrintOpen, setIsPrintOpen] = useState(false);
-    const [printData, setPrintData] = useState<any>(null);
+            return {
+                date: format(date, 'd MMM', { locale: th }),
+                in: dayTxs.filter(t => t.type === 'IN').reduce((sum, t) => sum + t.qty, 0),
+                out: dayTxs.filter(t => t.type === 'OUT').reduce((sum, t) => sum + t.qty, 0),
+            };
+        });
+    }, [transactions, selectedBranch]);
 
-    const handleViewTimeline = (tx: Transaction) => {
-        const group = transactions.filter(t => t.docNo === tx.docNo);
-        setTimelineTxs(group.length > 0 ? group : [tx]);
-    };
+    return (
+        <div className="bg-white p-6 rounded-[2.5rem] shadow-sm border border-slate-100 mt-6 overflow-hidden">
+            <div className="flex items-center gap-2 mb-6">
+                <div className="p-2 bg-blue-50 text-blue-600 rounded-lg">
+                    <Package size={18} />
+                </div>
+                <div>
+                    <h3 className="text-lg font-black text-slate-800">Movement Trend</h3>
+                    <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest">แนวโน้มการเคลื่อนย้ายพาเลท (14 วันล่าสุด)</p>
+                </div>
+            </div>
+            <div className="h-[250px] w-full">
+                <ResponsiveContainer width="100%" height="100%" minWidth={0}>
+                    <AreaChart data={data} accessibilityLayer>
+                        <defs>
+                            <linearGradient id="colorIn" x1="0" y1="0" x2="0" y2="1">
+                                <stop offset="5%" stopColor="#10b981" stopOpacity={0.1} />
+                                <stop offset="95%" stopColor="#10b981" stopOpacity={0} />
+                            </linearGradient>
+                            <linearGradient id="colorOut" x1="0" y1="0" x2="0" y2="1">
+                                <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.1} />
+                                <stop offset="95%" stopColor="#3b82f6" stopOpacity={0} />
+                            </linearGradient>
+                        </defs>
+                        <CartesianGrid vertical={false} strokeDasharray="3 3" stroke="#f1f5f9" />
+                        <XAxis
+                            dataKey="date"
+                            axisLine={false}
+                            tickLine={false}
+                            tick={{ fill: '#94a3b8', fontSize: 10, fontWeight: 700 }}
+                        />
+                        <YAxis
+                            axisLine={false}
+                            tickLine={false}
+                            tick={{ fill: '#94a3b8', fontSize: 10, fontWeight: 700 }}
+                        />
+                        <Tooltip
+                            contentStyle={{
+                                borderRadius: '1rem',
+                                border: 'none',
+                                boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)',
+                                fontSize: '12px',
+                                fontWeight: '900'
+                            }}
+                        />
+                        <Area
+                            type="monotone"
+                            dataKey="in"
+                            stroke="#10b981"
+                            strokeWidth={3}
+                            fillOpacity={1}
+                            fill="url(#colorIn)"
+                            name="รับเข้า (IN)"
+                        />
+                        <Area
+                            type="monotone"
+                            dataKey="out"
+                            stroke="#3b82f6"
+                            strokeWidth={3}
+                            fillOpacity={1}
+                            fill="url(#colorOut)"
+                            name="จ่ายออก (OUT)"
+                        />
+                    </AreaChart>
+                </ResponsiveContainer>
+            </div>
+        </div>
+    );
+};
 
-    const handleDelete = (txId: number) => {
-        if (Swal) {
-            Swal.fire({
-                title: 'ยืนยันการลบรายการ?',
-                text: "รายการจะถูกขีดฆ่าและทำเครื่องหมายว่ายกเลิก",
-                icon: 'warning',
-                showCancelButton: true,
-                confirmButtonColor: '#d33',
-                cancelButtonColor: '#3085d6',
-                confirmButtonText: 'ลบรายการ',
-                cancelButtonText: 'ยกเลิก'
-            }).then((result: any) => {
-                if (result.isConfirmed) {
-                    deleteTransaction(txId);
-                    Swal.fire(
-                        'ลบสำเร็จ!',
-                        'รายการถูกยกเลิกแล้ว',
-                        'success'
-                    );
-                }
-            });
-        }
-    };
-
-    const handlePrintDoc = (mainTx: Transaction) => {
-        const group = transactions.filter(t => t.docNo === mainTx.docNo);
-        const data = {
-            source: mainTx.source,
-            dest: mainTx.dest,
-            docNo: mainTx.docNo,
-            date: mainTx.date,
-            carRegistration: mainTx.carRegistration,
-            driverName: mainTx.driverName,
-            transportCompany: mainTx.transportCompany,
-            referenceDocNo: mainTx.referenceDocNo,
-            note: mainTx.note,
-            items: group.map(t => ({ palletId: t.palletId, qty: t.qty }))
-        };
-        setPrintData(data);
-        setIsPrintOpen(true);
-    };
+const Dashboard: React.FC<DashboardProps> = ({ stock, selectedBranch, transactions, currentUser }) => {
+    const { thresholds } = useStock();
+    const agingAnalysis = useMemo(() => getAgingRentalAnalysis(transactions), [transactions]);
 
     const stockOverview = useMemo(() => {
         const confirmed: Record<string, number> = {};
@@ -95,10 +133,7 @@ const Dashboard: React.FC<DashboardProps> = ({ stock, selectedBranch, transactio
         const activeBranchIds = BRANCHES.map(b => b.id);
 
         if (selectedBranch === 'ALL') {
-            // Filter specific branches for 'ALL' view (Northern Group + Maintenance + EKP)
-            const allowedBranchIds = ['hub_nw', 'kpp', 'cm', 'plk', 'maintenance_stock', 'ekp', 'ms'];
-
-            // Calculate Sum of specific Branch Stocks
+            const allowedBranchIds = ['hub_nw', 'sai3', 'kpp', 'cm', 'plk', 'maintenance_stock', 'ekp', 'ms'];
             activeBranchIds.forEach(branchId => {
                 if (allowedBranchIds.includes(branchId)) {
                     const branchStock = stock[branchId];
@@ -110,20 +145,17 @@ const Dashboard: React.FC<DashboardProps> = ({ stock, selectedBranch, transactio
                 }
             });
 
-            // Calculate Sum of PENDING transactions (In-Transit) destined for these branches
             transactions.forEach(t => {
                 if (t.status === 'PENDING' && allowedBranchIds.includes(t.dest)) {
                     pending[t.palletId] = (pending[t.palletId] || 0) + (t.qty as number);
                 }
             });
         } else {
-            // Specific Branch Confirmed Stock
             const branchStock = stock[selectedBranch as BranchId] || {};
             Object.entries(branchStock).forEach(([pid, qty]) => {
                 confirmed[pid] = qty as number;
             });
 
-            // Pending items specifically FOR this branch (Incoming)
             transactions.forEach(t => {
                 if (t.dest === selectedBranch && t.status === 'PENDING') {
                     pending[t.palletId] = (pending[t.palletId] || 0) + (t.qty as number);
@@ -154,6 +186,7 @@ const Dashboard: React.FC<DashboardProps> = ({ stock, selectedBranch, transactio
         });
 
         return {
+            ...result,
             totalStock: grandTotal,
             totalPending: grandPending,
             loscamRed: result['loscam_red'],
@@ -165,65 +198,65 @@ const Dashboard: React.FC<DashboardProps> = ({ stock, selectedBranch, transactio
         };
     }, [stockOverview]);
 
-    const displayTransactions = useMemo(() => {
-        let filtered = [...transactions];
-        if (selectedBranch !== 'ALL') {
-            filtered = filtered.filter(t => t.source === selectedBranch || t.dest === selectedBranch);
-        }
-        return filtered.sort((a, b) => b.id - a.id);
-    }, [transactions, selectedBranch]);
+    const alerts = useMemo(() => {
+        const activeAlerts: any[] = [];
+        if (!thresholds) return activeAlerts;
 
-    const isRedAlert = stats.loscamRed.total > 500;
+        const branchThresholds = thresholds[selectedBranch === 'ALL' ? 'ALL' : selectedBranch];
+        if (!branchThresholds) return activeAlerts;
 
-    const handleAdjustmentSubmit = async (data: { type: 'IN' | 'OUT'; branchId: string; palletId: PalletId; qty: number; note: string }) => {
-        try {
-            await (addTransaction({
-                type: 'ADJUST',
-                source: data.type === 'IN' ? 'ADJUSTMENT' : data.branchId,
-                dest: data.type === 'IN' ? data.branchId : 'ADJUSTMENT',
-                palletId: data.palletId,
-                qty: data.qty,
-                note: data.note,
-                status: 'COMPLETED'
-            }) as any);
+        Object.entries(branchThresholds).forEach(([pId, limits]: [string, any]) => {
+            const currentStats = stats[pId as keyof typeof stats] as any;
+            const currentQty = currentStats?.total || 0;
+            const palletInfo = PALLET_TYPES.find(p => p.id === pId);
 
-            setIsAdjModalOpen(false);
-            Swal.fire({
-                icon: 'success',
-                title: 'สำเร็จ',
-                text: 'ปรับปรุงสต็อกเรียบร้อยแล้ว',
-                timer: 1500,
-                showConfirmButton: false
-            });
-        } catch (error: any) {
-            Swal.fire({
-                icon: 'error',
-                title: 'ไม่สามารถปรับปรุงสต็อกได้!',
-                text: error.message || 'เกิดข้อผิดพลาดในการบันทึกข้อมูล',
-                confirmButtonText: 'ตกลง',
-                confirmButtonColor: '#d33',
-            });
-        }
-    };
+            if (limits.max > 0 && currentQty > limits.max) {
+                activeAlerts.push({
+                    type: 'MAX',
+                    palletName: palletInfo?.name || pId,
+                    qty: currentQty,
+                    limit: limits.max,
+                    color: 'text-red-600',
+                    bgColor: 'bg-red-50',
+                    borderColor: 'border-red-200'
+                });
+            } else if (limits.min > 0 && currentQty < limits.min) {
+                activeAlerts.push({
+                    type: 'MIN',
+                    palletName: palletInfo?.name || pId,
+                    qty: currentQty,
+                    limit: limits.min,
+                    color: 'text-amber-600',
+                    bgColor: 'bg-amber-50',
+                    borderColor: 'border-amber-200'
+                });
+            }
+        });
+
+        return activeAlerts;
+    }, [thresholds, selectedBranch, stats]);
 
     return (
         <div className="space-y-6">
-            <StockAdjustmentModal
-                isOpen={isAdjModalOpen}
-                onClose={() => setIsAdjModalOpen(false)}
-                onSubmit={handleAdjustmentSubmit}
-                currentBranch={selectedBranch}
-            />
-
-            {isRedAlert && (
-                <div className="bg-red-50 border border-red-200 rounded-2xl p-4 flex items-start gap-3 shadow-sm animate-in fade-in slide-in-from-top-2">
-                    <AlertCircle className="text-red-600 shrink-0 mt-0.5" />
-                    <div>
-                        <h3 className="text-red-900 font-bold">แจ้งเตือนระดับสต็อก (Alert)</h3>
-                        <p className="text-red-700 text-sm mt-1">
-                            พาเลท Loscam Red มีจำนวนสูงเกินมาตรฐาน ({stats.loscamRed.total} units). กรุณาตรวจสอบหรือระบายออก
-                        </p>
-                    </div>
+            {alerts.length > 0 && (
+                <div className="space-y-3">
+                    {alerts.map((alert, idx) => (
+                        <div key={idx} className={`${alert.bgColor} border ${alert.borderColor} rounded-2xl p-4 flex items-start gap-3 shadow-sm animate-in fade-in slide-in-from-top-2`}>
+                            <AlertCircle className={alert.color} />
+                            <div>
+                                <h3 className={`${alert.color.replace('text-', 'text-')} font-bold`}>
+                                    แจ้งเตือนระดับสต็อก ({alert.type === 'MAX' ? 'เกินกำหนด' : 'ต่ำกว่าเกณฑ์'})
+                                </h3>
+                                <p className={`${alert.color} text-sm mt-1 font-medium`}>
+                                    พาเลท {alert.palletName} ปัจจุบันมี {alert.qty} ตัว
+                                    {alert.type === 'MAX'
+                                        ? ` (สูงกว่าค่า Max ที่ตั้งไว้ ${alert.limit} ตัว)`
+                                        : ` (ต่ำกว่าค่า Min ที่ตั้งไว้ ${alert.limit} ตัว)`}
+                                    กรุณาตรวจสอบและดำเนินการ
+                                </p>
+                            </div>
+                        </div>
+                    ))}
                 </div>
             )}
 
@@ -247,7 +280,7 @@ const Dashboard: React.FC<DashboardProps> = ({ stock, selectedBranch, transactio
                     color="bg-red-600"
                     textColor="text-red-600"
                     subtext="Critical"
-                    alert={isRedAlert}
+                    alert={alerts.some(a => a.palletName.includes('Red'))}
                 />
                 <StatsCard
                     title="Loscam Blue"
@@ -301,70 +334,152 @@ const Dashboard: React.FC<DashboardProps> = ({ stock, selectedBranch, transactio
                 />
             </div>
 
-            {selectedBranch === 'ALL' && (
-                <div className="bg-white p-6 rounded-3xl shadow-sm border border-slate-100 overflow-hidden animate-in fade-in slide-in-from-bottom-4">
-                    <div className="flex items-center gap-3 mb-6 border-b border-slate-50 pb-4">
-                        <div className="p-2 bg-blue-50 text-blue-600 rounded-lg">
-                            <Layers size={20} />
+            <DashboardTrendChart transactions={transactions} selectedBranch={selectedBranch} />
+
+            <div className="bg-white p-6 rounded-[2.5rem] shadow-sm border border-slate-100 overflow-hidden animate-in fade-in slide-in-from-top-4">
+                <div className="flex items-center justify-between mb-6">
+                    <div className="flex items-center gap-3">
+                        <div className="p-2 bg-indigo-50 text-indigo-600 rounded-lg">
+                            <ShieldCheck size={20} />
                         </div>
                         <div>
-                            <h3 className="text-lg font-black text-slate-800">Branch Stock Breakdown</h3>
-                            <p className="text-sm text-slate-500">รายละเอียดสต็อกรายสาขา (Detailed Stock per Branch)</p>
+                            <h3 className="text-lg font-black text-slate-800">Executive Partner Summary</h3>
+                            <p className="text-xs text-slate-500 font-bold uppercase tracking-widest mt-0.5">สรุปยอดค้างและเรทค่าเช่าปัจจุบัน</p>
                         </div>
                     </div>
-                    <div className="overflow-x-auto">
-                        <table className="w-full text-sm">
-                            <thead>
-                                <tr className="bg-slate-50 border-b border-slate-100 text-slate-500">
-                                    <th className="p-4 text-left font-bold rounded-tl-xl">Branch Name</th>
-                                    <th className="p-4 text-center font-bold text-red-600">Loscam Red</th>
-                                    <th className="p-4 text-center font-bold text-amber-500">Loscam Yellow</th>
-                                    <th className="p-4 text-center font-bold text-blue-600">Loscam Blue</th>
-                                    <th className="p-4 text-center font-bold text-orange-500">HI-Q</th>
-                                    <th className="p-4 text-center font-bold text-slate-600">General</th>
-                                    <th className="p-4 text-center font-bold text-teal-600 rounded-tr-xl">Plastic</th>
-                                    <th className="p-4 text-center font-black text-slate-800">Total</th>
-                                </tr>
-                            </thead>
-                            <tbody className="divide-y divide-slate-50">
-                                {BRANCHES
-                                    .filter(b => ['hub_nw', 'kpp', 'cm', 'plk', 'maintenance_stock', 'ekp', 'ms'].includes(b.id))
-                                    .map(branch => {
-                                        const branchStock = stock[branch.id] || {};
-                                        const getQty = (id: PalletId) => branchStock[id] || 0;
-                                        const total = getQty('loscam_red') + getQty('loscam_yellow') + getQty('loscam_blue') +
-                                            getQty('hiq') + getQty('general') + getQty('plastic_circular');
+                </div>
+                <div className="overflow-x-auto">
+                    <table className="w-full text-sm">
+                        <thead>
+                            <tr className="bg-slate-50 border-b border-slate-100 text-slate-500">
+                                <th className="p-4 text-left font-black uppercase tracking-widest text-[10px]">คู่ค้า (Partner)</th>
+                                <th className="p-4 text-center font-black uppercase tracking-widest text-[10px]">สต็อกคงเหลือ (ยอดต้องคืน)</th>
+                                <th className="p-4 text-center font-black uppercase tracking-widest text-[10px]">เรทราคาปัจจุบัน</th>
+                                <th className="p-4 text-left font-black uppercase tracking-widest text-[10px]">หมายเหตุ / สถานะ (Status)</th>
+                            </tr>
+                        </thead>
+                        <tbody className="divide-y divide-slate-50">
+                            {['loscam_wangnoi', 'sino', 'lamsoon', 'ufc', 'loxley', 'kopee', 'hiq_th'].map(partnerId => {
+                                const partner = [...EXTERNAL_PARTNERS, { id: 'loscam_wangnoi', name: 'Loscam (Main Account)', type: 'provider' }].find(p => p.id === partnerId);
+                                if (!partner) return null;
 
-                                        return (
-                                            <tr key={branch.id} className="hover:bg-slate-50/80 transition-colors">
-                                                <td className="p-4 font-bold text-slate-800 border-r border-slate-50">{branch.name}</td>
-                                                <td className="p-4 text-center font-mono text-slate-600">{getQty('loscam_red')}</td>
-                                                <td className="p-4 text-center font-mono text-slate-600">{getQty('loscam_yellow')}</td>
-                                                <td className="p-4 text-center font-mono text-slate-600">{getQty('loscam_blue')}</td>
-                                                <td className="p-4 text-center font-mono text-slate-600">{getQty('hiq')}</td>
-                                                <td className="p-4 text-center font-mono text-slate-600">{getQty('general')}</td>
-                                                <td className="p-4 text-center font-mono text-slate-600">{getQty('plastic_circular')}</td>
-                                                <td className="p-4 text-center font-black text-slate-900 bg-slate-50/50">{total}</td>
-                                            </tr>
-                                        );
-                                    })}
-                            </tbody>
-                            <tfoot className="bg-slate-100 font-black text-slate-900 border-t-2 border-slate-200">
-                                <tr>
-                                    <td className="p-4 text-right">GRAND TOTAL</td>
-                                    <td className="p-4 text-center">{stats.loscamRed.confirmed}</td>
-                                    <td className="p-4 text-center">{stats.loscamYellow.confirmed}</td>
-                                    <td className="p-4 text-center">{stats.loscamBlue.confirmed}</td>
-                                    <td className="p-4 text-center">{stats.hiq.confirmed}</td>
-                                    <td className="p-4 text-center">{stats.general.confirmed}</td>
-                                    <td className="p-4 text-center">{stats.plastic.confirmed}</td>
-                                    <td className="p-4 text-center">{stats.totalStock - stats.totalPending}</td>
-                                </tr>
-                            </tfoot>
-                        </table>
+                                const partnerPallets = Object.entries(agingAnalysis.partnerSummaries)
+                                    .filter(([key]) => key.startsWith(partnerId + '_'))
+                                    .map(([, s]) => s);
+
+                                const totalDebt = partnerPallets.reduce((sum, s) => sum + (s.openQty || 0), 0);
+                                const totalRent = partnerPallets.reduce((sum, s) => sum + (s.rent || 0), 0);
+                                const maxRate = Math.max(...partnerPallets.map(s => s.currentRate || 0), 0);
+
+                                return (
+                                    <tr key={partnerId} className="hover:bg-slate-50/50 transition-colors">
+                                        <td className="p-4">
+                                            <div className="font-black text-slate-900">{partnerId === 'loscam_wangnoi' ? 'Loscam (Main Account)' : partner.name}</div>
+                                            <div className="text-[10px] text-slate-400 font-bold uppercase">
+                                                {partnerId === 'loscam_wangnoi' ? 'Aggregated Account' :
+                                                    partnerId === 'sino' ? 'ยืมใช้ / คืนตามกำหนด' : 'ส่วนงานลูกค้า (Customer)'}
+                                            </div>
+                                        </td>
+                                        <td className="p-4 text-center">
+                                            <span className={`text-xl font-black ${totalDebt !== 0 ? 'text-slate-900' : 'text-slate-300'}`}>
+                                                {totalDebt.toLocaleString()}
+                                            </span>
+                                            <span className="text-[10px] ml-1 font-bold text-slate-400">ตัว</span>
+                                        </td>
+                                        <td className="p-4 text-center">
+                                            {totalRent > 0 ? (
+                                                <div className="inline-flex items-center px-3 py-1 bg-red-50 text-red-700 rounded-full font-black text-xs">
+                                                    ฿{totalRent.toLocaleString()}
+                                                </div>
+                                            ) : partnerId === 'loscam_wangnoi' ? (
+                                                <div className="inline-flex items-center px-3 py-1 bg-indigo-50 text-indigo-700 rounded-full font-black text-xs">
+                                                    ฿{maxRate.toFixed(2)} / วัน
+                                                </div>
+                                            ) : (
+                                                <div className="inline-flex items-center px-3 py-1 bg-emerald-50 text-emerald-700 rounded-full font-black text-xs">
+                                                    ฟรี (10 วัน)
+                                                </div>
+                                            )}
+                                        </td>
+                                        <td className="p-4">
+                                            <div className="flex flex-wrap gap-1">
+                                                {partnerPallets.length > 0 ? partnerPallets.map((s, idx) => (
+                                                    <span key={idx} className={`text-[9px] font-black px-1.5 py-0.5 rounded-md ${s.openQty !== 0 ? 'bg-slate-100 text-slate-600' : 'bg-slate-50 text-slate-300'}`}>
+                                                        {s.palletId.replace('loscam_', '').toUpperCase()}: {s.openQty} ตัว
+                                                    </span>
+                                                )) : <span className="text-[10px] text-slate-400 font-bold uppercase tracking-widest">Normal (No Debt)</span>}
+                                            </div>
+                                        </td>
+                                    </tr>
+                                );
+                            })}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <div className="bg-white p-6 rounded-3xl shadow-sm border border-slate-100 overflow-hidden animate-in fade-in slide-in-from-bottom-4">
+                <div className="flex items-center gap-3 mb-6 border-b border-slate-50 pb-4">
+                    <div className="p-2 bg-blue-50 text-blue-600 rounded-lg">
+                        <Layers size={20} />
+                    </div>
+                    <div>
+                        <h3 className="text-lg font-black text-slate-800">Branch Stock Breakdown</h3>
+                        <p className="text-sm text-slate-500">รายละเอียดสต็อกรายสาขา (Detailed Stock per Branch)</p>
                     </div>
                 </div>
-            )}
+                <div className="overflow-x-auto">
+                    <table className="w-full text-sm">
+                        <thead>
+                            <tr className="bg-slate-50 border-b border-slate-100 text-slate-500">
+                                <th className="p-4 text-left font-bold rounded-tl-xl">Branch Name</th>
+                                <th className="p-4 text-center font-bold text-red-600">Loscam Red</th>
+                                <th className="p-4 text-center font-bold text-amber-500">Loscam Yellow</th>
+                                <th className="p-4 text-center font-bold text-blue-600">Loscam Blue</th>
+                                <th className="p-4 text-center font-bold text-orange-500">HI-Q</th>
+                                <th className="p-4 text-center font-bold text-slate-600">General</th>
+                                <th className="p-4 text-center font-bold text-teal-600 rounded-tr-xl">Plastic</th>
+                                <th className="p-4 text-center font-black text-slate-800">Total</th>
+                            </tr>
+                        </thead>
+                        <tbody className="divide-y divide-slate-50">
+                            {BRANCHES
+                                .filter(b => ['hub_nw', 'sai3', 'kpp', 'cm', 'plk', 'maintenance_stock', 'ekp', 'ms'].includes(b.id))
+                                .map(branch => {
+                                    const branchStock = stock[branch.id] || {};
+                                    const getQty = (id: PalletId) => branchStock[id] || 0;
+                                    const total = getQty('loscam_red') + getQty('loscam_yellow') + getQty('loscam_blue') +
+                                        getQty('hiq') + getQty('general') + getQty('plastic_circular');
+
+                                    return (
+                                        <tr key={branch.id} className="hover:bg-slate-50/80 transition-colors">
+                                            <td className="p-4 font-bold text-slate-800 border-r border-slate-50">{branch.name}</td>
+                                            <td className="p-4 text-center font-mono text-slate-600">{getQty('loscam_red')}</td>
+                                            <td className="p-4 text-center font-mono text-slate-600">{getQty('loscam_yellow')}</td>
+                                            <td className="p-4 text-center font-mono text-slate-600">{getQty('loscam_blue')}</td>
+                                            <td className="p-4 text-center font-mono text-slate-600">{getQty('hiq')}</td>
+                                            <td className="p-4 text-center font-mono text-slate-600">{getQty('general')}</td>
+                                            <td className="p-4 text-center font-mono text-slate-600">{getQty('plastic_circular')}</td>
+                                            <td className="p-4 text-center font-black text-slate-900 bg-slate-50/50">{total}</td>
+                                        </tr>
+                                    );
+                                })}
+                        </tbody>
+                        <tfoot className="bg-slate-100 font-black text-slate-900 border-t-2 border-slate-200">
+                            <tr>
+                                <td className="p-4 text-right">GRAND TOTAL</td>
+                                <td className="p-4 text-center">{stats.loscamRed.confirmed}</td>
+                                <td className="p-4 text-center">{stats.loscamYellow.confirmed}</td>
+                                <td className="p-4 text-center">{stats.loscamBlue.confirmed}</td>
+                                <td className="p-4 text-center">{stats.hiq.confirmed}</td>
+                                <td className="p-4 text-center">{stats.general.confirmed}</td>
+                                <td className="p-4 text-center">{stats.plastic.confirmed}</td>
+                                <td className="p-4 text-center">{stats.totalStock - stats.totalPending}</td>
+                            </tr>
+                        </tfoot>
+                    </table>
+                </div>
+            </div>
 
             <StockVisualizer
                 currentStock={Object.fromEntries(
@@ -372,45 +487,7 @@ const Dashboard: React.FC<DashboardProps> = ({ stock, selectedBranch, transactio
                 )}
                 totalStock={stats.totalStock}
             />
-
-            {/* In-Transit Table */}
-            <InTransitTable
-                transactions={transactions}
-                selectedBranch={selectedBranch}
-            />
-
-            <RecentTransactionsTable
-                displayTransactions={displayTransactions}
-                selectedBranch={selectedBranch}
-                currentUser={currentUser}
-                onViewTimeline={handleViewTimeline}
-                onPrintDoc={handlePrintDoc}
-                onDelete={handleDelete}
-                onExport={() => handleExportToExcel(displayTransactions, selectedBranch)}
-                onOpenAdjModal={() => setIsAdjModalOpen(true)}
-            />
-
-            {timelineTxs && (
-                <TransactionTimelineModal
-                    isOpen={!!timelineTxs}
-                    onClose={() => setTimelineTxs(null)}
-                    transactions={timelineTxs}
-                />
-            )}
-
-            <DocumentPreviewModal
-                isOpen={isPrintOpen}
-                onClose={() => {
-                    setIsPrintOpen(false);
-                    setPrintData(null);
-                }}
-                onConfirm={() => {
-                    setIsPrintOpen(false);
-                    setPrintData(null);
-                }}
-                data={printData}
-            />
-        </div>
+        </div >
     );
 };
 

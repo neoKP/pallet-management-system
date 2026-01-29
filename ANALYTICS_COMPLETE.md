@@ -188,7 +188,7 @@ Buttons:
 
 ### **Architecture**
 
-```
+```text
 Zustand Store (Global State)
     ↓
 Analytics Service (Business Logic)
@@ -212,7 +212,7 @@ Framer Motion (Animations)
 
 ## 📁 **Files Created**
 
-```
+```bash
 stores/
   └── analyticsStore.ts              ✅ Zustand Store
 
@@ -245,25 +245,25 @@ Documentation/
 
 ### **1. เข้าสู่ Dashboard**
 
-```
+```text
 Login → Click "Analytics" menu (📊) → Dashboard loads
 ```
 
 ### **2. เปลี่ยนช่วงเวลา**
 
-```
+```text
 Click: วันนี้ | สัปดาห์นี้ | เดือนนี้ | ไตรมาสนี้ | ปีนี้ | กำหนดเอง
 ```
 
 ### **3. สลับ Dark/Light Mode**
 
-```
+```text
 Click: 🌙 (Dark) or ☀️ (Light) - Top right corner
 ```
 
 ### **4. Reset Filters**
 
-```
+```text
 Click: 🔄 Reset button - Top right corner
 ```
 

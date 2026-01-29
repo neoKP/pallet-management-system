@@ -2,17 +2,7 @@ import React, { useState } from 'react';
 import { UserIcon, Lock, ShieldCheck, LogIn } from 'lucide-react';
 import BrandLogo from '../common/BrandLogo';
 import { User } from '../../types';
-
-// Used locally for mock login
-const MOCK_USERS: User[] = [
-    { username: 'admin', role: 'ADMIN', name: 'System Administrator' },
-    { username: 'user_nw', role: 'USER', branchId: 'hub_nw', name: 'Operator - Hub NW' },
-    { username: 'user_cm', role: 'USER', branchId: 'cm', name: 'Staff - Chiang Mai' },
-    { username: 'user_kpp', role: 'USER', branchId: 'kpp', name: 'Staff - Kamphaeng Phet' },
-    { username: 'user_plk', role: 'USER', branchId: 'plk', name: 'Staff - Phitsanulok' },
-    { username: 'user_ekp', role: 'USER', branchId: 'ekp', name: 'Staff - EKP' },
-    { username: 'user_ms', role: 'USER', branchId: 'ms', name: 'Staff - Mae Sot' },
-];
+import { AUTHORIZED_USERS } from '../../constants';
 
 interface LoginScreenProps {
     onLogin: (user: User) => void;
@@ -25,7 +15,7 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ onLogin }) => {
 
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
-        const user = MOCK_USERS.find(u => u.username === username);
+        const user = AUTHORIZED_USERS.find(u => u.username === username);
 
         // สำหรับ System Administrator (admin) ใช้รหัส 8888
         // สำหรับผู้ใช้อื่นๆ (Operator/Staff) ใช้รหัส 1234
@@ -68,7 +58,7 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ onLogin }) => {
                                 required
                             >
                                 <option value="">เลือกผู้ใช้</option>
-                                {MOCK_USERS.map(user => (
+                                {AUTHORIZED_USERS.map(user => (
                                     <option key={user.username} value={user.username} className="text-slate-900">
                                         {user.name}
                                     </option>

@@ -1,10 +1,10 @@
 import React from 'react';
-import { LayoutDashboard, ArrowRightLeft, Wrench, Menu, Settings, ChevronLeft, ChevronRight, BarChart3 } from 'lucide-react';
+import { LayoutDashboard, ArrowRightLeft, Wrench, Menu, Settings, ChevronLeft, ChevronRight, BarChart3, List } from 'lucide-react';
 import { BranchId, User } from '../../types';
 
 interface SidebarProps {
-    activeTab: 'dashboard' | 'record' | 'maintenance' | 'settings' | 'analytics';
-    setActiveTab: (tab: 'dashboard' | 'record' | 'maintenance' | 'settings' | 'analytics') => void;
+    activeTab: 'dashboard' | 'record' | 'maintenance' | 'settings' | 'analytics' | 'history';
+    setActiveTab: (tab: 'dashboard' | 'record' | 'maintenance' | 'settings' | 'analytics' | 'history') => void;
     currentUser: User | null;
     selectedBranch: BranchId | 'ALL';
     isCollapsed: boolean;
@@ -66,6 +66,18 @@ const Sidebar: React.FC<SidebarProps> = ({
                 >
                     <BarChart3 size={20} className={activeTab === 'analytics' ? 'text-white' : 'text-slate-400 group-hover:text-purple-600'} />
                     {!isCollapsed && <span className="whitespace-nowrap animate-in fade-in slide-in-from-left-2 duration-300">Analytics</span>}
+                </button>
+
+                <button
+                    onClick={() => setActiveTab('history')}
+                    title={isCollapsed ? 'Inventory Log' : ''}
+                    className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200 font-bold group ${activeTab === 'history'
+                        ? 'bg-blue-600 text-white shadow-lg shadow-blue-200'
+                        : 'text-slate-500 hover:bg-slate-50 hover:text-blue-600'
+                        } ${isCollapsed ? 'justify-center px-0' : ''}`}
+                >
+                    <List size={20} className={activeTab === 'history' ? 'text-white' : 'text-slate-400 group-hover:text-blue-600'} />
+                    {!isCollapsed && <span className="whitespace-nowrap animate-in fade-in slide-in-from-left-2 duration-300">Inventory Log</span>}
                 </button>
 
                 {selectedBranch !== 'ALL' && (

@@ -92,6 +92,7 @@ const MovementTab: React.FC<MovementTabProps> = ({ selectedBranch, transactions,
                         <TransactionHistory
                             historyGroups={logic.historyGroups}
                             onViewTimeline={logic.handleViewTimeline}
+                            onVerifyDocument={logic.handleVerifyDocument}
                         />
                     </div>
                 </>

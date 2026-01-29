@@ -21,6 +21,7 @@ export type BranchId =
   | 'cm'
   | 'ekp'
   | 'ms'
+  | 'sai3'
   | 'maintenance_stock';
 
 /**
@@ -76,6 +77,9 @@ export interface Partner {
   name: string;
   type: 'customer' | 'provider';
   allowedPallets: PalletId[];
+  rentalFee?: number; // Daily rate after free period
+  gracePeriod?: number; // Free days before billing starts
+  mappingName?: string; // Display mapping (e.g., Lascam -> Neo Corporate)
 }
 
 /**
@@ -104,6 +108,11 @@ export interface Transaction {
   receivedAt?: string;
   originalPalletId?: PalletId;
   originalQty?: number;
+  display_source?: string; // Virtual mapping for documents
+  display_dest?: string;   // Virtual mapping for documents
+  previousQty?: number;     // For audit log in adjustments
+  adjustedBy?: string;     // User who performed the adjustment
+  isInitial?: boolean;      // Mark as initial balance setup
 }
 
 /**
@@ -131,6 +140,16 @@ export interface GroundingLink {
     title: string;
   };
 }
+
+/**
+ * Stock Alert Thresholds
+ */
+export interface StockThreshold {
+  min: number;
+  max: number;
+}
+
+export type BranchThresholds = Record<BranchId, Partial<Record<PalletId, StockThreshold>>>;
 
 /**
  * Form State for Movement

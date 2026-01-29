@@ -1,13 +1,22 @@
-import React, { useState, useEffect } from 'react';
-import { Settings, MapPin, Package, Plus, Trash2, Save, Building2, Truck, X, Send, Wrench } from 'lucide-react';
+import React, { useState, useEffect, useMemo } from 'react';
+import { Settings, MapPin, Package, Plus, Trash2, Save, Building2, Truck, X, Send, Wrench, ShieldCheck } from 'lucide-react';
 import * as firebaseService from '../../services/firebase';
-import { PalletType, Branch, Partner, BranchId } from '../../types';
+import { PalletType, Branch, Partner, BranchId, User } from '../../types';
 import { useStock } from '../../contexts/StockContext';
+import { AdminStockControl } from './AdminStockControl';
 import * as telegramService from '../../services/telegramService';
 import Swal from 'sweetalert2';
 
+type SettingsSection = 'pallets' | 'locations' | 'thresholds' | 'telegram' | 'admin' | 'developer';
+
 const SettingsTab: React.FC = () => {
-    const [activeSection, setActiveSection] = useState<'pallets' | 'locations' | 'telegram' | 'developer'>('pallets');
+    const [activeSection, setActiveSection] = useState<SettingsSection>('pallets');
+    const [currentUser, setCurrentUser] = useState<User | null>(null);
+
+    useEffect(() => {
+        const saved = localStorage.getItem('neo-siam-user');
+        if (saved) setCurrentUser(JSON.parse(saved));
+    }, []);
 
     // Real-time data from Firebase
     const [pallets, setPallets] = useState<PalletType[]>([]);
@@ -141,7 +150,6 @@ const SettingsTab: React.FC = () => {
         const { INITIAL_STOCK, BRANCHES } = await import('../../constants');
 
         if (!branchId) {
-            // Show selection if no specific branch
             const { value: selected } = await Swal.fire({
                 title: 'เลือกสาขาที่ต้องการล้างยอดเป็น 0',
                 input: 'select',
@@ -165,13 +173,13 @@ const SettingsTab: React.FC = () => {
         }
     };
 
-    const handleSectionChange = async (section: 'pallets' | 'locations' | 'telegram' | 'developer') => {
+    const handleSectionChange = async (section: SettingsSection) => {
         if (activeSection === section) return;
 
-        if (section === 'telegram' || section === 'developer') {
+        if (section === 'telegram' || section === 'developer' || section === 'admin' || section === 'thresholds') {
             const { value: password } = await Swal.fire({
                 title: 'การเข้าถึงส่วนที่จำกัด',
-                text: `กรุณาใส่รหัสผ่านเพื่อเข้าใช้งานส่วน ${section === 'telegram' ? 'ตั้งค่า Telegram' : 'Developer & Recovery'}`,
+                text: `กรุณาใส่รหัสผ่านเพื่อเข้าใช้งานส่วน ${section === 'telegram' ? 'ตั้งค่า Telegram' : section === 'admin' ? 'Admin Control Panel' : section === 'thresholds' ? 'ตั้งค่า Thresholds' : 'Developer & Recovery'}`,
                 input: 'password',
                 inputPlaceholder: 'ใส่รหัสผ่าน',
                 showCancelButton: true,
@@ -250,6 +258,26 @@ const SettingsTab: React.FC = () => {
                     Locations
                 </button>
                 <button
+                    onClick={() => handleSectionChange('admin')}
+                    className={`flex items-center gap-2 px-6 py-2.5 rounded-xl text-sm font-bold transition-all ${activeSection === 'admin'
+                        ? 'bg-slate-900 text-white shadow-md'
+                        : 'text-slate-500 hover:bg-slate-50'
+                        }`}
+                >
+                    <ShieldCheck size={18} />
+                    Admin Control Panel
+                </button>
+                <button
+                    onClick={() => handleSectionChange('thresholds')}
+                    className={`flex items-center gap-2 px-6 py-2.5 rounded-xl text-sm font-bold transition-all ${activeSection === 'thresholds'
+                        ? 'bg-slate-900 text-white shadow-md'
+                        : 'text-slate-500 hover:bg-slate-50'
+                        }`}
+                >
+                    <Plus size={18} />
+                    Thresholds
+                </button>
+                <button
                     onClick={() => handleSectionChange('telegram')}
                     className={`flex items-center gap-2 px-6 py-2.5 rounded-xl text-sm font-bold transition-all ${activeSection === 'telegram'
                         ? 'bg-blue-600 text-white shadow-md'
@@ -272,256 +300,265 @@ const SettingsTab: React.FC = () => {
             </div>
 
             {/* Content Area */}
-            <div className="bg-white rounded-3xl shadow-sm border border-slate-100 overflow-hidden">
-                <div className="p-6 border-b border-slate-100 flex justify-between items-center bg-slate-50/50">
-                    <div>
-                        <h2 className="text-lg font-black text-slate-800">
-                            {activeSection === 'pallets' ? 'Registered Pallet Types' :
-                                activeSection === 'locations' ? 'Registered Locations' :
-                                    activeSection === 'telegram' ? 'Telegram Integration' : 'Developer & Recovery Operations'}
-                        </h2>
-                        <p className="text-sm text-slate-500">
-                            {activeSection === 'pallets' ? 'Manage types of pallets tracked in the system.' :
-                                activeSection === 'locations' ? 'Manage internal branches and external partners.' :
-                                    activeSection === 'telegram' ? 'ตั้งค่าการแจ้งเตือนผ่าน Telegram Group หรือ Chat' : 'Advanced system maintenance and data recovery tools.'}
-                        </p>
-                    </div>
-                    {activeSection !== 'telegram' && activeSection !== 'developer' && (
-                        <button
-                            onClick={() => setIsAddModalOpen(true)}
-                            className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white text-sm font-bold rounded-xl hover:bg-blue-700 transition-colors shadow-lg shadow-blue-200"
-                        >
-                            <Plus size={18} />
-                            Add New
-                        </button>
-                    )}
+            {activeSection === 'admin' ? (
+                <div className="animate-in fade-in slide-in-from-top-4">
+                    <AdminStockControl userName={currentUser?.name || 'Administrator'} />
                 </div>
+            ) : (
+                <div className="bg-white rounded-3xl shadow-sm border border-slate-100 overflow-hidden">
+                    <div className="p-6 border-b border-slate-100 flex justify-between items-center bg-slate-50/50">
+                        <div>
+                            <h2 className="text-lg font-black text-slate-800">
+                                {activeSection === 'pallets' ? 'Registered Pallet Types' :
+                                    activeSection === 'locations' ? 'Registered Locations' :
+                                        activeSection === 'thresholds' ? 'Stock Thresholds Management' :
+                                            activeSection === 'telegram' ? 'Telegram Integration' : 'Developer & Recovery Operations'}
+                            </h2>
+                            <p className="text-sm text-slate-500">
+                                {activeSection === 'pallets' ? 'Manage types of pallets tracked in the system.' :
+                                    activeSection === 'locations' ? 'Manage internal branches and external partners.' :
+                                        activeSection === 'thresholds' ? 'Set Min/Max pallet limits for each branch to trigger alerts.' :
+                                            activeSection === 'telegram' ? 'ตั้งค่าการแจ้งเตือนผ่าน Telegram Group หรือ Chat' : 'Advanced system maintenance and data recovery tools.'}
+                            </p>
+                        </div>
+                        {['pallets', 'locations'].includes(activeSection) && (
+                            <button
+                                onClick={() => setIsAddModalOpen(true)}
+                                className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white text-sm font-bold rounded-xl hover:bg-blue-700 transition-colors shadow-lg shadow-blue-200"
+                            >
+                                <Plus size={18} />
+                                Add New
+                            </button>
+                        )}
+                    </div>
 
-                <div className="overflow-x-auto">
-                    {activeSection === 'pallets' ? (
-                        <table className="w-full text-left text-sm">
-                            <thead className="bg-slate-50 text-slate-500 font-bold border-b border-slate-100">
-                                <tr>
-                                    <th className="p-4 pl-6">ID</th>
-                                    <th className="p-4">Name</th>
-                                    <th className="p-4">Material</th>
-                                    <th className="p-4">Type</th>
-                                    <th className="p-4 text-center">Color Code</th>
-                                    <th className="p-4 text-center">Actions</th>
-                                </tr>
-                            </thead>
-                            <tbody className="divide-y divide-slate-50">
-                                {pallets.map((p) => {
-                                    const dotStyle = { backgroundColor: !p.color.startsWith('bg-') ? p.color : undefined };
-                                    return (
-                                        <tr key={p.id} className="hover:bg-slate-50/50">
-                                            <td className="p-4 pl-6 font-mono text-slate-500">{p.id}</td>
-                                            <td className="p-4 font-bold text-slate-900">{p.name}</td>
-                                            <td className="p-4 capitalize text-slate-600">{p.material}</td>
+                    <div className="overflow-x-auto">
+                        {activeSection === 'pallets' ? (
+                            <table className="w-full text-left text-sm">
+                                <thead className="bg-slate-50 text-slate-500 font-bold border-b border-slate-100">
+                                    <tr>
+                                        <th className="p-4 pl-6">ID</th>
+                                        <th className="p-4">Name</th>
+                                        <th className="p-4">Material</th>
+                                        <th className="p-4">Type</th>
+                                        <th className="p-4 text-center">Color Code</th>
+                                        <th className="p-4 text-center">Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody className="divide-y divide-slate-50">
+                                    {pallets.map((p) => {
+                                        const isHex = !p.color.startsWith('bg-');
+                                        return (
+                                            <tr key={p.id} className="hover:bg-slate-50/50">
+                                                <td className="p-4 pl-6 font-mono text-slate-500">{p.id}</td>
+                                                <td className="p-4 font-bold text-slate-900">{p.name}</td>
+                                                <td className="p-4 capitalize text-slate-600">{p.material}</td>
+                                                <td className="p-4">
+                                                    {p.isRental ? (
+                                                        <span className="px-2 py-0.5 bg-purple-100 text-purple-700 rounded text-xs font-bold">Rental</span>
+                                                    ) : (
+                                                        <span className="px-2 py-0.5 bg-slate-100 text-slate-600 rounded text-xs font-bold">Owned</span>
+                                                    )}
+                                                </td>
+                                                <td className="p-4 text-center">
+                                                    <div 
+                                                        className={`w-6 h-6 rounded-full mx-auto shadow-sm border border-slate-200 ${!isHex ? p.color : ''}`}
+                                                        {...(isHex ? { style: { backgroundColor: p.color } } : {})}
+                                                    ></div>
+                                                </td>
+                                                <td className="p-4 text-center">
+                                                    <button
+                                                        onClick={() => handleDelete('pallets', p.id, p.name)}
+                                                        aria-label="Delete"
+                                                        className="text-slate-400 hover:text-red-500 transition-colors"
+                                                    >
+                                                        <Trash2 size={18} />
+                                                    </button>
+                                                </td>
+                                            </tr>
+                                        );
+                                    })}
+                                </tbody>
+                            </table>
+                        ) : activeSection === 'locations' ? (
+                            <table className="w-full text-left text-sm">
+                                <thead className="bg-slate-50 text-slate-500 font-bold border-b border-slate-100">
+                                    <tr>
+                                        <th className="p-4 pl-6">ID</th>
+                                        <th className="p-4">Name</th>
+                                        <th className="p-4">Category</th>
+                                        <th className="p-4">Type</th>
+                                        <th className="p-4 text-center">Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody className="divide-y divide-slate-50">
+                                    <tr className="bg-slate-50/50">
+                                        <td colSpan={5} className="p-2 px-6 text-xs font-black text-slate-400 uppercase tracking-wider">Internal Branches</td>
+                                    </tr>
+                                    {branches.map((b) => (
+                                        <tr key={b.id} className="hover:bg-slate-50/50">
+                                            <td className="p-4 pl-6 font-mono text-slate-500">{b.id}</td>
+                                            <td className="p-4 font-bold text-slate-900">{b.name}</td>
                                             <td className="p-4">
-                                                {p.isRental ? (
-                                                    <span className="px-2 py-0.5 bg-purple-100 text-purple-700 rounded text-xs font-bold">Rental</span>
-                                                ) : (
-                                                    <span className="px-2 py-0.5 bg-slate-100 text-slate-600 rounded text-xs font-bold">Owned</span>
-                                                )}
+                                                <span className="flex items-center gap-1.5 px-2 py-0.5 bg-blue-50 text-blue-700 rounded text-xs font-bold w-fit">
+                                                    <Building2 size={12} /> Internal
+                                                </span>
                                             </td>
-                                            <td className="p-4 text-center">
-                                                {/* eslint-disable-next-line */}
-                                                <div className={`w-6 h-6 rounded-full mx-auto shadow-sm border border-slate-200 ${p.color.startsWith('bg-') ? p.color : ''}`} {...{ style: dotStyle }}></div>
-                                            </td>
+                                            <td className="p-4 uppercase text-xs font-bold text-slate-500">{b.type}</td>
                                             <td className="p-4 text-center">
                                                 <button
-                                                    onClick={() => handleDelete('pallets', p.id, p.name)}
-                                                    aria-label="Delete"
+                                                    onClick={() => handleDelete('branches', b.id, b.name)}
+                                                    aria-label="Delete branch"
                                                     className="text-slate-400 hover:text-red-500 transition-colors"
                                                 >
                                                     <Trash2 size={18} />
                                                 </button>
                                             </td>
                                         </tr>
-                                    );
-                                })}
-                            </tbody>
-                        </table>
-                    ) : activeSection === 'locations' ? (
-                        <table className="w-full text-left text-sm">
-                            <thead className="bg-slate-50 text-slate-500 font-bold border-b border-slate-100">
-                                <tr>
-                                    <th className="p-4 pl-6">ID</th>
-                                    <th className="p-4">Name</th>
-                                    <th className="p-4">Category</th>
-                                    <th className="p-4">Type</th>
-                                    <th className="p-4 text-center">Actions</th>
-                                </tr>
-                            </thead>
-                            <tbody className="divide-y divide-slate-50">
-                                {/* Internal Branches */}
-                                <tr className="bg-slate-50/50">
-                                    <td colSpan={5} className="p-2 px-6 text-xs font-black text-slate-400 uppercase tracking-wider">Internal Branches</td>
-                                </tr>
-                                {branches.map((b) => (
-                                    <tr key={b.id} className="hover:bg-slate-50/50">
-                                        <td className="p-4 pl-6 font-mono text-slate-500">{b.id}</td>
-                                        <td className="p-4 font-bold text-slate-900">{b.name}</td>
-                                        <td className="p-4">
-                                            <span className="flex items-center gap-1.5 px-2 py-0.5 bg-blue-50 text-blue-700 rounded text-xs font-bold w-fit">
-                                                <Building2 size={12} /> Internal
-                                            </span>
-                                        </td>
-                                        <td className="p-4 uppercase text-xs font-bold text-slate-500">{b.type}</td>
-                                        <td className="p-4 text-center">
-                                            <button
-                                                onClick={() => handleDelete('branches', b.id, b.name)}
-                                                aria-label="Delete branch"
-                                                className="text-slate-400 hover:text-red-500 transition-colors"
-                                            >
-                                                <Trash2 size={18} />
-                                            </button>
-                                        </td>
-                                    </tr>
-                                ))}
+                                    ))}
 
-                                {/* External Partners */}
-                                <tr className="bg-slate-50/50">
-                                    <td colSpan={5} className="p-2 px-6 text-xs font-black text-slate-400 uppercase tracking-wider mt-4">External Partners</td>
-                                </tr>
-                                {partners.map((p) => (
-                                    <tr key={p.id} className="hover:bg-slate-50/50">
-                                        <td className="p-4 pl-6 font-mono text-slate-500">{p.id}</td>
-                                        <td className="p-4 font-bold text-slate-900">{p.name}</td>
-                                        <td className="p-4">
-                                            <span className="flex items-center gap-1.5 px-2 py-0.5 bg-orange-50 text-orange-700 rounded text-xs font-bold w-fit">
-                                                <Truck size={12} /> External
-                                            </span>
-                                        </td>
-                                        <td className="p-4 uppercase text-xs font-bold text-slate-500">{p.type}</td>
-                                        <td className="p-4 text-center">
-                                            <button
-                                                onClick={() => handleDelete('partners', p.id, p.name)}
-                                                aria-label="Delete partner"
-                                                className="text-slate-400 hover:text-red-500 transition-colors"
-                                            >
-                                                <Trash2 size={18} />
-                                            </button>
-                                        </td>
+                                    <tr className="bg-slate-50/50">
+                                        <td colSpan={5} className="p-2 px-6 text-xs font-black text-slate-400 uppercase tracking-wider mt-4">External Partners</td>
                                     </tr>
-                                ))}
-                            </tbody>
-                        </table>
-                    ) : activeSection === 'telegram' ? (
-                        <div className="p-8 max-w-2xl">
-                            <div className="bg-blue-50 rounded-2xl p-6 border border-blue-100 flex items-start gap-4 mb-8">
-                                <div className="p-3 bg-white rounded-xl shadow-sm">
-                                    <Send className="text-blue-600" />
+                                    {partners.map((p) => (
+                                        <tr key={p.id} className="hover:bg-slate-50/50">
+                                            <td className="p-4 pl-6 font-mono text-slate-500">{p.id}</td>
+                                            <td className="p-4 font-bold text-slate-900">{p.name}</td>
+                                            <td className="p-4">
+                                                <span className="flex items-center gap-1.5 px-2 py-0.5 bg-orange-50 text-orange-700 rounded text-xs font-bold w-fit">
+                                                    <Truck size={12} /> External
+                                                </span>
+                                            </td>
+                                            <td className="p-4 uppercase text-xs font-bold text-slate-500">{p.type}</td>
+                                            <td className="p-4 text-center">
+                                                <button
+                                                    onClick={() => handleDelete('partners', p.id, p.name)}
+                                                    aria-label="Delete partner"
+                                                    className="text-slate-400 hover:text-red-500 transition-colors"
+                                                >
+                                                    <Trash2 size={18} />
+                                                </button>
+                                            </td>
+                                        </tr>
+                                    ))}
+                                </tbody>
+                            </table>
+                        ) : activeSection === 'thresholds' ? (
+                            <ThresholdsEditor branches={branches} pallets={pallets} />
+                        ) : activeSection === 'telegram' ? (
+                            <div className="p-8 max-w-2xl">
+                                <div className="bg-blue-50 rounded-2xl p-6 border border-blue-100 flex items-start gap-4 mb-8">
+                                    <div className="p-3 bg-white rounded-xl shadow-sm">
+                                        <Send className="text-blue-600" />
+                                    </div>
+                                    <div>
+                                        <h3 className="font-black text-blue-900 mb-1">Telegram Bot: @NSPalletBot</h3>
+                                        <p className="text-sm text-blue-700 leading-relaxed">
+                                            บอทจะทำหน้าที่ส่งการแจ้งเตือนเมื่อมีการทำรายการในระบบ คุณสามารถรับ <b>Chat ID</b> ได้โดยการทักแชทไปที่บอท <b>@NSPalletBot</b> แล้วส่งข้อความอะไรก็ได้ จากนั้นใช้บอท <b>@userinfobot</b> เพื่อดูไอดีของคุณ หรือหากเป็นกลุ่มให้ใช้บอท <b>@GroupBuddy_Bot</b>
+                                        </p>
+                                    </div>
                                 </div>
-                                <div>
-                                    <h3 className="font-black text-blue-900 mb-1">Telegram Bot: @NSPalletBot</h3>
-                                    <p className="text-sm text-blue-700 leading-relaxed">
-                                        บอทจะทำหน้าที่ส่งการแจ้งเตือนเมื่อมีการทำรายการในระบบ คุณสามารถรับ <b>Chat ID</b> ได้โดยการทักแชทไปที่บอท <b>@NSPalletBot</b> แล้วส่งข้อความอะไรก็ได้ จากนั้นใช้บอท <b>@userinfobot</b> เพื่อดูไอดีของคุณ หรือหากเป็นกลุ่มให้ใช้บอท <b>@GroupBuddy_Bot</b>
-                                    </p>
-                                </div>
-                            </div>
 
-                            <div className="space-y-6">
-                                <div>
-                                    <label className="block text-sm font-bold text-slate-700 mb-2">Telegram Chat ID <span className="text-red-500">*</span></label>
-                                    <div className="flex gap-2">
-                                        <input
-                                            type="text"
-                                            className="flex-1 bg-slate-50 border border-slate-200 rounded-xl p-3 font-bold text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-500/20"
-                                            placeholder="ระบุ Chat ID (เช่น -100123456789)"
-                                            value={telegramChatId}
-                                            onChange={(e) => setTelegramChatId(e.target.value)}
-                                        />
+                                <div className="space-y-6">
+                                    <div>
+                                        <label className="block text-sm font-bold text-slate-700 mb-2">Telegram Chat ID <span className="text-red-500">*</span></label>
+                                        <div className="flex gap-2">
+                                            <input
+                                                type="text"
+                                                className="flex-1 bg-slate-50 border border-slate-200 rounded-xl p-3 font-bold text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-500/20"
+                                                placeholder="ระบุ Chat ID (เช่น -100123456789)"
+                                                value={telegramChatId}
+                                                onChange={(e) => setTelegramChatId(e.target.value)}
+                                            />
+                                            <button
+                                                onClick={() => {
+                                                    updateSystemConfig({ telegramChatId: telegramChatId });
+                                                    Swal.fire('บันทึกสำเร็จ', 'Chat ID ถูกอัปเดตแล้ว', 'success');
+                                                }}
+                                                className="px-6 py-3 bg-blue-600 text-white rounded-xl font-bold flex items-center gap-2 shadow-lg shadow-blue-200 active:scale-95 transition-all"
+                                            >
+                                                <Save size={18} /> บันทึก
+                                            </button>
+                                        </div>
+                                        <p className="text-[10px] text-slate-400 mt-2 italic">* หากต้องการส่งเข้ากลุ่ม ให้ดึงบอทเข้ากลุ่มก่อนแล้วหา Chat ID ของกลุ่มนั้น</p>
+                                    </div>
+
+                                    <div className="pt-6 border-t border-slate-100">
+                                        <h4 className="font-bold text-slate-800 mb-4">ทดสอบการส่งข้อความ</h4>
                                         <button
-                                            onClick={() => {
-                                                updateSystemConfig({ telegramChatId: telegramChatId });
-                                                Swal.fire('บันทึกสำเร็จ', 'Chat ID ถูกอัปเดตแล้ว', 'success');
+                                            onClick={async () => {
+                                                if (!telegramChatId) return Swal.fire('ผิดพลาด', 'กรุณาระบุ Chat ID ก่อน', 'error');
+                                                const res = await telegramService.sendMessage(telegramChatId, '🔔 *ทดสอบการแจ้งเตือน*\nระบบบริหารจัดการพาเลทเชื่อมต่อสำเร็จแล้ว!');
+                                                if (res?.ok) {
+                                                    Swal.fire('สำเร็จ', 'ส่งข้อความทดสอบแล้ว กรุณาเช็คที่ Telegram', 'success');
+                                                } else {
+                                                    Swal.fire('ล้มล้ว', 'ไม่สามารถส่งได้ กรุณาเช็ค Chat ID อีกครั้ง', 'error');
+                                                }
                                             }}
-                                            className="px-6 py-3 bg-blue-600 text-white rounded-xl font-bold flex items-center gap-2 shadow-lg shadow-blue-200 active:scale-95 transition-all"
+                                            className="w-full py-4 bg-slate-100 text-slate-600 rounded-xl font-black text-sm hover:bg-slate-200 transition-all flex items-center justify-center gap-2 border border-slate-200"
                                         >
-                                            <Save size={18} /> บันทึก
-                                        </button>
-                                    </div>
-                                    <p className="text-[10px] text-slate-400 mt-2 italic">* หากต้องการส่งเข้ากลุ่ม ให้ดึงบอทเข้ากลุ่มก่อนแล้วหา Chat ID ของกลุ่มนั้น</p>
-                                </div>
-
-                                <div className="pt-6 border-t border-slate-100">
-                                    <h4 className="font-bold text-slate-800 mb-4">ทดสอบการส่งข้อความ</h4>
-                                    <button
-                                        onClick={async () => {
-                                            if (!telegramChatId) return Swal.fire('ผิดพลาด', 'กรุณาระบุ Chat ID ก่อน', 'error');
-                                            const res = await telegramService.sendMessage(telegramChatId, '🔔 *ทดสอบการแจ้งเตือน*\nระบบบริหารจัดการพาเลทเชื่อมต่อสำเร็จแล้ว!');
-                                            if (res?.ok) {
-                                                Swal.fire('สำเร็จ', 'ส่งข้อความทดสอบแล้ว กรุณาเช็คที่ Telegram', 'success');
-                                            } else {
-                                                Swal.fire('ล้มล้ว', 'ไม่สามารถส่งได้ กรุณาเช็ค Chat ID อีกครั้ง', 'error');
-                                            }
-                                        }}
-                                        className="w-full py-4 bg-slate-100 text-slate-600 rounded-xl font-black text-sm hover:bg-slate-200 transition-all flex items-center justify-center gap-2 border border-slate-200"
-                                    >
-                                        <Send size={16} /> ส่งข้อความทดสอบ (Test Notification)
-                                    </button>
-                                </div>
-                            </div>
-                        </div>
-                    ) : (
-                        <div className="p-8 max-w-2xl space-y-8">
-                            <div className="bg-red-50 rounded-2xl p-6 border border-red-100 flex items-start gap-4">
-                                <div className="p-3 bg-white rounded-xl shadow-sm">
-                                    <Wrench className="text-red-600" />
-                                </div>
-                                <div>
-                                    <h3 className="font-black text-red-900 mb-1">Stock Data Recovery</h3>
-                                    <p className="text-sm text-red-700 leading-relaxed">
-                                        ใช้เครื่องมือเหล่านี้เพื่อแก้ไขปัญหาข้อมูลไม่ถูกต้อง หรือสต็อกแสดงผลเป็น 0 ทั้งที่ควรมีข้อมูล
-                                    </p>
-                                </div>
-                            </div>
-
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                <div className="p-6 bg-slate-50 rounded-2xl border border-slate-100 flex flex-col items-start gap-4 hover:border-blue-200 transition-all">
-                                    <div className="w-10 h-10 bg-white rounded-lg shadow-sm flex items-center justify-center text-blue-600">
-                                        <Package size={20} />
-                                    </div>
-                                    <div className="flex-1">
-                                        <h4 className="font-bold text-slate-800 mb-1">Deep Reset (Clear All Data)</h4>
-                                        <p className="text-xs text-slate-500 mb-4">ล้างยอดสต็อก ประวัติ และคำขอทั้งหมดเป็น 0 (เริ่มระบบใหม่)</p>
-                                        <button
-                                            onClick={handleSeedDemoData}
-                                            className="w-full py-2 bg-white border border-slate-200 rounded-lg text-xs font-bold text-red-600 hover:bg-red-50 transition-all"
-                                        >
-                                            Reset Entire System (Zero)
-                                        </button>
-                                    </div>
-                                </div>
-
-                                <div className="p-6 bg-slate-50 rounded-2xl border border-slate-100 flex flex-col items-start gap-4 hover:border-amber-200 transition-all">
-                                    <div className="w-10 h-10 bg-white rounded-lg shadow-sm flex items-center justify-center text-amber-600">
-                                        <Building2 size={20} />
-                                    </div>
-                                    <div className="flex-1">
-                                        <h4 className="font-bold text-slate-800 mb-1">Reset Branch Stock to 0</h4>
-                                        <p className="text-xs text-slate-500 mb-4">ล้างสต็อกรายสาขาให้เป็น 0 (กรณีข้อมูลผิดพลาดรุนแรง)</p>
-                                        <button
-                                            onClick={() => handleRepairBranch()}
-                                            className="w-full py-2 bg-white border border-slate-200 rounded-lg text-xs font-bold text-slate-700 hover:bg-slate-50 transition-all"
-                                        >
-                                            Select Branch to Reset
+                                            <Send size={16} /> ส่งข้อความทดสอบ (Test Notification)
                                         </button>
                                     </div>
                                 </div>
                             </div>
-                        </div>
-                    )}
+                        ) : (
+                            <div className="p-8 max-w-2xl space-y-8">
+                                <div className="bg-red-50 rounded-2xl p-6 border border-red-100 flex items-start gap-4">
+                                    <div className="p-3 bg-white rounded-xl shadow-sm">
+                                        <Wrench className="text-red-600" />
+                                    </div>
+                                    <div>
+                                        <h3 className="font-black text-red-900 mb-1">Stock Data Recovery</h3>
+                                        <p className="text-sm text-red-700 leading-relaxed">
+                                            ใช้เครื่องมือเหล่านี้เพื่อแก้ไขปัญหาข้อมูลไม่ถูกต้อง หรือสต็อกแสดงผลเป็น 0 ทั้งที่ควรมีข้อมูล
+                                        </p>
+                                    </div>
+                                </div>
+
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                    <div className="p-6 bg-slate-50 rounded-2xl border border-slate-100 flex flex-col items-start gap-4 hover:border-blue-200 transition-all">
+                                        <div className="w-10 h-10 bg-white rounded-lg shadow-sm flex items-center justify-center text-blue-600">
+                                            <Package size={20} />
+                                        </div>
+                                        <div className="flex-1">
+                                            <h4 className="font-bold text-slate-800 mb-1">Deep Reset (Clear All Data)</h4>
+                                            <p className="text-xs text-slate-500 mb-4">ล้างยอดสต็อก ประวัติ และคำขอทั้งหมดเป็น 0 (เริ่มระบบใหม่)</p>
+                                            <button
+                                                onClick={handleSeedDemoData}
+                                                className="w-full py-2 bg-white border border-slate-200 rounded-lg text-xs font-bold text-red-600 hover:bg-red-50 transition-all"
+                                            >
+                                                Reset Entire System (Zero)
+                                            </button>
+                                        </div>
+                                    </div>
+
+                                    <div className="p-6 bg-slate-50 rounded-2xl border border-slate-100 flex flex-col items-start gap-4 hover:border-amber-200 transition-all">
+                                        <div className="w-10 h-10 bg-white rounded-lg shadow-sm flex items-center justify-center text-amber-600">
+                                            <Building2 size={20} />
+                                        </div>
+                                        <div className="flex-1">
+                                            <h4 className="font-bold text-slate-800 mb-1">Reset Branch Stock to 0</h4>
+                                            <p className="text-xs text-slate-500 mb-4">ล้างสต็อกรายสาขาให้เป็น 0 (กรณีข้อมูลผิดพลาดรุนแรง)</p>
+                                            <button
+                                                onClick={() => handleRepairBranch()}
+                                                className="w-full py-2 bg-white border border-slate-200 rounded-lg text-xs font-bold text-slate-700 hover:bg-slate-50 transition-all"
+                                            >
+                                                Select Branch to Reset
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        )}
+                    </div>
                 </div>
-            </div>
+            )}
 
             {/* Add Modal */}
             {isAddModalOpen && (
                 <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-sm">
                     <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg overflow-hidden flex flex-col max-h-[90vh]">
-                        {/* Header */}
                         <div className="bg-slate-900 px-6 py-4 flex justify-between items-center shrink-0">
                             <h2 className="text-white font-bold text-lg flex items-center gap-2">
                                 <Plus size={20} className="text-blue-400" />
@@ -536,7 +573,6 @@ const SettingsTab: React.FC = () => {
                             </button>
                         </div>
 
-                        {/* Form */}
                         <form onSubmit={activeSection === 'pallets' ? handleAddPallet : handleAddLocation} className="p-6 space-y-4 overflow-y-auto">
                             {activeSection === 'pallets' ? (
                                 <>
@@ -622,6 +658,121 @@ const SettingsTab: React.FC = () => {
                     </div>
                 </div>
             )}
+        </div>
+    );
+};
+
+const ThresholdsEditor: React.FC<{ branches: Branch[], pallets: PalletType[] }> = ({ branches, pallets }) => {
+    const { thresholds, updateThresholds } = useStock();
+    const [localThresholds, setLocalThresholds] = useState<any>(null);
+
+    const displayOptions = useMemo(() => {
+        return [
+            { id: 'ALL', name: '📦 ยอดรวมทั้งบริษัท (All Branches Total)' },
+            ...branches.map(b => ({ id: b.id, name: b.name }))
+        ];
+    }, [branches]);
+
+    useEffect(() => {
+        if (thresholds) {
+            setLocalThresholds(thresholds);
+        } else {
+            const initial: any = {};
+            displayOptions.forEach(opt => {
+                initial[opt.id] = {};
+            });
+            setLocalThresholds(initial);
+        }
+    }, [thresholds, displayOptions]);
+
+    const handleUpdate = (branchId: string, palletId: string, field: 'min' | 'max', value: string) => {
+        const numVal = parseInt(value) || 0;
+        const next = { ...localThresholds };
+        if (!next[branchId]) next[branchId] = {};
+        if (!next[branchId][palletId]) next[branchId][palletId] = { min: 0, max: 0 };
+        next[branchId][palletId] = { ...next[branchId][palletId], [field]: numVal };
+        setLocalThresholds(next);
+    };
+
+    const handleSave = async () => {
+        try {
+            await updateThresholds(localThresholds);
+            Swal.fire('สำเร็จ', 'บันทึกค่า Thresholds เรียบร้อยแล้ว', 'success');
+        } catch (e) {
+            Swal.fire('ผิดพลาด', 'ไม่สามารถบันทึกข้อมูลได้', 'error');
+        }
+    };
+
+    if (!localThresholds) return <div className="p-8 text-center text-slate-400">Loading thresholds...</div>;
+
+    return (
+        <div className="p-6">
+            <div className="flex justify-between items-center mb-6">
+                <div>
+                    <h3 className="font-bold text-slate-800">Branch Threshold Config</h3>
+                    <p className="text-xs text-slate-500">กำหนดค่า Min/Max เพื่อแจ้งเตือนสต็อกรายสาขา</p>
+                </div>
+                <button
+                    onClick={handleSave}
+                    className="flex items-center gap-2 px-6 py-2.5 bg-emerald-600 text-white rounded-xl font-bold shadow-lg shadow-emerald-200 hover:bg-emerald-700 transition-all"
+                >
+                    <Save size={18} /> บันทึกการตั้งค่าทั้งหมด
+                </button>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
+                {displayOptions.map(option => (
+                    <div key={option.id} className={`rounded-2xl border overflow-hidden ${option.id === 'ALL' ? 'bg-indigo-50/50 border-indigo-200 ring-2 ring-indigo-500/20' : 'bg-slate-50 border-slate-100'}`}>
+                        <div className={`p-4 flex items-center justify-between ${option.id === 'ALL' ? 'bg-indigo-600' : 'bg-slate-900'} text-white`}>
+                            <span className="font-bold">{option.name}</span>
+                            <span className="text-[10px] font-mono opacity-50 uppercase">{option.id === 'ALL' ? 'Global' : option.id}</span>
+                        </div>
+                        <div className="p-4 space-y-4">
+                            {pallets.map(pallet => {
+                                const thresh = localThresholds[option.id]?.[pallet.id] || { min: 0, max: 0 };
+                                const isHex = !pallet.color.startsWith('bg-');
+                                const dotStyle = isHex ? { backgroundColor: pallet.color } : {};
+
+                                return (
+                                    <div key={pallet.id} className="space-y-2">
+                                        <div className="flex items-center gap-2">
+                                            <div 
+                                                className={`w-2 h-2 rounded-full ${!isHex ? pallet.color : ''}`} 
+                                                {...(isHex ? { style: dotStyle } : {})} 
+                                            />
+                                            <span className="text-xs font-bold text-slate-700">{pallet.name}</span>
+                                        </div>
+                                        <div className="grid grid-cols-2 gap-2">
+                                            <div className="relative">
+                                                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-[9px] font-black text-slate-400 uppercase">Min</span>
+                                                <input
+                                                    type="number"
+                                                    title={`Minimum threshold for ${pallet.name}`}
+                                                    aria-label={`Minimum threshold for ${pallet.name}`}
+                                                    value={thresh.min}
+                                                    onChange={(e) => handleUpdate(option.id, pallet.id, 'min', e.target.value)}
+                                                    className="w-full pl-10 pr-3 py-2 bg-white border border-slate-200 rounded-lg text-sm font-bold focus:ring-2 focus:ring-blue-500/20"
+                                                />
+                                            </div>
+                                            <div className="relative">
+                                                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-[9px] font-black text-slate-400 uppercase">Max</span>
+                                                <input
+                                                    type="number"
+                                                    title={`Maximum threshold for ${pallet.name}`}
+                                                    aria-label={`Maximum threshold for ${pallet.name}`}
+                                                    value={thresh.max}
+                                                    onChange={(e) => handleUpdate(option.id, pallet.id, 'max', e.target.value)}
+                                                    className="w-full pl-10 pr-3 py-2 bg-white border border-slate-200 rounded-lg text-sm font-bold focus:ring-2 focus:ring-blue-500/20"
+                                                />
+                                            </div>
+                                        </div>
+                                    </div>
+                                );
+                            })}
+                        </div>
+                    </div>
+                ))}
+            </div>
         </div>
     );
 };

@@ -175,7 +175,8 @@ export const initializeData = async () => {
         if (!configSnap.exists()) {
             console.log('Initializing system config...');
             await set(configRef, {
-                telegramChatId: ''
+                telegramChatId: '',
+                thresholds: INITIAL_STOCK // Use INITIAL_STOCK structure but with threshold objects later
             });
         }
 
@@ -494,6 +495,33 @@ export const resetAllData = async (initialStock: Stock) => {
         console.log('[Firebase] Deep reset completed. All stock and transactions cleared.');
     } catch (error) {
         console.error("Error performing deep reset:", error);
+        throw error;
+    }
+};
+
+export const subscribeToThresholds = (callback: (thresholds: any) => void) => {
+    try {
+        const db = getDb();
+        const { ref, onValue } = getUtils();
+        const thresholdRef = ref(db, 'config/thresholds');
+
+        return onValue(thresholdRef, (snapshot) => {
+            const val = snapshot.val();
+            if (val) callback(val);
+        });
+    } catch (error) {
+        console.error("Error subscribing to thresholds:", error);
+        return () => { };
+    }
+};
+
+export const updateThresholds = async (thresholds: any) => {
+    try {
+        const db = getDb();
+        const { ref, set } = getUtils();
+        await set(ref(db, 'config/thresholds'), thresholds);
+    } catch (error) {
+        console.error("Error updating thresholds:", error);
         throw error;
     }
 };

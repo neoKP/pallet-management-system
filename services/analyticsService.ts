@@ -1,10 +1,11 @@
 import { Transaction, Stock, BranchId, PalletId } from '../types';
 import { EXTERNAL_PARTNERS } from '../constants';
+import { calculatePartnerBalance, getPartnerBalanceContribution } from '../utils/businessLogic';
 
 export interface KPIMetrics {
     totalTransactions: number;
     totalPalletsInStock: number;
-    totalPalletsInTransit: number; // NEW: Pending/In-Transit pallets
+    totalPalletsInTransit: number;
     totalMovements: number;
     utilizationRate: number;
     maintenanceRate: number;
@@ -51,7 +52,7 @@ export interface BranchPerformance {
     outTransactions: number;
     utilizationRate: number;
     color: string;
-    percentage?: number; // Added
+    percentage?: number;
 }
 
 export interface PalletTypeAnalysis {
@@ -63,7 +64,7 @@ export interface PalletTypeAnalysis {
     maintenanceCount: number;
     turnoverRate: number;
     color: string;
-    percentage?: number; // Added
+    percentage?: number;
 }
 
 export interface ScrappedAnalysis {
@@ -74,7 +75,6 @@ export interface ScrappedAnalysis {
     percentage: number;
 }
 
-// NEW: Premium Analytics Interfaces
 export interface HeatmapData {
     date: Date;
     value: number;
@@ -93,353 +93,13 @@ export interface SparklineData {
 
 export interface PartnerBalanceData {
     date: string;
-    receive: number;    // รับ
-    dispatch: number;   // จ่าย
-    cancelled: number;  // ยกเลิก
-    borrow: number;     // ยืม
-    return: number;     // คืน
-    balance: number;    // ยอดสะสม (ยืม-คืน)
+    receive: number;
+    dispatch: number;
+    cancelled: number;
+    borrow: number;
+    return: number;
+    balance: number;
 }
-
-/**
- * Calculate KPI Metrics
- */
-export const calculateKPIs = (
-    transactions: Transaction[],
-    stock: Stock,
-    startDate: Date,
-    endDate: Date
-): KPIMetrics => {
-    const filteredTransactions = filterTransactionsByDate(transactions, startDate, endDate);
-
-    // Valid branch IDs (excluding external partners)
-    const validBranchIds: BranchId[] = ['hub_nw', 'kpp', 'plk', 'cm', 'ekp', 'ms', 'maintenance_stock'];
-
-    // Total Pallets in Stock (only from actual branches)
-    const totalPalletsInStock = validBranchIds.reduce((sum, branchId) => {
-        const branchStock = stock[branchId];
-        if (branchStock) {
-            return sum + Object.values(branchStock).reduce((branchSum, qty) => branchSum + qty, 0);
-        }
-        return sum;
-    }, 0);
-
-    // Total Pallets In-Transit (PENDING transactions to valid branches)
-    const totalPalletsInTransit = transactions
-        .filter(t => t.status === 'PENDING' && validBranchIds.includes(t.dest as BranchId))
-        .reduce((sum, t) => sum + t.qty, 0);
-
-    // Total Movements
-    const totalMovements = filteredTransactions.reduce((sum, t) => sum + t.qty, 0);
-
-    // Maintenance Rate
-    const maintenanceTransactions = filteredTransactions.filter(t => t.type === 'MAINTENANCE');
-    const maintenanceRate = filteredTransactions.length > 0
-        ? (maintenanceTransactions.length / filteredTransactions.length) * 100
-        : 0;
-
-    // Utilization Rate (simplified: movements vs stock)
-    const utilizationRate = totalPalletsInStock > 0
-        ? Math.min((totalMovements / totalPalletsInStock) * 100, 100)
-        : 0;
-
-    // Calculate trend (compare with previous period)
-    const periodLength = endDate.getTime() - startDate.getTime();
-    const previousStart = new Date(startDate.getTime() - periodLength);
-    const previousTransactions = filterTransactionsByDate(transactions, previousStart, startDate);
-
-    const currentCount = filteredTransactions.length;
-    const previousCount = previousTransactions.length;
-
-    let trend: 'up' | 'down' | 'stable' = 'stable';
-    let trendPercentage = 0;
-
-    if (previousCount > 0) {
-        trendPercentage = ((currentCount - previousCount) / previousCount) * 100;
-        if (trendPercentage > 5) trend = 'up';
-        else if (trendPercentage < -5) trend = 'down';
-    }
-
-    return {
-        totalTransactions: filteredTransactions.length,
-        totalPalletsInStock,
-        totalPalletsInTransit,
-        totalMovements,
-        utilizationRate: Math.round(utilizationRate * 10) / 10,
-        maintenanceRate: Math.round(maintenanceRate * 10) / 10,
-        totalScrapped: filteredTransactions
-            .filter(t => t.type === 'MAINTENANCE' && t.status === 'COMPLETED')
-            .reduce((sum, t) => {
-                const match = t.noteExtended?.match(/SCRAP:\s*(\d+)/);
-                return sum + (match ? parseInt(match[1]) : 0);
-            }, 0),
-        totalIn: filteredTransactions.filter(t => t.type === 'IN').reduce((sum, t) => sum + t.qty, 0),
-        totalInTrend: Math.round(((filteredTransactions.filter(t => t.type === 'IN').reduce((sum, t) => sum + t.qty, 0) - previousTransactions.filter(t => t.type === 'IN').reduce((sum, t) => sum + t.qty, 0)) / (previousTransactions.filter(t => t.type === 'IN').reduce((sum, t) => sum + t.qty, 0) || 1)) * 100 * 10) / 10,
-        totalOut: filteredTransactions.filter(t => t.type === 'OUT').reduce((sum, t) => sum + t.qty, 0),
-        totalOutTrend: Math.round(((filteredTransactions.filter(t => t.type === 'OUT').reduce((sum, t) => sum + t.qty, 0) - previousTransactions.filter(t => t.type === 'OUT').reduce((sum, t) => sum + t.qty, 0)) / (previousTransactions.filter(t => t.type === 'OUT').reduce((sum, t) => sum + t.qty, 0) || 1)) * 100 * 10) / 10,
-        totalActivity: totalMovements,
-        totalActivityTrend: Math.round(((totalMovements - previousTransactions.reduce((sum, t) => sum + t.qty, 0)) / (previousTransactions.reduce((sum, t) => sum + t.qty, 0) || 1)) * 100 * 10) / 10,
-        maxPossession: totalPalletsInStock + totalPalletsInTransit,
-        maxPossessionTrend: 0, // Hard to calculate without daily snapshots
-        trend,
-        trendPercentage: Math.abs(Math.round(trendPercentage * 10) / 10),
-    };
-};
-
-/**
- * Get Transaction Status Distribution
- */
-export const getStatusDistribution = (
-    transactions: Transaction[],
-    startDate: Date,
-    endDate: Date
-): ChartDataPoint[] => {
-    const filtered = filterTransactionsByDate(transactions, startDate, endDate);
-
-    const statusCounts = filtered.reduce((acc, t) => {
-        acc[t.status] = (acc[t.status] || 0) + 1;
-        return acc;
-    }, {} as Record<string, number>);
-
-    const colors = {
-        COMPLETED: '#10b981',
-        PENDING: '#f59e0b',
-        CANCELLED: '#ef4444',
-    };
-
-    return Object.entries(statusCounts).map(([status, count]) => ({
-        name: status === 'COMPLETED' ? 'เสร็จสิ้น' : status === 'PENDING' ? 'รอดำเนินการ' : 'ยกเลิก',
-        value: count,
-        color: colors[status as keyof typeof colors] || '#6366f1',
-        percentage: Math.round((count / filtered.length) * 100),
-    }));
-};
-
-/**
- * Get Transaction Type Distribution
- */
-export const getTypeDistribution = (
-    transactions: Transaction[],
-    startDate: Date,
-    endDate: Date
-): ChartDataPoint[] => {
-    const filtered = filterTransactionsByDate(transactions, startDate, endDate);
-
-    const typeCounts = filtered.reduce((acc, t) => {
-        acc[t.type] = (acc[t.type] || 0) + t.qty;
-        return acc;
-    }, {} as Record<string, number>);
-
-    const colors = {
-        IN: '#3b82f6',
-        OUT: '#f59e0b',
-        MAINTENANCE: '#8b5cf6',
-        ADJUST: '#06b6d4',
-    };
-
-    const labels = {
-        IN: 'รับเข้า',
-        OUT: 'จ่ายออก',
-        MAINTENANCE: 'ซ่อมบำรุง',
-        ADJUST: 'ปรับปรุง',
-    };
-
-    const total = Object.values(typeCounts).reduce((sum, count) => sum + count, 0);
-
-    return Object.entries(typeCounts).map(([type, count]) => ({
-        name: labels[type as keyof typeof labels] || type,
-        value: count,
-        color: colors[type as keyof typeof colors] || '#6366f1',
-        percentage: total > 0 ? Math.round((count / total) * 100) : 0,
-    }));
-};
-
-/**
- * Get Time Series Data
- */
-export const getTimeSeriesData = (
-    transactions: Transaction[],
-    startDate: Date,
-    endDate: Date,
-    groupBy: 'day' | 'week' | 'month' = 'day'
-): TimeSeriesData[] => {
-    const filtered = filterTransactionsByDate(transactions, startDate, endDate);
-
-    const grouped = filtered.reduce((acc, t) => {
-        const date = new Date(t.date);
-        let key: string;
-
-        if (groupBy === 'day') {
-            key = date.toISOString().split('T')[0];
-        } else if (groupBy === 'week') {
-            const weekStart = new Date(date);
-            weekStart.setDate(date.getDate() - date.getDay());
-            key = weekStart.toISOString().split('T')[0];
-        } else {
-            key = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
-        }
-
-        if (!acc[key]) {
-            acc[key] = { date: key, in: 0, out: 0, maintenance: 0, scrapped: 0, total: 0 };
-        }
-
-        if (t.type === 'IN') acc[key].in += t.qty;
-        else if (t.type === 'OUT') acc[key].out += t.qty;
-        else if (t.type === 'MAINTENANCE') {
-            acc[key].maintenance += t.qty;
-            // Extract scrap if available
-            const match = t.noteExtended?.match(/SCRAP:\s*(\d+)/);
-            if (match) acc[key].scrapped += parseInt(match[1]);
-        }
-
-        acc[key].total += t.qty;
-
-        return acc;
-    }, {} as Record<string, TimeSeriesData>);
-
-    return Object.values(grouped).sort((a, b) => a.date.localeCompare(b.date));
-};
-
-/**
- * Get Branch Performance
- */
-export const getBranchPerformance = (
-    transactions: Transaction[],
-    stock: Stock,
-    startDate: Date,
-    endDate: Date,
-    branchNames: Record<BranchId, string>
-): BranchPerformance[] => {
-    const filtered = filterTransactionsByDate(transactions, startDate, endDate);
-
-    const branchColors = [
-        '#6366f1', '#8b5cf6', '#ec4899', '#f59e0b', '#10b981', '#06b6d4', '#ef4444'
-    ];
-
-    // Get valid branch IDs from branchNames (excludes external partners)
-    const validBranchIds = Object.keys(branchNames);
-    const totalOverallStock = validBranchIds.reduce((sum, bid) => {
-        const bStock = stock[bid as BranchId];
-        return sum + (bStock ? Object.values(bStock).reduce((s, q) => s + q, 0) : 0);
-    }, 0);
-
-    return Object.entries(stock)
-        .filter(([branchId]) => validBranchIds.includes(branchId)) // Only include actual branches
-        .map(([branchId, branchStock], index) => {
-            const totalStock = Object.values(branchStock).reduce((sum, qty) => sum + qty, 0);
-
-            const branchTransactions = filtered.filter(
-                t => t.source === branchId || t.dest === branchId
-            );
-
-            const inTransactions = branchTransactions.filter(t => t.dest === branchId && t.type === 'IN').length;
-            const outTransactions = branchTransactions.filter(t => t.source === branchId && t.type === 'OUT').length;
-
-            const utilizationRate = totalStock > 0
-                ? Math.min(((inTransactions + outTransactions) / totalStock) * 100, 100)
-                : 0;
-
-            const percentage = totalOverallStock > 0 ? (totalStock / totalOverallStock) * 100 : 0;
-
-            return {
-                branchId: branchId as BranchId,
-                branchName: branchNames[branchId as BranchId] || branchId,
-                totalStock,
-                inTransactions,
-                outTransactions,
-                utilizationRate: Math.round(utilizationRate * 10) / 10,
-                color: branchColors[index % branchColors.length],
-                percentage: Math.round(percentage * 10) / 10,
-            };
-        })
-        .sort((a, b) => b.totalStock - a.totalStock);
-};
-
-/**
- * Get Pallet Type Analysis
- */
-export const getPalletTypeAnalysis = (
-    transactions: Transaction[],
-    stock: Stock,
-    startDate: Date,
-    endDate: Date,
-    palletNames: Record<PalletId, string>,
-    palletColors: Record<PalletId, string>
-): PalletTypeAnalysis[] => {
-    const filtered = filterTransactionsByDate(transactions, startDate, endDate);
-
-    // Calculate total stock per pallet type
-    const palletStocks = Object.values(stock).reduce((acc, branchStock) => {
-        Object.entries(branchStock).forEach(([palletId, qty]) => {
-            acc[palletId as PalletId] = (acc[palletId as PalletId] || 0) + qty;
-        });
-        return acc;
-    }, {} as Record<PalletId, number>);
-
-    return Object.entries(palletStocks).map(([palletId, totalStock]) => {
-        const palletTransactions = filtered.filter(t => t.palletId === palletId);
-
-        const inCount = palletTransactions.filter(t => t.type === 'IN').reduce((sum, t) => sum + t.qty, 0);
-        const outCount = palletTransactions.filter(t => t.type === 'OUT').reduce((sum, t) => sum + t.qty, 0);
-        const maintenanceCount = palletTransactions.filter(t => t.type === 'MAINTENANCE').reduce((sum, t) => sum + t.qty, 0);
-
-        const turnoverRate = totalStock > 0 ? ((inCount + outCount) / totalStock) * 100 : 0;
-
-        const totalAllStock = Object.values(palletStocks).reduce((sum, qty) => sum + qty, 0);
-
-        return {
-            palletId: palletId as PalletId,
-            palletName: palletNames[palletId as PalletId] || palletId,
-            totalStock,
-            inCount,
-            outCount,
-            maintenanceCount,
-            turnoverRate: Math.round(turnoverRate * 10) / 10,
-            color: palletColors[palletId as PalletId] || '#6366f1',
-            percentage: totalAllStock > 0 ? Math.round((totalStock / totalAllStock) * 100 * 10) / 10 : 0,
-        };
-    }).sort((a, b) => b.totalStock - a.totalStock);
-};
-
-/**
- * Get Scrapped Analysis
- */
-export const getScrappedAnalysis = (
-    transactions: Transaction[],
-    startDate: Date,
-    endDate: Date,
-    palletNames: Record<PalletId, string>,
-    palletColors: Record<PalletId, string>
-): ScrappedAnalysis[] => {
-    const filtered = filterTransactionsByDate(transactions, startDate, endDate);
-
-    const getScrapQty = (noteExtended?: string) => {
-        if (!noteExtended) return 0;
-        const match = noteExtended.match(/SCRAP:\s*(\d+)/);
-        return match ? parseInt(match[1]) : 0;
-    };
-
-    const scrapMap = filtered
-        .filter(t => t.type === 'MAINTENANCE' && t.status === 'COMPLETED')
-        .reduce((acc, t) => {
-            const scrapQty = getScrapQty(t.noteExtended);
-            if (scrapQty > 0) {
-                const pid = t.originalPalletId || t.palletId;
-                acc[pid] = (acc[pid] || 0) + scrapQty;
-            }
-            return acc;
-        }, {} as Record<PalletId, number>);
-
-    const totalScrapped = Object.values(scrapMap).reduce((sum, qty) => sum + qty, 0);
-
-    return Object.entries(scrapMap).map(([pid, qty]) => ({
-        palletId: pid as PalletId,
-        palletName: palletNames[pid as PalletId] || pid,
-        scrappedQty: qty,
-        color: palletColors[pid as PalletId] || '#ef4444',
-        percentage: totalScrapped > 0 ? Math.round((qty / totalScrapped) * 100) : 0
-    })).sort((a, b) => b.scrappedQty - a.scrappedQty);
-};
 
 /**
  * Helper: Filter transactions by date range
@@ -456,286 +116,483 @@ const filterTransactionsByDate = (
 };
 
 /**
- * Apply conditional formatting color
+ * Calculate KPI Metrics
  */
-export const getConditionalColor = (value: number, thresholds: { low: number; high: number }): string => {
-    if (value < thresholds.low) return '#ef4444'; // Red
-    if (value > thresholds.high) return '#10b981'; // Green
-    return '#f59e0b'; // Yellow
-};
-
-/**
- * Get Partner Balance Analysis (Borrow-Return)
- */
-export const getPartnerBalanceAnalysis = (
-    transactions: Transaction[],
-    partnerId: string | 'all',
-    startDate: Date,
-    endDate: Date
-): PartnerBalanceData[] => {
-    // Filter relevant transactions (all time is needed for correct running balance)
-    const isAll = partnerId === 'all';
-
-    // Get all valid partner IDs if 'all'
-    const partnerIds = isAll ? EXTERNAL_PARTNERS.map(p => p.id) : [partnerId];
-
-    const grouped: Record<string, { receive: number, dispatch: number, cancelled: number, borrow: number, return: number }> = {};
-
-    // Get all transactions involving these partners for flow analysis
-    const allRelevantTx = transactions
-        .filter(t => (partnerIds.includes(t.source) || partnerIds.includes(t.dest)))
-        .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
-
-    const formatDate = (d: Date) => {
-        const year = d.getFullYear();
-        const month = String(d.getMonth() + 1).padStart(2, '0');
-        const day = String(d.getDate()).padStart(2, '0');
-        return `${year}-${month}-${day}`;
-    };
-
-    allRelevantTx.forEach(t => {
-        // Use a Date object to ensure we get the local date parts consistently
-        const d = new Date(t.date);
-        const dateKey = formatDate(d);
-        if (!grouped[dateKey]) grouped[dateKey] = { receive: 0, dispatch: 0, cancelled: 0, borrow: 0, return: 0 };
-
-        if (t.status === 'CANCELLED') {
-            grouped[dateKey].cancelled += t.qty;
-            return;
-        }
-
-        // Standard flow
-        if (partnerIds.includes(t.dest)) grouped[dateKey].dispatch += t.qty;
-        if (partnerIds.includes(t.source)) grouped[dateKey].receive += t.qty;
-
-        // Balance-affecting flow
-        if (t.status === 'COMPLETED') {
-            if (partnerIds.includes(t.dest)) grouped[dateKey].borrow += t.qty;
-            if (partnerIds.includes(t.source)) grouped[dateKey].return += t.qty;
-        }
-    });
-
-    // Generate daily time series for the range
-    const result: PartnerBalanceData[] = [];
-    let runningBalance = 0;
-
-    // To get the starting balance before the startDate, we need to sum previous COMPLETED tx
-    const preBalanceTx = allRelevantTx.filter(t => t.status === 'COMPLETED' && new Date(t.date) < startDate);
-    runningBalance = preBalanceTx.reduce((acc, t) => {
-        if (partnerIds.includes(t.dest)) return acc + t.qty;
-        if (partnerIds.includes(t.source)) return acc - t.qty;
-        return acc;
-    }, 0);
-
-    const curr = new Date(startDate);
-    while (curr <= endDate) {
-        const dateKey = formatDate(curr);
-        const dayData = grouped[dateKey] || { receive: 0, dispatch: 0, cancelled: 0, borrow: 0, return: 0 };
-
-        runningBalance += (dayData.borrow - dayData.return);
-
-        result.push({
-            date: dateKey,
-            receive: dayData.receive,
-            dispatch: dayData.dispatch,
-            cancelled: dayData.cancelled,
-            borrow: dayData.borrow,
-            return: dayData.return,
-            balance: runningBalance
-        });
-
-        curr.setDate(curr.getDate() + 1);
-    }
-
-    return result;
-};
-
-/**
- * Get Scrapped by Branch Summary
- */
-export const getScrappedByBranch = (
-    transactions: Transaction[],
-    startDate: Date,
-    endDate: Date,
-    branchNames: Record<BranchId, string>
-): ChartDataPoint[] => {
-    const filtered = transactions.filter(t => {
-        const d = new Date(t.date);
-        return d >= startDate && d <= endDate && t.type === 'MAINTENANCE' && t.status === 'COMPLETED';
-    });
-
-    const branchScrap: Record<string, number> = {};
-    filtered.forEach(t => {
-        const match = t.noteExtended?.match(/SCRAP:\s*(\d+)/);
-        if (match) {
-            const qty = parseInt(match[1]);
-            const bid = t.source || 'hub_nw'; // Maintenance happens at a branch
-            branchScrap[bid] = (branchScrap[bid] || 0) + qty;
-        }
-    });
-
-    const colors = ['#ef4444', '#dc2626', '#b91c1c', '#991b1b', '#7f1d1d'];
-
-    return Object.entries(branchScrap).map(([bid, qty], i) => ({
-        name: branchNames[bid as BranchId] || bid,
-        value: qty,
-        color: colors[i % colors.length]
-    })).sort((a, b) => b.value - a.value);
-};
-
-/**
- * Get Net Balance Summary for all External Partners
- */
-export const getPartnerSummary = (
-    transactions: Transaction[],
-    partnerList: { id: string, name: string }[]
-): ChartDataPoint[] => {
-    const partnerMap: Record<string, number> = {};
-
-    transactions.filter(t => t.status === 'COMPLETED').forEach(t => {
-        partnerList.forEach(p => {
-            if (t.dest === p.id) partnerMap[p.id] = (partnerMap[p.id] || 0) + t.qty;
-            if (t.source === p.id) partnerMap[p.id] = (partnerMap[p.id] || 0) - t.qty;
-        });
-    });
-
-    const colors = ['#6366f1', '#8b5cf6', '#ec4899', '#f59e0b'];
-
-    return partnerList.map((p, i) => ({
-        name: p.name,
-        value: partnerMap[p.id] || 0,
-        color: colors[i % colors.length]
-    })).sort((a, b) => b.value - a.value);
-};
-
-/**
- * Get Net Balance breakdown by Pallet Type for specific partner(s)
- */
-export const getPartnerPalletTypeSummary = (
-    transactions: Transaction[],
-    partnerId: string | 'all',
-    palletTypes: Record<string, { name: string, color: string }>
-): ChartDataPoint[] => {
-    const isAll = partnerId === 'all';
-    const partnerIds = isAll ? ['sino', 'neo', 'ls', 'pakk_sai3'] : [partnerId];
-
-    const balanceMap: Record<string, number> = {};
-
-    transactions.filter(t => t.status === 'COMPLETED').forEach(t => {
-        if (partnerIds.includes(t.dest)) {
-            balanceMap[t.palletId] = (balanceMap[t.palletId] || 0) + t.qty;
-        }
-        if (partnerIds.includes(t.source)) {
-            balanceMap[t.palletId] = (balanceMap[t.palletId] || 0) - t.qty;
-        }
-    });
-
-    return Object.entries(palletTypes).map(([pid, pinfo]) => ({
-        name: pinfo.name,
-        value: balanceMap[pid] || 0,
-        color: pinfo.color
-    })).filter(item => item.value !== 0).sort((a, b) => b.value - a.value);
-};
-
-/**
- * Get Loscam Red Rental Analysis for the last 7 days
- */
-export const getLoscamRentalAnalysis = (
+export const calculateKPIs = (
     transactions: Transaction[],
     stock: Stock,
-): LoscamRentalData[] => {
-    // 1. Identify valid internal branches vs partners
+    startDate: Date,
+    endDate: Date
+): KPIMetrics => {
+    const filteredTransactions = filterTransactionsByDate(transactions, startDate, endDate);
     const validBranchIds: BranchId[] = ['hub_nw', 'kpp', 'plk', 'cm', 'ekp', 'ms', 'maintenance_stock'];
-    const partnerIds = EXTERNAL_PARTNERS.filter(p => p.type !== 'provider').map(p => p.id);
+
+    const totalPalletsInStock = validBranchIds.reduce((sum, branchId) => {
+        const branchStock = stock[branchId];
+        return sum + (branchStock ? Object.values(branchStock).reduce((s, q) => s + q, 0) : 0);
+    }, 0);
+
+    const totalPalletsInTransit = transactions
+        .filter(t => t.status === 'PENDING' && validBranchIds.includes(t.dest as BranchId))
+        .reduce((sum, t) => sum + t.qty, 0);
+
+    const totalMovements = filteredTransactions.reduce((sum, t) => sum + t.qty, 0);
+
+    const maintenanceTransactions = filteredTransactions.filter(t => t.type === 'MAINTENANCE');
+    const maintenanceRate = filteredTransactions.length > 0 ? (maintenanceTransactions.length / filteredTransactions.length) * 100 : 0;
+    const utilizationRate = totalPalletsInStock > 0 ? Math.min((totalMovements / totalPalletsInStock) * 100, 100) : 0;
+
+    const periodLength = endDate.getTime() - startDate.getTime();
+    const previousStart = new Date(startDate.getTime() - periodLength);
+    const previousTransactions = filterTransactionsByDate(transactions, previousStart, startDate);
+
+    const currentCount = filteredTransactions.length;
+    const previousCount = previousTransactions.length;
+
+    let trend: 'up' | 'down' | 'stable' = 'stable';
+    let trendPercentage = 0;
+    if (previousCount > 0) {
+        trendPercentage = ((currentCount - previousCount) / previousCount) * 100;
+        if (trendPercentage > 5) trend = 'up';
+        else if (trendPercentage < -5) trend = 'down';
+    }
+
+    const currentIn = filteredTransactions.filter(t => t.type === 'IN').reduce((sum, t) => sum + t.qty, 0);
+    const currentOut = filteredTransactions.filter(t => t.type === 'OUT').reduce((sum, t) => sum + t.qty, 0);
+
+    const prevIn = previousTransactions.filter(t => t.type === 'IN').reduce((sum, t) => sum + t.qty, 0);
+    const prevOut = previousTransactions.filter(t => t.type === 'OUT').reduce((sum, t) => sum + t.qty, 0);
+    const prevActivity = previousTransactions.reduce((sum, t) => sum + t.qty, 0);
+
+    const calcTrend = (curr: number, prev: number) => {
+        if (prev === 0) return curr > 0 ? 100 : 0;
+        return Math.round(((curr - prev) / prev) * 100);
+    };
+
+    return {
+        totalTransactions: currentCount,
+        totalPalletsInStock,
+        totalPalletsInTransit,
+        totalMovements,
+        utilizationRate: Math.round(utilizationRate * 10) / 10,
+        maintenanceRate: Math.round(maintenanceRate * 10) / 10,
+        totalScrapped: filteredTransactions
+            .filter(t => t.type === 'MAINTENANCE' && t.status === 'COMPLETED')
+            .reduce((sum, t) => {
+                const match = t.noteExtended?.match(/SCRAP:\s*(\d+)/);
+                return sum + (match ? parseInt(match[1]) : 0);
+            }, 0),
+        totalIn: currentIn,
+        totalInTrend: calcTrend(currentIn, prevIn),
+        totalOut: currentOut,
+        totalOutTrend: calcTrend(currentOut, prevOut),
+        totalActivity: totalMovements,
+        totalActivityTrend: calcTrend(totalMovements, prevActivity),
+        maxPossession: totalPalletsInStock + totalPalletsInTransit,
+        maxPossessionTrend: 0,
+        trend,
+        trendPercentage: Math.abs(Math.round(trendPercentage * 10) / 10),
+    };
+};
+
+/**
+ * Get Transaction Status Distribution
+ */
+export const getStatusDistribution = (transactions: Transaction[], startDate: Date, endDate: Date): ChartDataPoint[] => {
+    const filtered = filterTransactionsByDate(transactions, startDate, endDate);
+    const counts = filtered.reduce((acc, t) => {
+        acc[t.status] = (acc[t.status] || 0) + 1;
+        return acc;
+    }, {} as Record<string, number>);
+    const colors = { COMPLETED: '#10b981', PENDING: '#f59e0b', CANCELLED: '#ef4444' };
+    return Object.entries(counts).map(([status, count]) => ({
+        name: status === 'COMPLETED' ? 'เสร็จสิ้น' : status === 'PENDING' ? 'รอดำเนินการ' : 'ยกเลิก',
+        value: count,
+        color: colors[status as keyof typeof colors] || '#6366f1',
+        percentage: Math.round((count / filtered.length) * 100),
+    }));
+};
+
+/**
+ * Get Transaction Type Distribution
+ */
+export const getTypeDistribution = (transactions: Transaction[], startDate: Date, endDate: Date): ChartDataPoint[] => {
+    const filtered = filterTransactionsByDate(transactions, startDate, endDate);
+    const counts = filtered.reduce((acc, t) => {
+        acc[t.type] = (acc[t.type] || 0) + t.qty;
+        return acc;
+    }, {} as Record<string, number>);
+    const colors = { IN: '#3b82f6', OUT: '#f59e0b', MAINTENANCE: '#8b5cf6', ADJUST: '#06b6d4' };
+    const labels = { IN: 'รับเข้า', OUT: 'จ่ายออก', MAINTENANCE: 'ซ่อมบำรุง', ADJUST: 'ปรับปรุง' };
+    const total = Object.values(counts).reduce((s, c) => s + c, 0);
+    return Object.entries(counts).map(([type, count]) => ({
+        name: labels[type as keyof typeof labels] || type,
+        value: count,
+        color: colors[type as keyof typeof colors] || '#6366f1',
+        percentage: total > 0 ? Math.round((count / total) * 100) : 0,
+    }));
+};
+
+/**
+ * Get Time Series Data
+ */
+export const getTimeSeriesData = (transactions: Transaction[], startDate: Date, endDate: Date, groupBy: 'day' | 'week' | 'month' = 'day'): TimeSeriesData[] => {
+    const filtered = filterTransactionsByDate(transactions, startDate, endDate);
+    const grouped = filtered.reduce((acc, t) => {
+        const date = new Date(t.date);
+        let key = date.toISOString().split('T')[0];
+        if (groupBy === 'month') key = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
+        if (!acc[key]) acc[key] = { date: key, in: 0, out: 0, maintenance: 0, scrapped: 0, total: 0 };
+        if (t.type === 'IN') acc[key].in += t.qty;
+        else if (t.type === 'OUT') acc[key].out += t.qty;
+        else if (t.type === 'MAINTENANCE') {
+            acc[key].maintenance += t.qty;
+            const sMatch = t.noteExtended?.match(/SCRAP:\s*(\d+)/);
+            if (sMatch) acc[key].scrapped += parseInt(sMatch[1]);
+        }
+        acc[key].total += t.qty;
+        return acc;
+    }, {} as Record<string, TimeSeriesData>);
+    return Object.values(grouped).sort((a, b) => a.date.localeCompare(b.date));
+};
+
+/**
+ * Get Branch Performance
+ */
+export const getBranchPerformance = (transactions: Transaction[], stock: Stock, startDate: Date, endDate: Date, branchNames: Record<BranchId, string>): BranchPerformance[] => {
+    const filtered = filterTransactionsByDate(transactions, startDate, endDate);
+    const validIds = Object.keys(branchNames) as BranchId[];
+    return validIds.map((bid, i) => {
+        const bStock = stock[bid] || {};
+        const totalStock = Object.values(bStock).reduce((s, q) => s + q, 0);
+        const bTx = filtered.filter(t => t.source === bid || t.dest === bid);
+        const inC = bTx.filter(t => t.dest === bid && t.type === 'IN').length;
+        const outC = bTx.filter(t => t.source === bid && t.type === 'OUT').length;
+        return {
+            branchId: bid, branchName: branchNames[bid], totalStock, inTransactions: inC, outTransactions: outC,
+            utilizationRate: totalStock > 0 ? Math.min(((inC + outC) / totalStock) * 100, 100) : 0,
+            color: ['#6366f1', '#8b5cf6', '#ec4899', '#f59e0b', '#10b981'][i % 5]
+        };
+    }).sort((a, b) => b.totalStock - a.totalStock);
+};
+
+/**
+ * Get Pallet Type Analysis
+ */
+export const getPalletTypeAnalysis = (transactions: Transaction[], stock: Stock, startDate: Date, endDate: Date, palletNames: Record<PalletId, string>, palletColors: Record<PalletId, string>): PalletTypeAnalysis[] => {
+    const filtered = filterTransactionsByDate(transactions, startDate, endDate);
+    const pStocks: Record<PalletId, number> = {} as any;
+    Object.values(stock).forEach(bs => Object.entries(bs).forEach(([pid, q]) => pStocks[pid as PalletId] = (pStocks[pid as PalletId] || 0) + q));
+    return Object.entries(pStocks).map(([pid, ts]) => {
+        const pTx = filtered.filter(t => t.palletId === pid);
+        return {
+            palletId: pid as PalletId, palletName: palletNames[pid as PalletId], totalStock: ts,
+            inCount: pTx.filter(t => t.type === 'IN').reduce((s, t) => s + t.qty, 0),
+            outCount: pTx.filter(t => t.type === 'OUT').reduce((s, t) => s + t.qty, 0),
+            maintenanceCount: pTx.filter(t => t.type === 'MAINTENANCE').reduce((s, t) => s + t.qty, 0),
+            turnoverRate: ts > 0 ? ((pTx.length) / ts) * 100 : 0, color: palletColors[pid as PalletId]
+        };
+    }).sort((a, b) => b.totalStock - a.totalStock);
+};
+
+/**
+ * Get Scrapped Analysis
+ */
+export const getScrappedAnalysis = (transactions: Transaction[], startDate: Date, endDate: Date, palletNames: Record<PalletId, string>, palletColors: Record<PalletId, string>): ScrappedAnalysis[] => {
+    const filtered = filterTransactionsByDate(transactions, startDate, endDate);
+    const sm: Record<string, number> = {};
+    filtered.filter(t => t.type === 'MAINTENANCE' && t.status === 'COMPLETED').forEach(t => {
+        const m = t.noteExtended?.match(/SCRAP:\s*(\d+)/);
+        if (m) { const q = parseInt(m[1]); const pid = t.originalPalletId || t.palletId; sm[pid] = (sm[pid] || 0) + q; }
+    });
+    const total = Object.values(sm).reduce((s, q) => s + q, 0);
+    return Object.entries(sm).map(([pid, q]) => ({
+        palletId: pid as PalletId, palletName: palletNames[pid as PalletId], scrappedQty: q, color: palletColors[pid as PalletId],
+        percentage: total > 0 ? (q / total) * 100 : 0
+    })).sort((a, b) => b.scrappedQty - a.scrappedQty);
+};
+
+export const getPartnerSummary = (transactions: Transaction[], partnerList: { id: string, name: string }[]): ChartDataPoint[] => {
+    const colors = ['#6366f1', '#8b5cf6', '#ec4899', '#f59e0b'];
+    return partnerList.map((p, i) => ({
+        name: p.name,
+        value: calculatePartnerBalance(transactions, p.id, 'loscam_red'),
+        color: colors[i % colors.length]
+    })).sort((a, b) => b.value - a.value);
+};
+
+export const getPartnerPalletTypeSummary = (transactions: Transaction[], partnerId: string, palletTypes: Record<string, { name: string, color: string }>): ChartDataPoint[] => {
+    return Object.entries(palletTypes).map(([pid, info]) => ({
+        name: info.name,
+        value: calculatePartnerBalance(transactions, partnerId, pid as PalletId),
+        color: info.color
+    })).filter(i => i.value !== 0).sort((a, b) => b.value - a.value);
+};
+
+export const getLoscamRentalAnalysis = (transactions: Transaction[], stock: Stock): LoscamRentalData[] => {
     const palletId: PalletId = 'loscam_red';
-
-    // 2. Calculate CURRENT total in system (Possession)
-    // Possession = Total in all internal branches + Total with all partners
-    const currentInternalStock = validBranchIds.reduce((sum, bid) => {
-        return sum + (stock[bid]?.[palletId] || 0);
-    }, 0);
-
-    const currentPartnerBalances = partnerIds.reduce((sum, pid) => {
-        // Calculate current net balance for this partner
-        const balance = transactions
-            .filter(t => t.status === 'COMPLETED' && t.palletId === palletId)
-            .reduce((acc, t) => {
-                if (t.dest === pid) return acc + t.qty;
-                if (t.source === pid) return acc - t.qty;
-                return acc;
-            }, 0);
-        return sum + balance;
-    }, 0);
-
-    let runningPossession = currentInternalStock + currentPartnerBalances;
-
-    // 3. Walk backwards for 7 days
     const result: LoscamRentalData[] = [];
     const today = new Date();
     today.setHours(23, 59, 59, 999);
 
-    const formatDate = (d: Date) => {
-        const year = d.getFullYear();
-        const month = String(d.getMonth() + 1).padStart(2, '0');
-        const day = String(d.getDate()).padStart(2, '0');
-        return `${year}-${month}-${day}`;
-    };
+    let currentPos = calculatePartnerBalance(transactions, 'loscam_wangnoi', palletId);
 
-    // Group relevant transactions by date (only those that change system-wide possession)
-    // Possession changes only when it comes from OUTSIDE (provider) or goes to OUTSIDE.
-    // However, the rule here is simpler: POSSESSION = Stock + Partner Balances.
-    // Any transaction where source is NOT in (branches + partners) AND dest is in (branches + partners) increases possession.
-    // Any transaction where source is in (branches + partners) AND dest is NOT in (branches + partners) decreases possession.
-
-    // Actually, in this system, everything is either a branch or a partner. 
-    // The "Provider" (loscam_wangnoi) is also in EXTERNAL_PARTNERS.
-    // So "System" = [Internal Branches] + [Non-Provider Partners].
-    // Possession = (Received from Provider) - (Returned to Provider).
-    const providerId = 'loscam_wangnoi';
-
-    // Sort transactions by date descending
-    const sortedTx = [...transactions]
-        .filter(t => t.status === 'COMPLETED' && t.palletId === palletId)
-        .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+    const sortedTx = [...transactions].filter(t => t.status === 'COMPLETED' && t.palletId === palletId).sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
 
     for (let i = 0; i < 7; i++) {
-        const targetDate = new Date(today);
-        targetDate.setDate(today.getDate() - i);
-        const dateKey = formatDate(targetDate);
+        const d = new Date(today); d.setDate(today.getDate() - i);
+        const rate = currentPos > 3000 ? 1.12 : currentPos > 2000 ? 1.19 : 1.40;
+        result.push({ date: d.toISOString().split('T')[0], quantity: currentPos, cost: Math.round(currentPos * rate * 100) / 100 });
 
-        // Calculate cost based on rule:
-        // <= 2000 units: 1.40 THB/unit
-        // > 2000 units: 1.10 THB/unit for all
-        const cost = runningPossession > 2000
-            ? runningPossession * 1.10
-            : runningPossession * 1.40;
-
-        result.push({
-            date: dateKey,
-            quantity: runningPossession,
-            cost: Math.round(cost * 100) / 100
-        });
-
-        // Prepare runningPossession for previous day (subtract today's changes)
-        // Possession increased today if: source was provider AND dest was internal/customer
-        // Possession decreased today if: source was internal/customer AND dest was provider
-        const dayStart = new Date(targetDate);
-        dayStart.setHours(0, 0, 0, 0);
-        const dayEnd = new Date(targetDate);
-        dayEnd.setHours(23, 59, 59, 999);
-
-        const dayChanges = sortedTx.filter(t => {
-            const d = new Date(t.date);
-            return d >= dayStart && d <= dayEnd;
-        });
-
-        dayChanges.forEach(t => {
-            // If it came from provider today, it was added to system. To go back, subtract it.
-            if (t.source === providerId) runningPossession -= t.qty;
-            // If it went to provider today, it left the system. To go back, add it.
-            if (t.dest === providerId) runningPossession += t.qty;
-        });
+        const dayStart = new Date(d); dayStart.setHours(0, 0, 0, 0);
+        const dayEnd = new Date(d); dayEnd.setHours(23, 59, 59, 999);
+        sortedTx.filter(t => {
+            const td = new Date(t.date);
+            return td >= dayStart && td <= dayEnd;
+        }).forEach(t => currentPos -= getPartnerBalanceContribution(t, 'loscam_wangnoi', palletId));
     }
-
     return result.reverse();
+};
+
+export interface AgingLoanItem {
+    partnerId: string;
+    partnerName: string;
+    palletId: PalletId;
+    docNo: string;
+    borrowDate: string;
+    ageDays: number;
+    qty: number;
+    overdueDays: number;
+    rentalRate: number;
+    accruedRent: number;
+}
+
+export interface AgingRentalSummary {
+    loans: AgingLoanItem[];
+    totalOverdueQty: number;
+    totalAccruedRent: number;
+    partnerSummaries: Record<string, {
+        name: string;
+        palletId: PalletId;
+        totalIn: number;
+        totalOut: number;
+        openQty: number;
+        rent: number;
+        avgAge: number;
+        warningCount: number;
+        dangerCount: number;
+        currentRate?: number;
+    }>;
+}
+
+export const getAgingRentalAnalysis = (transactions: Transaction[], today: Date = new Date()): AgingRentalSummary => {
+    const partnerSummaries: Record<string, any> = {};
+    const loans: AgingLoanItem[] = [];
+
+    // Target Partners to always show/process
+    const targetPartners = ['loscam_wangnoi', 'sino', 'lamsoon', 'ufc', 'loxley', 'kopee', 'hiq_th'];
+    const allPalletIds: PalletId[] = ['loscam_red', 'loscam_blue', 'loscam_yellow', 'hiq'];
+
+    targetPartners.forEach(pId => {
+        allPalletIds.forEach(palletId => {
+            const balance = calculatePartnerBalance(transactions, pId, palletId);
+            const key = `${pId}_${palletId}`;
+
+            // Initialize summary
+            partnerSummaries[key] = {
+                name: pId === 'loscam_wangnoi' ? 'Loscam (Main Account)' : (EXTERNAL_PARTNERS.find(p => p.id === pId)?.name || pId),
+                palletId: palletId,
+                totalIn: transactions.filter(t => t.status === 'COMPLETED' && t.palletId === palletId && t.source === pId).reduce((s, t) => s + t.qty, 0),
+                totalOut: transactions.filter(t => t.status === 'COMPLETED' && t.palletId === palletId && t.dest === pId).reduce((s, t) => s + t.qty, 0),
+                openQty: balance,
+                rent: 0,
+                avgAge: 0,
+                warningCount: 0,
+                dangerCount: 0,
+                currentRate: 0,
+                weight: 0
+            };
+
+            // Special Rental/Aging Logic for Loscam Red and Sino Red
+            if (palletId === 'loscam_red' && (pId === 'loscam_wangnoi' || pId === 'sino')) {
+                const borrows = transactions
+                    .filter(t => t.status === 'COMPLETED' && t.palletId === 'loscam_red' && (pId === 'loscam_wangnoi' ? t.source === 'neo_corp' : t.source === 'sino'))
+                    .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+
+                const returnsCount = transactions
+                    .filter(t => t.status === 'COMPLETED' && t.palletId === 'loscam_red' && (pId === 'loscam_wangnoi' ? t.dest === 'loscam_wangnoi' : t.dest === 'sino'))
+                    .reduce((sum, t) => sum + t.qty, 0);
+
+                let vReturn = returnsCount;
+                const dailyRate = pId === 'loscam_wangnoi'
+                    ? (balance > 3000 ? 1.12 : balance > 2000 ? 1.19 : 1.40)
+                    : 1.0;
+
+                partnerSummaries[key].currentRate = dailyRate;
+
+                borrows.forEach(b => {
+                    let rem = b.qty;
+                    if (vReturn > 0) {
+                        const d = Math.min(rem, vReturn);
+                        rem -= d;
+                        vReturn -= d;
+                    }
+
+                    if (rem > 0) {
+                        const days = Math.floor((today.getTime() - new Date(b.date).getTime()) / 86400000);
+                        const isSino = pId === 'sino';
+                        const grace = isSino ? 10 : 0;
+                        const overdue = Math.max(0, days - grace);
+                        const rent = overdue * dailyRate * rem;
+
+                        loans.push({
+                            partnerId: pId,
+                            partnerName: partnerSummaries[key].name,
+                            palletId: 'loscam_red',
+                            docNo: b.docNo,
+                            borrowDate: b.date.split('T')[0],
+                            ageDays: days,
+                            qty: rem,
+                            overdueDays: overdue,
+                            rentalRate: overdue > 0 ? dailyRate : 0,
+                            accruedRent: Math.round(rent * 100) / 100
+                        });
+
+                        partnerSummaries[key].rent += rent;
+                        partnerSummaries[key].weight += (days * rem);
+                        if (days > 10) partnerSummaries[key].dangerCount += rem;
+                        else if (days > 7) partnerSummaries[key].warningCount += rem;
+                    }
+                });
+
+                if (balance > 0) {
+                    partnerSummaries[key].avgAge = Math.round(partnerSummaries[key].weight / balance);
+                }
+            }
+        });
+    });
+
+    return {
+        loans: loans.sort((a, b) => b.ageDays - a.ageDays),
+        totalOverdueQty: Object.values(partnerSummaries).reduce((s: any, x: any) => s + (x.dangerCount || 0), 0),
+        totalAccruedRent: Math.round(Object.values(partnerSummaries).reduce((s: any, x: any) => s + (x.rent || 0), 0) * 100) / 100,
+        partnerSummaries
+    };
+};
+
+export const getSinoAgingAnalysis = (transactions: Transaction[], today: Date = new Date()): ChartDataPoint[] => {
+    const summary = getAgingRentalAnalysis(transactions, today);
+    const sino = Object.values(summary.partnerSummaries).find(s => s.name.includes('ซีโน'));
+    if (!sino) return [{ name: 'Safe', value: 0, color: '#10b981' }, { name: 'Warning', value: 0, color: '#f59e0b' }, { name: 'Overdue', value: 0, color: '#ef4444' }];
+
+    const items = summary.loans.filter(l => l.partnerId === 'sino');
+    const safe = items.filter(l => l.ageDays <= 5).reduce((s, l) => s + l.qty, 0);
+    const warn = items.filter(l => l.ageDays > 5 && l.ageDays <= 10).reduce((s, l) => s + l.qty, 0);
+    const over = items.filter(l => l.ageDays > 10).reduce((s, l) => s + l.qty, 0);
+
+    return [
+        { name: 'Safe (0-5 วัน)', value: safe, color: '#10b981' },
+        { name: 'Warning (6-10 วัน)', value: warn, color: '#f59e0b' },
+        { name: 'Overdue (10+ วัน)', value: over, color: '#ef4444' }
+    ];
+};
+
+export const getLogisticInsight = (transactions: Transaction[]): ChartDataPoint[] => {
+    const counts: Record<string, number> = {};
+    transactions.forEach(t => {
+        const v = t.vehicleType || 'ไม่ระบุ';
+        counts[v] = (counts[v] || 0) + 1;
+    });
+    return Object.entries(counts).map(([name, value], i) => ({ name, value, color: ['#6366f1', '#8b5cf6', '#ec4899', '#f59e0b', '#10b981'][i % 5] })).sort((a, b) => b.value - a.value);
+};
+
+export const getBranchPalletBreakdown = (stock: Stock, branchId: BranchId, palletNames: Record<PalletId, string>, palletColors: Record<PalletId, string>): ChartDataPoint[] => {
+    const bStock = stock[branchId];
+    if (!bStock) return [];
+
+    return Object.entries(bStock).map(([pid, qty]) => ({
+        name: palletNames[pid as PalletId] || pid,
+        value: qty,
+        color: palletColors[pid as PalletId] || '#6366f1'
+    })).filter(item => item.value > 0).sort((a, b) => b.value - a.value);
+};
+
+export const getCentralizedReturnAnalysis = (transactions: Transaction[], partners: string[]): ChartDataPoint[] => {
+    const relevantTx = transactions.filter(t => t.type === 'OUT' && partners.includes(t.dest));
+    const hubCount = relevantTx.filter(t => t.source === 'hub_nw').reduce((s, t) => s + t.qty, 0);
+    const branchCount = relevantTx.filter(t => t.source !== 'hub_nw').reduce((s, t) => s + t.qty, 0);
+
+    return [
+        { name: 'Hub NW (Centralized)', value: hubCount, color: '#10b981' },
+        { name: 'Other Branches (Direct)', value: branchCount, color: '#f59e0b' }
+    ];
+};
+
+export const getQuickLoopPerformance = (transactions: Transaction[]): ChartDataPoint[] => {
+    const completeDoc = transactions.filter(t => t.carRegistration && t.driverName).length;
+    const incompleteDoc = transactions.length - completeDoc;
+    return [
+        { name: 'Complete Info', value: completeDoc, color: '#3b82f6' },
+        { name: 'Incomplete Info', value: incompleteDoc, color: '#cbd5e1' }
+    ];
+};
+
+export const getPeakHourAnalysis = (transactions: Transaction[]): { hour: string; activity: number }[] => {
+    const hours = new Array(24).fill(0);
+    transactions.forEach(t => {
+        const h = new Date(t.date).getHours();
+        hours[h]++;
+    });
+    return hours.map((count, i) => ({ hour: `${i}:00`, activity: count }));
+};
+
+export const getHubTransferEfficiency = (transactions: Transaction[]): number => {
+    return transactions.filter(t => t.status === 'PENDING' && t.dest === 'hub_nw').reduce((sum, t) => sum + t.qty, 0);
+};
+
+export const getPartnerVelocity = (transactions: Transaction[], partnerIds: string[]): ChartDataPoint[] => {
+    const velocities: Record<string, number> = {};
+    const now = new Date();
+    partnerIds.forEach(id => {
+        const recentTx = transactions.filter(t => (t.source === id || t.dest === id) && (now.getTime() - new Date(t.date).getTime()) < 30 * 24 * 60 * 60 * 1000);
+        velocities[id] = recentTx.reduce((sum, t) => sum + t.qty, 0);
+    });
+    return Object.entries(velocities).map(([id, qty]) => ({ name: id, value: qty, color: '#8b5cf6' })).sort((a, b) => b.value - a.value);
+};
+
+export const getPartnerBalanceAnalysis = (transactions: Transaction[], partnerId: string, startDate: Date, endDate: Date): PartnerBalanceData[] => {
+    const data: PartnerBalanceData[] = [];
+    const days = Math.ceil((endDate.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24));
+    let currentBalance = 0;
+    if (partnerId !== 'all') {
+        currentBalance = calculatePartnerBalance(transactions.filter(t => new Date(t.date) < startDate), partnerId, 'loscam_red');
+    }
+    for (let i = 0; i <= days; i++) {
+        const d = new Date(startDate);
+        d.setDate(d.getDate() + i);
+        const dayStr = d.toISOString().split('T')[0];
+        const dayTx = transactions.filter(t => t.status === 'COMPLETED' && t.date.startsWith(dayStr) && (partnerId === 'all' || t.source === partnerId || t.dest === partnerId));
+        let receive = 0;
+        let dispatch = 0;
+        dayTx.forEach(t => {
+            if (t.type === 'IN') receive += t.qty;
+            if (t.type === 'OUT') dispatch += t.qty;
+        });
+        data.push({ date: dayStr, receive, dispatch, cancelled: 0, borrow: receive, return: dispatch, balance: currentBalance });
+    }
+    return data;
+};
+
+export const getScrappedByBranch = (transactions: Transaction[], startDate: Date, endDate: Date, branchNames: Record<BranchId, string>): ChartDataPoint[] => {
+    const filtered = filterTransactionsByDate(transactions, startDate, endDate);
+    const branchScraps: Record<string, number> = {};
+    filtered.filter(t => t.type === 'MAINTENANCE' && t.status === 'COMPLETED').forEach(t => {
+        const match = t.noteExtended?.match(/SCRAP:\s*(\d+)/);
+        if (match) {
+            const qty = parseInt(match[1]);
+            const branchName = branchNames[t.source as BranchId] || t.source;
+            branchScraps[branchName] = (branchScraps[branchName] || 0) + qty;
+        }
+    });
+    return Object.entries(branchScraps).map(([name, value], i) => ({ name, value, color: ['#ef4444', '#f87171', '#b91c1c', '#991b1b', '#7f1d1d'][i % 5] })).sort((a, b) => b.value - a.value);
 };

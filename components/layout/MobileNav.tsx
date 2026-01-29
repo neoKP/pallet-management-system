@@ -1,5 +1,5 @@
 import React from 'react';
-import { LayoutDashboard, ArrowRightLeft, Wrench, BarChart3 } from 'lucide-react';
+import { LayoutDashboard, ArrowRightLeft, Wrench, BarChart3, List } from 'lucide-react';
 import { BranchId, User } from '../../types';
 
 interface MobileNavProps {
@@ -20,6 +20,11 @@ const MobileNav: React.FC<MobileNavProps> = ({ activeTab, setActiveTab, selected
             <button onClick={() => setActiveTab('analytics')} className={`p-2 rounded-lg flex flex-col items-center ${activeTab === 'analytics' ? 'text-purple-600' : 'text-slate-400'}`}>
                 <BarChart3 size={24} />
                 <span className="text-[10px] font-bold mt-1">Analytics</span>
+            </button>
+
+            <button onClick={() => setActiveTab('history')} className={`p-2 rounded-lg flex flex-col items-center ${activeTab === 'history' ? 'text-blue-600' : 'text-slate-400'}`}>
+                <List size={24} />
+                <span className="text-[10px] font-bold mt-1">Logs</span>
             </button>
 
             {(selectedBranch !== 'ALL') && (

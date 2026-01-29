@@ -81,7 +81,7 @@ export const TiltCard = ({ children, className = "", glareColor = "#a855f7", sty
 };
 
 // --- Spotlight Card Wrapper ---
-export const SpotlightCard = ({ children, className = "", spotlightColor = "rgba(168,85,247,0.15)" }: { children: React.ReactNode, className?: string, spotlightColor?: string }) => {
+export const SpotlightCard = ({ children, className = "", spotlightColor = "rgba(168,85,247,0.15)", style }: { children: React.ReactNode, className?: string, spotlightColor?: string, style?: React.CSSProperties }) => {
     const divRef = useRef<HTMLDivElement>(null);
     const [position, setPosition] = useState({ x: 0, y: 0 });
     const [opacity, setOpacity] = useState(0);
@@ -108,6 +108,7 @@ export const SpotlightCard = ({ children, className = "", spotlightColor = "rgba
             onMouseEnter={handleFocus}
             onMouseLeave={handleBlur}
             className={`relative overflow-hidden ${className}`}
+            style={style}
         >
             {/* Spotlight Glow */}
             <div

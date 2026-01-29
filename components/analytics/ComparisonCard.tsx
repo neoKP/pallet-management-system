@@ -82,13 +82,13 @@ export const ComparisonCard: React.FC<ComparisonCardProps> = ({
             >
                 {/* Neon Border Effect on Hover */}
                 <motion.div
-                    className="absolute inset-0 rounded-xl pointer-events-none"
+                    className="absolute inset-0 rounded-xl pointer-events-none border"
                     initial={{ opacity: 0 }}
                     animate={{ opacity: isHovering ? 1 : 0 }}
                     transition={{ duration: 0.3 }}
                     style={{
                         boxShadow: `inset 0 0 20px ${color}20, 0 0 20px ${color}20`,
-                        border: `1px solid ${color}60`
+                        borderColor: `${color}60`
                     }}
                 />
 

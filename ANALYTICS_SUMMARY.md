@@ -161,7 +161,7 @@ Buttons: Rotate on hover (Reset button)
 
 ## 📁 **โครงสร้างไฟล์**
 
-```
+```bash
 neo-siam-logistics---pallet-management-system/
 ├── stores/
 │   └── analyticsStore.ts          # Zustand Store

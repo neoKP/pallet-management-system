@@ -1,5 +1,4 @@
-import React from 'react';
-import { Clock, Building, Car, User as UserIcon, FileText } from 'lucide-react';
+import { Clock, Building, Car, User as UserIcon, FileText, Printer } from 'lucide-react';
 import { Transaction } from '../../types';
 import { PALLET_TYPES, VEHICLE_TYPES } from '../../constants';
 
@@ -19,11 +18,13 @@ const formatDate = (dateStr: string) => {
 interface TransactionHistoryProps {
     historyGroups: Transaction[][];
     onViewTimeline: (tx: Transaction) => void;
+    onVerifyDocument: (txGroup: Transaction[]) => void;
 }
 
 const TransactionHistory: React.FC<TransactionHistoryProps> = ({
     historyGroups,
-    onViewTimeline
+    onViewTimeline,
+    onVerifyDocument
 }) => {
     return (
         <div className="glass p-6 rounded-3xl border border-slate-200 bg-white">
@@ -52,19 +53,28 @@ const TransactionHistory: React.FC<TransactionHistoryProps> = ({
                                     </div>
                                     <span className="text-xs font-mono font-bold text-slate-500">{tx.docNo || '-'}</span>
                                 </div>
-                                <div className="flex flex-col items-end gap-1">
-                                    <span className="text-xs text-slate-400">{formatDate(tx.date)}</span>
+                                <div className="flex flex-col items-end gap-1.5">
+                                    <span className="text-xs text-slate-400 mb-1">{formatDate(tx.date)}</span>
                                     <button
                                         onClick={() => onViewTimeline(tx)}
-                                        className="text-xs flex items-center gap-1 text-slate-400 font-bold hover:text-blue-600 transition-colors"
+                                        className="text-[10px] flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-blue-50 text-blue-600 font-black hover:bg-blue-600 hover:text-white transition-all shadow-sm border border-blue-100"
                                         title="View Timeline"
                                     >
-                                        <Clock size={12} /> Timeline
+                                        <Clock size={10} /> TIMELINE
+                                    </button>
+                                    <button
+                                        onClick={() => onVerifyDocument(group)}
+                                        className="text-[10px] flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-indigo-50 text-indigo-600 font-black hover:bg-indigo-600 hover:text-white transition-all shadow-sm border border-indigo-100"
+                                        title="ตรวจสอบเอกสาร (Document Verification)"
+                                    >
+                                        <Printer size={10} /> VERIFY
                                     </button>
                                 </div>
                             </div>
                             <div className="text-sm text-slate-600">
-                                <div className="mb-2"><span className="font-bold text-slate-800">Route:</span> {tx.source} → {tx.dest}</div>
+                                <div className="mb-2">
+                                    <span className="font-bold text-slate-800">Route:</span> {tx.display_source || tx.source} → {tx.display_dest || tx.dest}
+                                </div>
                                 {(tx.carRegistration || tx.transportCompany) && (
                                     <div className="mb-2 text-xs text-slate-500 bg-white border border-slate-200 p-2 rounded space-y-1">
                                         {tx.transportCompany && <div className="flex items-center gap-1"><Building size={10} /> {tx.transportCompany}</div>}

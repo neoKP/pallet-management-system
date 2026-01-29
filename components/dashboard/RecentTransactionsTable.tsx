@@ -234,14 +234,14 @@ const RecentTransactionsTable: React.FC<RecentTransactionsTableProps> = ({
                                                 <div className="flex items-center gap-1">
                                                     <button
                                                         onClick={() => onViewTimeline(mainTx)}
-                                                        className="px-2 py-0.5 bg-slate-100 hover:bg-blue-50 text-slate-500 hover:text-blue-600 rounded border border-slate-200 hover:border-blue-200 text-[10px] font-bold transition-all flex items-center gap-1"
+                                                        className="px-2.5 py-1 bg-blue-50 text-blue-600 hover:bg-blue-600 hover:text-white rounded-full border border-blue-100 text-[9px] font-black transition-all flex items-center gap-1 shadow-sm"
                                                         title="View Timeline"
                                                     >
-                                                        <Clock size={10} /> Timeline
+                                                        <Clock size={10} /> TIMELINE
                                                     </button>
                                                     <button
                                                         onClick={() => onPrintDoc(mainTx)}
-                                                        className="p-1 px-1.5 bg-slate-100 hover:bg-slate-200 text-slate-500 hover:text-slate-800 rounded border border-slate-200 transition-all flex items-center gap-1"
+                                                        className="p-1 px-2.5 bg-indigo-50 text-indigo-600 hover:bg-indigo-600 hover:text-white rounded-full border border-indigo-100 transition-all flex items-center gap-1 shadow-sm"
                                                         title="Print PDF"
                                                     >
                                                         <Printer size={10} />
@@ -249,10 +249,10 @@ const RecentTransactionsTable: React.FC<RecentTransactionsTableProps> = ({
                                                     {currentUser?.role === 'ADMIN' && !isCancelled && (
                                                         <button
                                                             onClick={() => onDelete(mainTx.id)}
-                                                            className="p-1 bg-white hover:bg-red-50 text-slate-400 hover:text-red-500 rounded border border-slate-200 hover:border-red-200 transition-colors"
+                                                            className="p-1 px-2 bg-red-50 text-red-400 hover:bg-red-500 hover:text-white rounded-full border border-red-100 transition-all shadow-sm"
                                                             title="Delete Transaction"
                                                         >
-                                                            <Trash2 size={12} />
+                                                            <Trash2 size={10} />
                                                         </button>
                                                     )}
                                                 </div>

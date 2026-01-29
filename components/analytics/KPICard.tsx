@@ -104,9 +104,11 @@ export const KPICard: React.FC<KPICardProps> = ({
                 initial={{ opacity: 0 }}
                 whileHover={{ opacity: 0.1 }}
                 transition={{ duration: 0.3 }}
-                style={variantStyle ? undefined : ({
-                    '--dynamic-bg-value': `linear-gradient(135deg, ${color} 0%, transparent 100%)`,
-                } as React.CSSProperties)}
+                {...(variantStyle ? {} : {
+                    style: {
+                        '--dynamic-bg-value': `linear-gradient(135deg, ${color} 0%, transparent 100%)`,
+                    } as React.CSSProperties
+                })}
             />
 
             {/* Icon */}
@@ -114,11 +116,11 @@ export const KPICard: React.FC<KPICardProps> = ({
                 className={`inline-flex p-3 rounded-xl mb-4 ${variantStyle ? variantStyle.bgSoft : 'dynamic-bg-color'}`}
                 whileHover={{ scale: 1.1, rotate: 5 }}
                 transition={{ type: 'spring', stiffness: 300 }}
-                style={variantStyle ? undefined : ({ '--dynamic-bg-color-value': `${color}20` } as React.CSSProperties)}
+                {...(variantStyle ? {} : { style: { '--dynamic-bg-color-value': `${color}20` } as React.CSSProperties })}
             >
                 <div
                     className={variantStyle ? variantStyle.text : 'dynamic-color'}
-                    style={variantStyle ? undefined : ({ '--dynamic-color-value': color } as React.CSSProperties)}
+                    {...(variantStyle ? {} : { style: { '--dynamic-color-value': color } as React.CSSProperties })}
                 >
                     {icon}
                 </div>

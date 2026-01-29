@@ -205,6 +205,7 @@ export const RechartsBarChart: React.FC<RechartsBarChartProps> = ({
                         if (state.activeTooltipIndex !== undefined) setActiveIndex(state.activeTooltipIndex);
                     }}
                     onMouseLeave={() => setActiveIndex(null)}
+                    accessibilityLayer
                 >
                     <defs>
                         <linearGradient id="barGradient" x1="0" y1="0" x2="0" y2="1">
@@ -225,13 +226,13 @@ export const RechartsBarChart: React.FC<RechartsBarChartProps> = ({
                         axisLine={false}
                         tickLine={false}
                         stroke={isDarkMode ? '#64748b' : '#94a3b8'}
-                        tick={{ fill: isDarkMode ? '#64748b' : '#64748b', fontSize: 11, fontWeight: isHovering ? 600 : 500 }}
+                        tick={{ fill: isDarkMode ? '#64748b' : '#64748b', fontSize: 11, fontWeight: isHovering ? '600' : '500' }}
                     />
                     <YAxis
                         axisLine={false}
                         tickLine={false}
                         stroke={isDarkMode ? '#64748b' : '#94a3b8'}
-                        tick={{ fill: isDarkMode ? '#64748b' : '#64748b', fontSize: 11, fontWeight: 500 }}
+                        tick={{ fill: isDarkMode ? '#64748b' : '#64748b', fontSize: 11, fontWeight: '500' }}
                     />
                     <Tooltip
                         content={<CustomTooltip />}
@@ -461,8 +462,8 @@ export const RechartsPieChart: React.FC<RechartsPieChartProps> = ({
                 </AnimatePresence>
             </div>
 
-            <ResponsiveContainer width="100%" height={400}>
-                <PieChart>
+            <ResponsiveContainer width="100%" height={400} minWidth={0}>
+                <PieChart accessibilityLayer>
                     <defs>
                         <filter id="segmentGlow">
                             <feGaussianBlur stdDeviation="2" result="coloredBlur" />
@@ -500,7 +501,7 @@ export const RechartsPieChart: React.FC<RechartsPieChartProps> = ({
                             />
                         ))}
                     </Pie>
-                    <Tooltip content={<div className="hidden" />} />
+                    <Tooltip content={() => null} />
                 </PieChart>
             </ResponsiveContainer>
 
@@ -616,7 +617,7 @@ export const RechartsLineChart: React.FC<RechartsLineChartProps> = ({
                             return (
                                 <div key={index} className="flex items-center justify-between gap-4">
                                     <div className="flex items-center gap-2">
-                                        <div className="w-2 h-2 rounded-full" style={{ backgroundColor: entry.color }} />
+                                        <div className="w-2 h-2 rounded-full" {...({ style: { backgroundColor: entry.color } as React.CSSProperties })} />
                                         <span className={`text-xs font-medium ${isDarkMode ? 'text-slate-400' : 'text-slate-600'}`}>
                                             {labels[entry.dataKey] || entry.name}
                                         </span>
@@ -680,8 +681,8 @@ export const RechartsLineChart: React.FC<RechartsLineChartProps> = ({
                 </h3>
             </div>
 
-            <ResponsiveContainer width="100%" height={400}>
-                <AreaChart data={data}>
+            <ResponsiveContainer width="100%" height={400} minWidth={0}>
+                <AreaChart data={data} accessibilityLayer>
                     <defs>
                         <linearGradient id="colorIn" x1="0" y1="0" x2="0" y2="1">
                             <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.3} />
@@ -884,8 +885,8 @@ export const PartnerBalanceChart: React.FC<PartnerBalanceChartProps> = ({
             </div>
 
             <div className="relative h-[400px] w-full">
-                <ResponsiveContainer width="100%" height="100%">
-                    <ComposedChart data={data}>
+                <ResponsiveContainer width="100%" height="100%" minWidth={0}>
+                    <ComposedChart data={data} accessibilityLayer>
                         <defs>
                             <linearGradient id="balanceGradientWow" x1="0" y1="0" x2="0" y2="1">
                                 <stop offset="5%" stopColor="#f59e0b" stopOpacity={0.4} />
@@ -1065,8 +1066,8 @@ export const LoscamRentalChart: React.FC<LoscamRentalChartProps> = ({
                 </div>
             </div>
 
-            <ResponsiveContainer width="100%" height={400}>
-                <ComposedChart data={data}>
+            <ResponsiveContainer width="100%" height={400} minWidth={0}>
+                <ComposedChart data={data} accessibilityLayer>
                     <defs>
                         <linearGradient id="qtyGradient" x1="0" y1="0" x2="0" y2="1">
                             <stop offset="0%" stopColor="#ef4444" stopOpacity={0.6} />
@@ -1189,8 +1190,8 @@ export const WasteDamageAnalysis: React.FC<WasteDamageAnalysisProps> = ({
                 </div>
 
                 <div className="relative h-[400px]">
-                    <ResponsiveContainer width="100%" height="100%">
-                        <ComposedChart data={data}>
+                    <ResponsiveContainer width="100%" height="100%" minWidth={0}>
+                        <ComposedChart data={data} accessibilityLayer>
                             <defs>
                                 <linearGradient id="scrappedTrendGradient" x1="0" y1="0" x2="0" y2="1">
                                     <stop offset="5%" stopColor="#f43f5e" stopOpacity={0.4} />

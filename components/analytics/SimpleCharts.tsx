@@ -33,7 +33,7 @@ export const SimpleBarChart: React.FC<SimpleBarChartProps> = ({
                 {title}
             </h3>
 
-            <div className="relative dynamic-height" style={{ '--dynamic-height-value': `${height}px` } as React.CSSProperties}>
+            <div className="relative dynamic-height" {...({ style: { '--dynamic-height-value': `${height}px` } as React.CSSProperties })}>
                 <div className="flex items-end justify-around h-full gap-4">
                     {data.map((item, index) => {
                         const barHeight = (item.value / maxValue) * 100;
@@ -71,11 +71,13 @@ export const SimpleBarChart: React.FC<SimpleBarChartProps> = ({
                                             relative overflow-hidden
                                             dynamic-height dynamic-bg-color dynamic-shadow
                                         `}
-                                        style={{
-                                            '--dynamic-height-value': `${barHeight}%`,
-                                            '--dynamic-bg-color-value': color,
-                                            '--dynamic-shadow-value': isHovered ? `0 8px 24px ${color}40` : `0 4px 12px ${color}20`,
-                                        } as React.CSSProperties}
+                                        {...({
+                                            style: {
+                                                '--dynamic-height-value': `${barHeight}%`,
+                                                '--dynamic-bg-color-value': color,
+                                                '--dynamic-shadow-value': isHovered ? `0 8px 24px ${color}40` : `0 4px 12px ${color}20`,
+                                            } as React.CSSProperties
+                                        })}
                                     >
                                         {/* Shine Effect */}
                                         <div
@@ -165,9 +167,11 @@ export const SimplePieChart: React.FC<SimplePieChartProps> = ({
                                     strokeDasharray={strokeDasharray}
                                     strokeDashoffset={strokeDashoffset}
                                     className="transition-all duration-300 cursor-pointer dynamic-filter"
-                                    style={{
-                                        '--dynamic-filter-value': isHovered ? `drop-shadow(0 0 8px ${item.color})` : 'none',
-                                    } as React.CSSProperties}
+                                    {...({
+                                        style: {
+                                            '--dynamic-filter-value': isHovered ? `drop-shadow(0 0 8px ${item.color})` : 'none',
+                                        } as React.CSSProperties
+                                    })}
                                     onMouseEnter={() => setHoveredIndex(index)}
                                     onMouseLeave={() => setHoveredIndex(null)}
                                     onClick={() => onSegmentClick?.(item)}
@@ -211,10 +215,12 @@ export const SimplePieChart: React.FC<SimplePieChartProps> = ({
                                 <div className="flex items-center gap-3">
                                     <div
                                         className="w-4 h-4 rounded-full transition-transform duration-300 dynamic-bg-color dynamic-scale"
-                                        style={{
-                                            '--dynamic-bg-color-value': item.color,
-                                            '--dynamic-scale-value': isHovered ? 1.2 : 1,
-                                        } as React.CSSProperties}
+                                        {...({
+                                            style: {
+                                                '--dynamic-bg-color-value': item.color,
+                                                '--dynamic-scale-value': isHovered ? 1.2 : 1,
+                                            } as React.CSSProperties
+                                        })}
                                     />
                                     <span className={`font-medium ${isDarkMode ? 'text-gray-300' : 'text-gray-700'}`}>
                                         {item.name}

@@ -12,7 +12,9 @@ import Sidebar from './components/layout/Sidebar';
 import Header from './components/layout/Header';
 import MobileNav from './components/layout/MobileNav';
 import SettingsTab from './components/settings/SettingsTab';
+import HistoryTab from './components/history/HistoryTab';
 import QRScannerModal from './components/common/QRScannerModal';
+import { QuickLoopRecord } from './components/movements/QuickLoopRecord';
 import { BRANCHES } from './constants';
 import { safeStorage } from './utils/helpers';
 // @ts-ignore
@@ -22,15 +24,23 @@ export default function App() {
   const { currentUser, login, logout } = useAuth();
   const { stock, transactions, addTransaction, processBatchMaintenance, confirmTransactionsBatch } = useStock();
 
-  const [activeTab, setActiveTab] = useState<'dashboard' | 'record' | 'maintenance' | 'settings' | 'analytics'>('dashboard');
+  const [activeTab, setActiveTab] = useState<'dashboard' | 'record' | 'maintenance' | 'settings' | 'analytics' | 'history'>('dashboard');
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
   const [selectedBranch, setSelectedBranch] = useState<BranchId | 'ALL'>(() => {
 
     const savedUser = safeStorage.getItem('neo-siam-user');
     if (savedUser) {
-      const user = JSON.parse(savedUser);
-      if (user.role === 'ADMIN' || user.branchId === 'hub_nw') return 'ALL';
-      if (user.role === 'USER' && user.branchId) return user.branchId;
+      try {
+        const user = JSON.parse(savedUser);
+        if (user && typeof user === 'object') {
+          if (user.role === 'ADMIN' || user.branchId === 'hub_nw') return 'ALL';
+          if (user.role === 'USER' && user.branchId) return user.branchId;
+        }
+      } catch (e) {
+        console.error('Failed to parse saved user:', e);
+        // Optionally clear invalid data
+        safeStorage.removeItem('neo-siam-user');
+      }
     }
     return 'hub_nw';
   });
@@ -43,13 +53,11 @@ export default function App() {
     setActiveTab
   );
 
-  const canViewAll = currentUser?.role === 'ADMIN' || currentUser?.branchId === 'hub_nw';
+  const canViewAll = !!currentUser;
 
   useEffect(() => {
     if (currentUser) {
-      if (currentUser.role === 'USER' && currentUser.branchId !== 'hub_nw' && currentUser.branchId) {
-        setSelectedBranch(currentUser.branchId);
-      } else if ((currentUser.role === 'ADMIN' || currentUser.branchId === 'hub_nw') && selectedBranch !== 'ALL' && !BRANCHES.some(b => b.id === selectedBranch)) {
+      if (!selectedBranch || (selectedBranch !== 'ALL' && !BRANCHES.some(b => b.id === selectedBranch))) {
         setSelectedBranch('ALL');
       }
     }
@@ -138,6 +146,14 @@ export default function App() {
             />
           )}
 
+          {activeTab === 'history' && (
+            <HistoryTab
+              transactions={transactions}
+              selectedBranch={selectedBranch}
+              currentUser={currentUser}
+            />
+          )}
+
           {activeTab === 'maintenance' && (
             <MaintenanceTab
               stock={stock}
@@ -160,6 +176,11 @@ export default function App() {
         selectedBranch={selectedBranch}
         currentUser={currentUser}
       />
+
+      {/* Global Quick Loop Widget */}
+      {(selectedBranch === 'sai3' || selectedBranch === 'hub_nw') && (
+        <QuickLoopRecord selectedBranch={selectedBranch} />
+      )}
     </div>
   );
 }
