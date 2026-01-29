@@ -21,7 +21,7 @@ interface HistoryTabProps {
 }
 
 const HistoryTab: React.FC<HistoryTabProps> = ({ transactions, selectedBranch, currentUser }) => {
-    const { deleteTransaction, addTransaction } = useStock();
+    const { deleteTransaction, addTransaction, adjustStock, stock } = useStock();
 
     // Timeline State
     const [timelineTxs, setTimelineTxs] = useState<Transaction[] | null>(null);
@@ -88,17 +88,27 @@ const HistoryTab: React.FC<HistoryTabProps> = ({ transactions, selectedBranch, c
         }
     };
 
-    const handleAdjustmentSubmit = async (data: { type: 'IN' | 'OUT'; branchId: string; palletId: PalletId; qty: number; note: string }) => {
+    const handleAdjustmentSubmit = async (data: { type: 'IN' | 'OUT' | 'ABSOLUTE'; branchId: string; palletId: PalletId; qty: number; note: string }) => {
         try {
-            await (addTransaction({
-                type: 'ADJUST',
-                source: data.type === 'IN' ? 'ADJUSTMENT' : data.branchId,
-                dest: data.type === 'IN' ? data.branchId : 'ADJUSTMENT',
-                palletId: data.palletId,
-                qty: data.qty,
-                note: data.note,
-                status: 'COMPLETED'
-            }) as any);
+            if (data.type === 'ABSOLUTE') {
+                await adjustStock({
+                    targetId: data.branchId,
+                    palletId: data.palletId,
+                    newQty: data.qty,
+                    reason: data.note,
+                    userName: currentUser?.name || 'Unknown'
+                });
+            } else {
+                await addTransaction({
+                    type: 'ADJUST',
+                    source: data.type === 'IN' ? 'ADJUSTMENT' : data.branchId,
+                    dest: data.type === 'IN' ? data.branchId : 'ADJUSTMENT',
+                    palletId: data.palletId,
+                    qty: data.qty,
+                    note: data.note,
+                    status: 'COMPLETED'
+                });
+            }
 
             setIsAdjModalOpen(false);
             Swal.fire({
@@ -126,6 +136,8 @@ const HistoryTab: React.FC<HistoryTabProps> = ({ transactions, selectedBranch, c
                 onClose={() => setIsAdjModalOpen(false)}
                 onSubmit={handleAdjustmentSubmit}
                 currentBranch={selectedBranch}
+                stock={stock}
+                transactions={transactions}
             />
 
             <div className="flex items-center gap-3 mb-2">

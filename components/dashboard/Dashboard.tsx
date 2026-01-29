@@ -126,6 +126,36 @@ const Dashboard: React.FC<DashboardProps> = ({ stock, selectedBranch, transactio
     const { thresholds } = useStock();
     const agingAnalysis = useMemo(() => getAgingRentalAnalysis(transactions), [transactions]);
 
+    // DEBUG: Log HI-Q stock per branch to console
+    React.useEffect(() => {
+        console.log('=== DEBUG: HI-Q Stock Per Branch ===');
+        const branches: BranchId[] = ['hub_nw', 'sai3', 'kpp', 'plk', 'cm', 'ekp', 'ms', 'maintenance_stock'];
+        let totalHiq = 0;
+        branches.forEach(branchId => {
+            const hiqQty = stock[branchId]?.hiq || 0;
+            totalHiq += hiqQty;
+            console.log(`${branchId}: ${hiqQty} ตัว`);
+        });
+        console.log(`>>> TOTAL HI-Q (from stock state): ${totalHiq} ตัว`);
+        console.log('=====================================');
+
+        // Expose a global function to fix stock values
+        (window as any).fixStock = async (branchId: string, palletId: string, newValue: number) => {
+            try {
+                const db = (window as any).firebase.database();
+                const { ref, update } = (window as any).firebase.utils;
+                const stockRef = ref(db, `stock/${branchId}`);
+                await update(stockRef, { [palletId]: newValue });
+                console.log(`✅ Updated ${branchId}/${palletId} to ${newValue}`);
+                alert(`สำเร็จ! แก้ไข ${branchId} ${palletId} เป็น ${newValue} แล้ว`);
+            } catch (err) {
+                console.error('❌ Error updating stock:', err);
+                alert('เกิดข้อผิดพลาด: ' + err);
+            }
+        };
+        console.log('🔧 พิมพ์คำสั่งนี้เพื่อแก้ไขสต็อก: fixStock("sai3", "hiq", -308)');
+    }, [stock]);
+
     const stockOverview = useMemo(() => {
         const confirmed: Record<string, number> = {};
         const pending: Record<string, number> = {};
@@ -175,20 +205,22 @@ const Dashboard: React.FC<DashboardProps> = ({ stock, selectedBranch, transactio
 
         const palletIds = ['loscam_red', 'loscam_yellow', 'loscam_blue', 'hiq', 'general', 'plastic_circular'];
         const result: any = {};
-        let grandTotal = 0;
-        let grandPending = 0;
+        let fleetTotal = 0;
+        let fleetPending = 0;
 
         palletIds.forEach(pid => {
             const v = getVal(pid);
             result[pid] = v;
-            grandTotal += v.total;
-            grandPending += v.pending;
+
+            // All pallets in this list are considered physical stock in branches
+            fleetTotal += v.total;
+            fleetPending += v.pending;
         });
 
         return {
             ...result,
-            totalStock: grandTotal,
-            totalPending: grandPending,
+            totalStock: fleetTotal,
+            totalPending: fleetPending,
             loscamRed: result['loscam_red'],
             loscamYellow: result['loscam_yellow'],
             loscamBlue: result['loscam_blue'],
@@ -262,14 +294,14 @@ const Dashboard: React.FC<DashboardProps> = ({ stock, selectedBranch, transactio
 
             <div className="grid grid-cols-2 lg:grid-cols-4 xl:grid-cols-4 gap-4">
                 <StatsCard
-                    title="ยอดรวมทั้งสิ้น"
+                    title="ยอดรวมสต็อกในสาขา (Fleet)"
                     value={stats.totalStock}
                     confirmedValue={stats.totalStock - stats.totalPending}
                     pendingValue={stats.totalPending}
                     icon={Package}
                     color="bg-slate-900"
                     textColor="text-slate-900"
-                    subtext="All Pallets"
+                    subtext="Excluding Partner Balances"
                 />
                 <StatsCard
                     title="Loscam Red"
@@ -303,14 +335,14 @@ const Dashboard: React.FC<DashboardProps> = ({ stock, selectedBranch, transactio
                     subtext="Standard"
                 />
                 <StatsCard
-                    title="HI-Q"
+                    title="HI-Q (ในสาขา)"
                     value={stats.hiq.total}
                     confirmedValue={stats.hiq.confirmed}
                     pendingValue={stats.hiq.pending}
                     icon={ShieldCheck}
                     color="bg-orange-500"
                     textColor="text-orange-600"
-                    subtext="Special"
+                    subtext={stats.hiq.total < 0 ? "⚠️ มีการส่งคืนมากกว่ารับเข้า" : "Physical Stock"}
                 />
                 <StatsCard
                     title="พาเลทหมุนเวียน (ไม้/คละสี)"

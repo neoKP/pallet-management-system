@@ -11,57 +11,39 @@ export const getPartnerBalanceContribution = (t: Transaction, partnerId: string,
     const isLoscamRed = partnerId === 'loscam_wangnoi' && palletId === 'loscam_red';
     const isSino = partnerId === 'sino' && palletId === 'loscam_red'; // Sino specifically borrow logic for red pallets
 
-    // 1. Special Case: Loscam Red
-    // User says: Borrowed from Neo Corp, Returned to Loscam Wangnoi. Owed = (Neo - Wangnoi)
-    if (isLoscamRed) {
-        // Regular flow
-        if (t.source === 'neo_corp') return t.qty;
-        if (t.dest === 'loscam_wangnoi') return -t.qty;
-
-        // Manual Adjustments to Loscam account
-        if (t.type === 'ADJUST') {
-            if (t.dest === 'loscam_wangnoi') return t.qty; // Adjusting debt UP (using dest=wangnoi for consistency with other partners)
-            if (t.source === 'loscam_wangnoi') return -t.qty;
-        }
+    // 1. Initial/Adjust Logic (Global for all partners to prevent conflicts)
+    if (t.type === 'ADJUST' || t.isInitial) {
+        if (t.dest === partnerId) return t.qty; // Adjustment increasing balance
+        if (t.source === partnerId) return -t.qty; // Adjustment decreasing balance
         return 0;
     }
 
-    // 2. Special Case: Sino Red (They lend to us)
+    // 2. Special Case: Loscam Red (Debt from Wangnoi vs Neo Corp)
+    if (isLoscamRed) {
+        if (t.source === 'neo_corp') return t.qty;
+        if (t.dest === 'loscam_wangnoi') return -t.qty;
+        return 0;
+    }
+
+    // 3. Special Case: Sino Red (They lend to us)
     if (isSino) {
         if (t.source === 'sino') return t.qty;
         if (t.dest === 'sino') return -t.qty;
-
-        if (t.type === 'ADJUST') {
-            if (t.dest === 'sino') return t.qty;
-            if (t.source === 'sino') return -t.qty;
-        }
         return 0;
     }
 
-    // 3. General Partner Logic
+    // 4. General Partner Logic (Movements only now)
     const partner = EXTERNAL_PARTNERS.find(p => p.id === partnerId);
     if (!partner) return 0;
 
     if (partner.type === 'provider') {
-        // Providers (We borrow from them): Positive = We receive more
-        if (t.source === partnerId) return t.qty;
-        if (t.dest === partnerId) return -t.qty;
-
-        // Adjustments: UP means we add to our liability
-        if (t.type === 'ADJUST') {
-            if (t.dest === partnerId) return t.qty;
-            if (t.source === partnerId) return -t.qty;
-        }
+        // Providers (We borrow from them): Positive = We receive more (Debt UP)
+        if (t.source === partnerId) return t.qty; // Received from them
+        if (t.dest === partnerId) return -t.qty; // Returned to them
     } else {
-        // Customers (They borrow from us): Positive = They receive more
-        if (t.dest === partnerId) return t.qty;
-        if (t.source === partnerId) return -t.qty;
-
-        // Adjustments: UP means they owe us more
-        if (t.type === 'ADJUST') {
-            if (t.dest === partnerId) return t.qty;
-            if (t.source === partnerId) return -t.qty;
-        }
+        // Customers (They borrow from us): Positive = They receive more (Debt UP)
+        if (t.dest === partnerId) return t.qty; // Sent to them
+        if (t.source === partnerId) return -t.qty; // Received back from them
     }
 
     return 0;

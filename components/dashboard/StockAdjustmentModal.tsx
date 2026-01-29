@@ -8,26 +8,49 @@ interface StockAdjustmentModalProps {
     isOpen: boolean;
     onClose: () => void;
     onSubmit: (data: {
-        type: 'IN' | 'OUT';
+        type: 'IN' | 'OUT' | 'ABSOLUTE';
         branchId: string;
         palletId: PalletId;
         qty: number;
         note: string;
     }) => void;
     currentBranch: BranchId | 'ALL';
+    stock: any;
+    transactions: any[];
 }
 
 const StockAdjustmentModal: React.FC<StockAdjustmentModalProps> = ({
     isOpen,
     onClose,
     onSubmit,
-    currentBranch
+    currentBranch,
+    stock,
+    transactions
 }) => {
-    const [adjType, setAdjType] = useState<'IN' | 'OUT'>('IN');
+    const [adjType, setAdjType] = useState<'IN' | 'OUT' | 'ABSOLUTE'>('IN');
     const [selectedBranch, setSelectedBranch] = useState<string>(currentBranch === 'ALL' ? 'hub_nw' : currentBranch);
     const [selectedPallet, setSelectedPallet] = useState<PalletId>('loscam_red');
     const [qty, setQty] = useState<string>('');
     const [note, setNote] = useState<string>('');
+
+    // --- Helper to calculate current balance ---
+    const currentBalance = React.useMemo(() => {
+        const isBranch = BRANCHES.some(b => b.id === selectedBranch);
+        if (isBranch) {
+            return stock[selectedBranch as BranchId]?.[selectedPallet as PalletId] || 0;
+        } else {
+            // For partners, calculate from transactions
+            const { calculatePartnerBalance } = require('../../utils/businessLogic');
+            return calculatePartnerBalance(transactions, selectedBranch, selectedPallet);
+        }
+    }, [selectedBranch, selectedPallet, stock, transactions]);
+
+    const expectedTotal = React.useMemo(() => {
+        const amount = parseInt(qty) || 0;
+        if (adjType === 'ABSOLUTE') return amount;
+        if (adjType === 'IN') return currentBalance + amount;
+        return currentBalance - amount;
+    }, [currentBalance, qty, adjType]);
 
     useEffect(() => {
         if (isOpen) {
@@ -97,29 +120,55 @@ const StockAdjustmentModal: React.FC<StockAdjustmentModalProps> = ({
                 <form onSubmit={handleSubmit} className="p-6 overflow-y-auto space-y-4">
 
                     {/* Adjustment Type Toggle */}
-                    <div className="grid grid-cols-2 gap-2 bg-slate-100 p-1 rounded-xl">
+                    <div className="grid grid-cols-3 gap-2 bg-slate-100 p-1 rounded-xl">
                         <button
                             type="button"
                             onClick={() => setAdjType('IN')}
-                            className={`flex items-center justify-center gap-2 py-2.5 rounded-lg text-sm font-bold transition-all ${adjType === 'IN'
+                            className={`flex items-center justify-center gap-2 py-2.5 rounded-lg text-[10px] font-black transition-all ${adjType === 'IN'
                                 ? 'bg-emerald-500 text-white shadow-md'
                                 : 'text-slate-500 hover:bg-slate-200'
                                 }`}
                         >
-                            <ArrowUp size={16} />
-                            Add Stock
+                            <ArrowUp size={14} />
+                            ADD (+)
                         </button>
                         <button
                             type="button"
                             onClick={() => setAdjType('OUT')}
-                            className={`flex items-center justify-center gap-2 py-2.5 rounded-lg text-sm font-bold transition-all ${adjType === 'OUT'
+                            className={`flex items-center justify-center gap-2 py-2.5 rounded-lg text-[10px] font-black transition-all ${adjType === 'OUT'
                                 ? 'bg-red-500 text-white shadow-md'
                                 : 'text-slate-500 hover:bg-slate-200'
                                 }`}
                         >
-                            <ArrowDown size={16} />
-                            Reduce Stock
+                            <ArrowDown size={14} />
+                            REDUCE (-)
                         </button>
+                        <button
+                            type="button"
+                            onClick={() => setAdjType('ABSOLUTE')}
+                            className={`flex items-center justify-center gap-2 py-2.5 rounded-lg text-[10px] font-black transition-all ${adjType === 'ABSOLUTE'
+                                ? 'bg-blue-600 text-white shadow-md'
+                                : 'text-slate-500 hover:bg-slate-200'
+                                }`}
+                        >
+                            <Check size={14} />
+                            SET TOTAL
+                        </button>
+                    </div>
+
+                    {/* Balance Preview Card */}
+                    <div className="bg-slate-900 rounded-2xl p-4 flex justify-between items-center overflow-hidden relative">
+                        <div className="absolute top-0 right-0 w-32 h-32 bg-blue-500/10 rounded-full -mr-16 -mt-16 blur-2xl" />
+                        <div>
+                            <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Current Balance</p>
+                            <h3 className="text-2xl font-black text-white">{currentBalance.toLocaleString()}</h3>
+                        </div>
+                        <div className="text-right">
+                            <p className="text-[10px] font-black text-blue-400 uppercase tracking-widest">Expected Result</p>
+                            <h3 className={`text-2xl font-black ${adjType === 'ABSOLUTE' ? 'text-blue-400' : (expectedTotal > currentBalance ? 'text-emerald-400' : 'text-red-400')}`}>
+                                {expectedTotal.toLocaleString()}
+                            </h3>
+                        </div>
                     </div>
 
                     {/* Branch Selection */}
