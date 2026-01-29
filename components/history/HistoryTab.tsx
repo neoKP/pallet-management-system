@@ -21,7 +21,7 @@ interface HistoryTabProps {
 }
 
 const HistoryTab: React.FC<HistoryTabProps> = ({ transactions, selectedBranch, currentUser }) => {
-    const { deleteTransaction, addTransaction, adjustStock, stock } = useStock();
+    const { deleteTransaction, adjustStock, stock } = useStock();
 
     // Timeline State
     const [timelineTxs, setTimelineTxs] = useState<Transaction[] | null>(null);
@@ -90,32 +90,33 @@ const HistoryTab: React.FC<HistoryTabProps> = ({ transactions, selectedBranch, c
 
     const handleAdjustmentSubmit = async (data: { type: 'IN' | 'OUT' | 'ABSOLUTE'; branchId: string; palletId: PalletId; qty: number; note: string }) => {
         try {
+            // Calculate the target stock value based on adjustment type
+            const currentQty = stock[data.branchId as BranchId]?.[data.palletId] || 0;
+            let finalQty: number;
+
             if (data.type === 'ABSOLUTE') {
-                await adjustStock({
-                    targetId: data.branchId,
-                    palletId: data.palletId,
-                    newQty: data.qty,
-                    reason: data.note,
-                    userName: currentUser?.name || 'Unknown'
-                });
+                finalQty = data.qty; // Set directly to the input value
+            } else if (data.type === 'IN') {
+                finalQty = currentQty + data.qty; // Add to current
             } else {
-                await addTransaction({
-                    type: 'ADJUST',
-                    source: data.type === 'IN' ? 'ADJUSTMENT' : data.branchId,
-                    dest: data.type === 'IN' ? data.branchId : 'ADJUSTMENT',
-                    palletId: data.palletId,
-                    qty: data.qty,
-                    note: data.note,
-                    status: 'COMPLETED'
-                });
+                finalQty = currentQty - data.qty; // Subtract from current
             }
+
+            // Always use adjustStock for stability - it directly updates Firebase stock
+            await adjustStock({
+                targetId: data.branchId,
+                palletId: data.palletId,
+                newQty: finalQty,
+                reason: `[${data.type}] ${data.note}`,
+                userName: currentUser?.name || 'Unknown'
+            });
 
             setIsAdjModalOpen(false);
             Swal.fire({
                 icon: 'success',
                 title: 'สำเร็จ',
-                text: 'ปรับปรุงสต็อกเรียบร้อยแล้ว',
-                timer: 1500,
+                text: `ปรับปรุงสต็อกเรียบร้อยแล้ว (${currentQty} → ${finalQty})`,
+                timer: 2000,
                 showConfirmButton: false
             });
         } catch (error: any) {
