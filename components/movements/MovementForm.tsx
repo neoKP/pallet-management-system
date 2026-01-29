@@ -117,7 +117,7 @@ const MovementForm: React.FC<MovementFormProps> = ({
                             </option>
                         ))}
                         {selectedBranch !== 'maintenance_stock' && EXTERNAL_PARTNERS.filter(p => {
-                            // Version 2.3.0: Detailed Branch & Partner Access Control
+                            // Version 2.4.0: Simplified Partner Access Control
 
                             // Rule 0: Global 'No OUT to Neo Corp'
                             if (transactionType === 'OUT' && p.id === 'neo_corp') return false;
@@ -133,11 +133,21 @@ const MovementForm: React.FC<MovementFormProps> = ({
                                 if (selectedBranch !== 'sai3') return false;
                             }
 
-                            // Rule 3: Existing Loscam Red enforcement context check
-                            const hasLascamRed = items.some(item => item.palletId === 'loscam_red');
-                            if (hasLascamRed) {
-                                if (transactionType === 'IN') return p.id === 'neo_corp';
-                                if (transactionType === 'OUT') return p.id === 'loscam_wangnoi';
+                            // Rule 3: HI-Q only shows when selecting hiq pallets OR when no items selected yet
+                            if (p.id === 'hiq_th') {
+                                const hasHiq = items.some(item => item.palletId === 'hiq');
+                                const hasNonHiq = items.some(item => item.palletId !== '' && item.palletId !== 'hiq');
+                                if (hasNonHiq && !hasHiq) return false;
+                            }
+
+                            // Rule 4: Loscam provider (neo_corp, loscam_wangnoi) only at Hub NW
+                            if (['neo_corp', 'loscam_wangnoi'].includes(p.id)) {
+                                if (selectedBranch !== 'hub_nw') return false;
+                            }
+
+                            // Rule 5: Sino only at Hub NW
+                            if (p.id === 'sino') {
+                                if (selectedBranch !== 'hub_nw') return false;
                             }
 
                             return true;
