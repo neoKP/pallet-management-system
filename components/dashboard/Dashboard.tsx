@@ -427,9 +427,13 @@ const Dashboard: React.FC<DashboardProps> = ({ stock, selectedBranch, transactio
                                                 <div className="inline-flex items-center px-3 py-1 bg-indigo-50 text-indigo-700 rounded-full font-black text-xs">
                                                     ฿{maxRate.toFixed(2)} / วัน
                                                 </div>
-                                            ) : (
+                                            ) : partnerId === 'sino' ? (
                                                 <div className="inline-flex items-center px-3 py-1 bg-emerald-50 text-emerald-700 rounded-full font-black text-xs">
                                                     ฟรี (10 วัน)
+                                                </div>
+                                            ) : (
+                                                <div className="inline-flex items-center px-3 py-1 bg-slate-100 text-slate-500 rounded-full font-black text-xs">
+                                                    ไม่มีค่าเช่า
                                                 </div>
                                             )}
                                         </td>
