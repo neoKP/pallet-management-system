@@ -177,7 +177,33 @@ export const StockProvider: React.FC<StockProviderProps> = ({ children }) => {
             }
         });
         await firebaseService.addMovementBatch(batchTxs, nextStock);
-    }, [stock, generateDocNo]);
+
+        // Send Telegram notification for ALL movements
+        if (config.telegramChatId) {
+            try {
+                const sourceName = BRANCHES.find(b => b.id === data.source)?.name ||
+                    EXTERNAL_PARTNERS.find(p => p.id === data.source)?.name || data.source;
+                const destName = BRANCHES.find(b => b.id === data.dest)?.name ||
+                    EXTERNAL_PARTNERS.find(p => p.id === data.dest)?.name || data.dest;
+
+                const message = telegramService.formatMovementNotification({
+                    type: data.type,
+                    docNo,
+                    items: data.items,
+                    referenceDocNo: data.referenceDocNo,
+                    carRegistration: data.carRegistration,
+                    vehicleType: data.vehicleType,
+                    driverName: data.driverName,
+                    transportCompany: data.transportCompany
+                }, sourceName, destName);
+
+                await telegramService.sendMessage(config.telegramChatId, message);
+                console.log('📱 Telegram notification sent for movement');
+            } catch (err) {
+                console.error('Failed to send Telegram notification:', err);
+            }
+        }
+    }, [stock, generateDocNo, config.telegramChatId]);
 
     const confirmTransactionsBatch = useCallback(async (results: Transaction[]) => {
         const nextStock = { ...stock };
