@@ -257,10 +257,10 @@ const HomePage: React.FC<HomePageProps> = ({
                         transition={{ delay: 0.5 }}
                         whileHover={{ scale: 1.05 }}
                         whileTap={{ scale: 0.95 }}
-                        onClick={() => onNavigate('dashboard')}
+                        onClick={() => onNavigate('record')}
                         className="group px-8 py-4 bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-white font-bold rounded-xl shadow-lg shadow-cyan-500/30 transition-all duration-300 flex items-center gap-2 mx-auto"
                     >
-                        Go to Dashboard
+                        Go to Movement
                         <ChevronRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
                     </motion.button>
                 </motion.div>
