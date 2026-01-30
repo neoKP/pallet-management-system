@@ -145,9 +145,9 @@ const MovementForm: React.FC<MovementFormProps> = ({
                                 if (selectedBranch !== 'hub_nw') return false;
                             }
 
-                            // Rule 5: Sino only at Hub NW
+                            // Rule 5: Sino only at Hub NW and Chiang Mai
                             if (p.id === 'sino') {
-                                if (selectedBranch !== 'hub_nw') return false;
+                                if (!['hub_nw', 'cm'].includes(selectedBranch)) return false;
                             }
 
                             return true;

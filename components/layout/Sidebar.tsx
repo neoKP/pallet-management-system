@@ -109,7 +109,7 @@ const Sidebar: React.FC<SidebarProps> = ({
                 )}
 
                 {/* Maintenance Menu - Only for Admin, Hub NW (นครสวรรค์), and Maintenance role */}
-                {(currentUser?.role === 'ADMIN' || currentUser?.branchId === 'hub_nw' || currentUser?.role === 'MAINTENANCE') && (
+                {(currentUser?.role === 'ADMIN' || currentUser?.branchId === 'hub_nw' || currentUser?.branchId === 'maintenance_stock') && (
                     <button
                         onClick={() => setActiveTab('maintenance')}
                         title={isCollapsed ? 'Maintenance' : ''}

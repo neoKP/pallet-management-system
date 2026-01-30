@@ -34,7 +34,7 @@ const MobileNav: React.FC<MobileNavProps> = ({ activeTab, setActiveTab, selected
                 </button>
             )}
 
-            {(selectedBranch === 'hub_nw' || currentUser?.branchId === 'hub_nw') && (
+            {(selectedBranch === 'hub_nw' || currentUser?.branchId === 'hub_nw' || currentUser?.branchId === 'maintenance_stock') && (
                 <button onClick={() => setActiveTab('maintenance')} className={`p-2 rounded-lg flex flex-col items-center ${activeTab === 'maintenance' ? 'text-blue-600' : 'text-slate-400'}`}>
                     <Wrench size={24} />
                     <span className="text-[10px] font-bold mt-1">Maint</span>

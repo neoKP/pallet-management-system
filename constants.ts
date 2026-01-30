@@ -78,6 +78,7 @@ export const AUTHORIZED_USERS: User[] = [
   { username: 'user_plk', role: 'USER', branchId: 'plk', name: 'Staff - Phitsanulok' },
   { username: 'user_ekp', role: 'USER', branchId: 'ekp', name: 'Staff - EKP' },
   { username: 'user_ms', role: 'USER', branchId: 'ms', name: 'Staff - Mae Sot' },
+  { username: 'user_maintenance', role: 'USER', branchId: 'maintenance_stock', name: 'Staff - Maintenance' },
 ];
 
 export const VEHICLE_TYPES = [
