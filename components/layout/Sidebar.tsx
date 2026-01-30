@@ -1,10 +1,10 @@
 import React from 'react';
-import { LayoutDashboard, ArrowRightLeft, Wrench, Menu, Settings, ChevronLeft, ChevronRight, BarChart3, List } from 'lucide-react';
+import { LayoutDashboard, ArrowRightLeft, Wrench, Menu, Settings, ChevronLeft, ChevronRight, BarChart3, List, Home } from 'lucide-react';
 import { BranchId, User } from '../../types';
 
 interface SidebarProps {
-    activeTab: 'dashboard' | 'record' | 'maintenance' | 'settings' | 'analytics' | 'history';
-    setActiveTab: (tab: 'dashboard' | 'record' | 'maintenance' | 'settings' | 'analytics' | 'history') => void;
+    activeTab: 'home' | 'dashboard' | 'record' | 'maintenance' | 'settings' | 'analytics' | 'history';
+    setActiveTab: (tab: 'home' | 'dashboard' | 'record' | 'maintenance' | 'settings' | 'analytics' | 'history') => void;
     currentUser: User | null;
     selectedBranch: BranchId | 'ALL';
     isCollapsed: boolean;
@@ -43,6 +43,18 @@ const Sidebar: React.FC<SidebarProps> = ({
 
             {/* Navigation Menu */}
             <nav className="flex-1 p-4 space-y-2 overflow-y-auto overflow-x-hidden custom-scrollbar">
+                {/* Home Menu - takes user back to full screen home */}
+                <button
+                    onClick={() => setActiveTab('home')}
+                    title={isCollapsed ? 'หน้าแรก' : ''}
+                    className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200 font-bold group text-slate-500 hover:bg-blue-50 hover:text-blue-600 ${isCollapsed ? 'justify-center px-0' : ''}`}
+                >
+                    <Home size={20} className="text-slate-400 group-hover:text-blue-600" />
+                    {!isCollapsed && <span className="whitespace-nowrap animate-in fade-in slide-in-from-left-2 duration-300">กลับหน้าหลัก</span>}
+                </button>
+
+                <div className="border-t border-slate-100 my-2" />
+
                 <button
                     onClick={() => setActiveTab('dashboard')}
                     title={isCollapsed ? 'Dashboard' : ''}
@@ -94,18 +106,20 @@ const Sidebar: React.FC<SidebarProps> = ({
                     </button>
                 )}
 
-                {/* Maintenance Menu */}
-                <button
-                    onClick={() => setActiveTab('maintenance')}
-                    title={isCollapsed ? 'Maintenance' : ''}
-                    className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200 font-bold group ${activeTab === 'maintenance'
-                        ? 'bg-blue-600 text-white shadow-lg shadow-blue-200'
-                        : 'text-slate-500 hover:bg-slate-50 hover:text-blue-600'
-                        } ${isCollapsed ? 'justify-center px-0' : ''}`}
-                >
-                    <Wrench size={20} className={activeTab === 'maintenance' ? 'text-white' : 'text-slate-400 group-hover:text-blue-600'} />
-                    {!isCollapsed && <span className="whitespace-nowrap animate-in fade-in slide-in-from-left-2 duration-300">Maintenance</span>}
-                </button>
+                {/* Maintenance Menu - Only for Admin, Hub NW (นครสวรรค์), and Maintenance role */}
+                {(currentUser?.role === 'ADMIN' || currentUser?.branchId === 'hub_nw' || currentUser?.role === 'MAINTENANCE') && (
+                    <button
+                        onClick={() => setActiveTab('maintenance')}
+                        title={isCollapsed ? 'Maintenance' : ''}
+                        className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200 font-bold group ${activeTab === 'maintenance'
+                            ? 'bg-blue-600 text-white shadow-lg shadow-blue-200'
+                            : 'text-slate-500 hover:bg-slate-50 hover:text-blue-600'
+                            } ${isCollapsed ? 'justify-center px-0' : ''}`}
+                    >
+                        <Wrench size={20} className={activeTab === 'maintenance' ? 'text-white' : 'text-slate-400 group-hover:text-blue-600'} />
+                        {!isCollapsed && <span className="whitespace-nowrap animate-in fade-in slide-in-from-left-2 duration-300">Maintenance</span>}
+                    </button>
+                )}
 
                 {/* Settings Menu */}
                 {currentUser?.role === 'ADMIN' && (
