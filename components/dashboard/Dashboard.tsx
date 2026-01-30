@@ -380,7 +380,8 @@ const Dashboard: React.FC<DashboardProps> = ({ stock, selectedBranch, transactio
                         </div>
                     </div>
                 </div>
-                <div className="overflow-x-auto">
+                {/* Desktop Table View */}
+                <div className="hidden md:block overflow-x-auto">
                     <table className="w-full text-sm">
                         <thead>
                             <tr className="bg-slate-50 border-b border-slate-100 text-slate-500">
@@ -452,6 +453,64 @@ const Dashboard: React.FC<DashboardProps> = ({ stock, selectedBranch, transactio
                         </tbody>
                     </table>
                 </div>
+
+                {/* Mobile Card View */}
+                <div className="md:hidden space-y-4">
+                    {['loscam_wangnoi', 'sino', 'lamsoon', 'ufc', 'loxley', 'kopee', 'hiq_th'].map(partnerId => {
+                        const partner = [...EXTERNAL_PARTNERS, { id: 'loscam_wangnoi', name: 'Loscam (Main Account)', type: 'provider' }].find(p => p.id === partnerId);
+                        if (!partner) return null;
+
+                        const partnerPallets = Object.entries(agingAnalysis.partnerSummaries)
+                            .filter(([key]) => key.startsWith(partnerId + '_'))
+                            .map(([, s]) => s);
+
+                        const totalDebt = partnerPallets.reduce((sum, s) => sum + (s.openQty || 0), 0);
+                        const totalRent = partnerPallets.reduce((sum, s) => sum + (s.rent || 0), 0);
+                        const maxRate = Math.max(...partnerPallets.map(s => s.currentRate || 0), 0);
+
+                        return (
+                            <div key={partnerId} className="p-4 bg-slate-50 rounded-2xl border border-slate-100">
+                                <div className="flex justify-between items-start mb-3">
+                                    <div>
+                                        <div className="font-black text-slate-900 text-sm">{partnerId === 'loscam_wangnoi' ? 'Loscam (Main Account)' : partner.name}</div>
+                                        <div className="text-[9px] text-slate-400 font-bold uppercase">
+                                            {partnerId === 'loscam_wangnoi' ? 'Aggregated' : partnerId === 'sino' ? 'Sino Pacific' : 'Customer'}
+                                        </div>
+                                    </div>
+                                    <div className="text-right">
+                                        <div className={`text-lg font-black ${totalDebt !== 0 ? 'text-slate-900' : 'text-slate-300'}`}>
+                                            {totalDebt.toLocaleString()}
+                                            <span className="text-[10px] ml-1 font-bold text-slate-400 uppercase">Qty</span>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div className="flex items-center justify-between mb-3">
+                                    <div className="text-[10px] font-bold text-slate-400">Current Rate:</div>
+                                    {totalRent > 0 ? (
+                                        <div className="px-3 py-1 bg-red-50 text-red-700 rounded-full font-black text-xs">
+                                            ฿{totalRent.toLocaleString()}
+                                        </div>
+                                    ) : partnerId === 'loscam_wangnoi' ? (
+                                        <div className="px-3 py-1 bg-indigo-50 text-indigo-700 rounded-full font-black text-xs">
+                                            ฿{maxRate.toFixed(2)}/Day
+                                        </div>
+                                    ) : (
+                                        <div className="px-3 py-1 bg-slate-200 text-slate-500 rounded-full font-black text-xs">
+                                            {partnerId === 'sino' ? 'Free 10D' : 'No Rental'}
+                                        </div>
+                                    )}
+                                </div>
+                                <div className="flex flex-wrap gap-1">
+                                    {partnerPallets.map((s, idx) => (
+                                        <span key={idx} className={`text-[9px] font-black px-1.5 py-0.5 rounded-md ${s.openQty !== 0 ? 'bg-white text-slate-600 border border-slate-100' : 'bg-transparent text-slate-300'}`}>
+                                            {s.palletId.replace('loscam_', '').toUpperCase()}: {s.openQty}
+                                        </span>
+                                    ))}
+                                </div>
+                            </div>
+                        );
+                    })}
+                </div>
             </div>
 
             <div className="bg-white p-6 rounded-3xl shadow-sm border border-slate-100 overflow-hidden animate-in fade-in slide-in-from-bottom-4">
@@ -464,7 +523,8 @@ const Dashboard: React.FC<DashboardProps> = ({ stock, selectedBranch, transactio
                         <p className="text-sm text-slate-500">รายละเอียดสต็อกรายสาขา (Detailed Stock per Branch)</p>
                     </div>
                 </div>
-                <div className="overflow-x-auto">
+                {/* Desktop View */}
+                <div className="hidden md:block overflow-x-auto">
                     <table className="w-full text-sm">
                         <thead>
                             <tr className="bg-slate-50 border-b border-slate-100 text-slate-500">
@@ -514,6 +574,55 @@ const Dashboard: React.FC<DashboardProps> = ({ stock, selectedBranch, transactio
                             </tr>
                         </tfoot>
                     </table>
+                </div>
+
+                {/* Mobile View */}
+                <div className="md:hidden space-y-3">
+                    {BRANCHES
+                        .filter(b => ['hub_nw', 'sai3', 'kpp', 'cm', 'plk', 'maintenance_stock', 'ekp', 'ms'].includes(b.id))
+                        .map(branch => {
+                            const branchStock = stock[branch.id] || {};
+                            const getQty = (id: PalletId) => branchStock[id] || 0;
+                            const total = getQty('loscam_red') + getQty('loscam_yellow') + getQty('loscam_blue') +
+                                getQty('hiq') + getQty('general') + getQty('plastic_circular');
+
+                            return (
+                                <div key={branch.id} className="p-4 bg-slate-50 rounded-2xl border border-slate-100">
+                                    <div className="flex justify-between items-center mb-3">
+                                        <span className="font-bold text-slate-900">{branch.name}</span>
+                                        <span className="px-3 py-1 bg-white rounded-full text-xs font-black text-slate-800 shadow-sm border border-slate-100">
+                                            Total: {total}
+                                        </span>
+                                    </div>
+                                    <div className="grid grid-cols-3 gap-2">
+                                        <div className="text-center p-2 bg-white rounded-lg border border-slate-50">
+                                            <div className="text-[9px] font-bold text-red-500 uppercase">RED</div>
+                                            <div className="text-sm font-black text-slate-700">{getQty('loscam_red')}</div>
+                                        </div>
+                                        <div className="text-center p-2 bg-white rounded-lg border border-slate-50">
+                                            <div className="text-[9px] font-bold text-amber-500 uppercase">YEL</div>
+                                            <div className="text-sm font-black text-slate-700">{getQty('loscam_yellow')}</div>
+                                        </div>
+                                        <div className="text-center p-2 bg-white rounded-lg border border-slate-50">
+                                            <div className="text-[9px] font-bold text-blue-500 uppercase">BLU</div>
+                                            <div className="text-sm font-black text-slate-700">{getQty('loscam_blue')}</div>
+                                        </div>
+                                        <div className="text-center p-2 bg-white rounded-lg border border-slate-50">
+                                            <div className="text-[9px] font-bold text-orange-500 uppercase">HIQ</div>
+                                            <div className="text-sm font-black text-slate-700">{getQty('hiq')}</div>
+                                        </div>
+                                        <div className="text-center p-2 bg-white rounded-lg border border-slate-50">
+                                            <div className="text-[9px] font-bold text-slate-500 uppercase">GEN</div>
+                                            <div className="text-sm font-black text-slate-700">{getQty('general')}</div>
+                                        </div>
+                                        <div className="text-center p-2 bg-white rounded-lg border border-slate-50">
+                                            <div className="text-[9px] font-bold text-teal-500 uppercase">PLA</div>
+                                            <div className="text-sm font-black text-slate-700">{getQty('plastic_circular')}</div>
+                                        </div>
+                                    </div>
+                                </div>
+                            );
+                        })}
                 </div>
             </div>
 

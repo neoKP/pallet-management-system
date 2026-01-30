@@ -110,18 +110,13 @@ const HomePage: React.FC<HomePageProps> = ({
     return (
         <div className="min-h-screen bg-slate-900 flex flex-col relative overflow-hidden">
             {/* Background Image with Overlay */}
-            <div
-                className="absolute inset-0 bg-cover bg-center bg-no-repeat opacity-40"
-                style={{
-                    backgroundImage: `url('https://images.unsplash.com/photo-1586528116311-ad8dd3c8310d?q=80&w=2070')`,
-                }}
-            />
+            <div className="absolute inset-0 bg-cover bg-center bg-no-repeat opacity-40 bg-[url('https://images.unsplash.com/photo-1586528116311-ad8dd3c8310d?q=80&w=2070')]" />
             <div className="absolute inset-0 bg-gradient-to-b from-slate-900/80 via-slate-900/60 to-slate-900" />
 
             {/* Animated Background Elements */}
             <div className="absolute inset-0 overflow-hidden pointer-events-none">
                 <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-cyan-500/10 rounded-full blur-3xl animate-pulse" />
-                <div className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-blue-500/10 rounded-full blur-3xl animate-pulse" style={{ animationDelay: '1s' }} />
+                <div className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-blue-500/10 rounded-full blur-3xl animate-pulse [animation-delay:1s]" />
             </div>
 
             {/* Top Navigation Bar */}
@@ -200,7 +195,7 @@ const HomePage: React.FC<HomePageProps> = ({
             </header>
 
             {/* Hero Section */}
-            <main className="relative z-10 flex-1 flex flex-col items-center justify-center px-4 sm:px-6 lg:px-8 py-12">
+            <main className="relative z-10 flex-1 flex flex-col items-center justify-center px-4 sm:px-6 lg:px-8 py-6 md:py-12">
                 <motion.div
                     initial={{ opacity: 0, y: 30 }}
                     animate={{ opacity: 1, y: 0 }}
@@ -208,7 +203,7 @@ const HomePage: React.FC<HomePageProps> = ({
                     className="text-center max-w-4xl mx-auto"
                 >
                     {/* Main Heading */}
-                    <h1 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-black text-white mb-4 leading-tight">
+                    <h1 className="text-2xl sm:text-4xl md:text-5xl lg:text-6xl font-black text-white mb-3 md:mb-4 leading-tight px-2">
                         <span className="bg-gradient-to-r from-white via-cyan-200 to-white bg-clip-text text-transparent">
                             NEOSIAM LOGISTICS
                         </span>
@@ -234,19 +229,19 @@ const HomePage: React.FC<HomePageProps> = ({
                         initial={{ opacity: 0, y: 20 }}
                         animate={{ opacity: 1, y: 0 }}
                         transition={{ delay: 0.3 }}
-                        className="flex flex-wrap items-center justify-center gap-4 sm:gap-6 mb-10"
+                        className="grid grid-cols-3 gap-2 sm:gap-6 mb-8 md:mb-10 max-w-full overflow-hidden"
                     >
-                        <div className="bg-white/5 backdrop-blur-xl border border-white/10 rounded-xl px-5 py-3">
-                            <p className="text-cyan-400 text-2xl sm:text-3xl font-black">{grandTotal.toLocaleString()}</p>
-                            <p className="text-slate-500 text-xs">Total Pallets</p>
+                        <div className="bg-white/5 backdrop-blur-xl border border-white/10 rounded-xl px-2 py-2 sm:px-5 sm:py-3 min-w-0">
+                            <p className="text-cyan-400 text-lg sm:text-3xl font-black truncate">{grandTotal.toLocaleString()}</p>
+                            <p className="text-slate-500 text-[9px] sm:text-xs uppercase tracking-wider">Total</p>
                         </div>
-                        <div className="bg-white/5 backdrop-blur-xl border border-white/10 rounded-xl px-5 py-3">
-                            <p className="text-green-400 text-2xl sm:text-3xl font-black">{BRANCHES.length}</p>
-                            <p className="text-slate-500 text-xs">Active Branches</p>
+                        <div className="bg-white/5 backdrop-blur-xl border border-white/10 rounded-xl px-2 py-2 sm:px-5 sm:py-3 min-w-0">
+                            <p className="text-green-400 text-lg sm:text-3xl font-black truncate">{BRANCHES.length}</p>
+                            <p className="text-slate-500 text-[9px] sm:text-xs uppercase tracking-wider">Branches</p>
                         </div>
-                        <div className="bg-white/5 backdrop-blur-xl border border-white/10 rounded-xl px-5 py-3">
-                            <p className="text-amber-400 text-2xl sm:text-3xl font-black">{pendingCount}</p>
-                            <p className="text-slate-500 text-xs">Pending Actions</p>
+                        <div className="bg-white/5 backdrop-blur-xl border border-white/10 rounded-xl px-2 py-2 sm:px-5 sm:py-3 min-w-0">
+                            <p className="text-amber-400 text-lg sm:text-3xl font-black truncate">{pendingCount}</p>
+                            <p className="text-slate-500 text-[9px] sm:text-xs uppercase tracking-wider">Pending</p>
                         </div>
                     </motion.div>
 
@@ -278,13 +273,15 @@ const HomePage: React.FC<HomePageProps> = ({
                             initial={{ opacity: 0, y: 20 }}
                             animate={{ opacity: 1, y: 0 }}
                             transition={{ delay: 0.8 + index * 0.1 }}
-                            className="group bg-white/5 backdrop-blur-xl border border-white/10 rounded-2xl p-5 hover:bg-white/10 hover:border-cyan-500/30 transition-all duration-300"
+                            className="group bg-white/5 backdrop-blur-xl border border-white/10 rounded-2xl p-4 md:p-5 hover:bg-white/10 hover:border-cyan-500/30 transition-all duration-300 flex items-center md:items-start md:flex-col gap-4 md:gap-0"
                         >
-                            <div className={`w-12 h-12 bg-gradient-to-br ${feature.color} rounded-xl flex items-center justify-center mb-4 shadow-lg group-hover:scale-110 transition-transform`}>
-                                <feature.icon className="w-6 h-6 text-white" />
+                            <div className={`w-10 h-10 md:w-12 md:h-12 shrink-0 bg-gradient-to-br ${feature.color} rounded-xl flex items-center justify-center mb-0 md:mb-4 shadow-lg group-hover:scale-110 transition-transform`}>
+                                <feature.icon className="w-5 h-5 md:w-6 md:h-6 text-white" />
                             </div>
-                            <h3 className="text-white font-bold text-lg mb-2">{feature.title}</h3>
-                            <p className="text-slate-400 text-sm">{feature.description}</p>
+                            <div className="flex-1">
+                                <h3 className="text-white font-bold text-sm md:text-lg mb-1 md:mb-2">{feature.title}</h3>
+                                <p className="text-slate-400 text-[11px] md:text-sm">{feature.description}</p>
+                            </div>
                         </motion.div>
                     ))}
                 </motion.div>

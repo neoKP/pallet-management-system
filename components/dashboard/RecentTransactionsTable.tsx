@@ -180,7 +180,8 @@ const RecentTransactionsTable: React.FC<RecentTransactionsTableProps> = ({
                 </div>
             </div>
 
-            <div className="overflow-auto flex-1 relative">
+            {/* Desktop Table View */}
+            <div className="hidden md:block overflow-auto flex-1 relative">
                 <table className="w-full text-left text-sm relative">
                     <thead className="bg-slate-50 text-slate-500 font-bold border-b border-slate-100 sticky top-0 z-10 shadow-sm">
                         <tr>
@@ -328,6 +329,108 @@ const RecentTransactionsTable: React.FC<RecentTransactionsTableProps> = ({
                         )}
                     </tbody>
                 </table>
+            </div>
+
+            {/* Mobile Card View */}
+            <div className="md:hidden overflow-auto flex-1 p-4 space-y-4">
+                {paginatedTransactions.length === 0 ? (
+                    <div className="flex flex-col items-center gap-3 text-slate-300 py-12">
+                        <HistoryIcon size={48} strokeWidth={1.5} />
+                        <p className="font-bold text-slate-400">ไม่พบข้อมูลรายการ</p>
+                    </div>
+                ) : (
+                    paginatedTransactions.map((txs) => {
+                        const mainTx = txs[0];
+                        const isCancelled = mainTx.status === 'CANCELLED';
+                        const { qtyIn, qtyOut } = calculateGroupTotals(txs);
+                        const dateObj = (mainTx.date && mainTx.date.includes('T'))
+                            ? new Date(mainTx.date)
+                            : new Date(mainTx.id);
+
+                        return (
+                            <div key={mainTx.docNo || mainTx.id} className={`p-4 rounded-2xl border transition-all ${isCancelled ? 'bg-red-50/30 border-red-100 opacity-60' : 'bg-white border-slate-100 shadow-sm'}`}>
+                                <div className="flex justify-between items-start mb-3">
+                                    <div className="flex flex-col">
+                                        <span className={`font-mono font-bold text-sm ${isCancelled ? 'text-slate-400 line-through' : 'text-blue-600'}`}>
+                                            {mainTx.docNo}
+                                        </span>
+                                        <span className="text-[10px] text-slate-400 font-bold">
+                                            {dateObj.toLocaleDateString('th-TH')} • {dateObj.toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' })}
+                                        </span>
+                                    </div>
+                                    <div className="flex items-center gap-1">
+                                        <button
+                                            onClick={() => onViewTimeline(mainTx)}
+                                            className="p-1.5 bg-blue-50 text-blue-600 rounded-lg border border-blue-100"
+                                            title="ดูไทม์ไลน์"
+                                            aria-label="View history timeline"
+                                        >
+                                            <Clock size={14} />
+                                        </button>
+                                        <button
+                                            onClick={() => onPrintDoc(mainTx)}
+                                            className="p-1.5 bg-indigo-50 text-indigo-600 rounded-lg border border-indigo-100"
+                                            title="พิมพ์เอกสาร"
+                                            aria-label="Print document"
+                                        >
+                                            <Printer size={14} />
+                                        </button>
+                                        {currentUser?.role === 'ADMIN' && !isCancelled && (
+                                            <button
+                                                onClick={() => onDelete(mainTx.id)}
+                                                className="p-1.5 bg-red-50 text-red-400 rounded-lg border border-red-100"
+                                                title="ลบรายการ"
+                                                aria-label="Delete transaction"
+                                            >
+                                                <Trash2 size={14} />
+                                            </button>
+                                        )}
+                                    </div>
+                                </div>
+
+                                <div className="flex items-center justify-between mb-3">
+                                    <div className="flex items-center gap-2">
+                                        {isCancelled ? (
+                                            <span className="px-2 py-0.5 rounded text-[9px] bg-red-100 text-red-600 font-black uppercase">CANCELLED</span>
+                                        ) : (
+                                            <span className={`px-2 py-0.5 rounded text-[9px] font-black uppercase ${(selectedBranch !== 'ALL' && mainTx.dest === selectedBranch) || mainTx.type === 'IN' ? 'bg-emerald-100 text-emerald-700' : 'bg-orange-100 text-orange-700'}`}>
+                                                {selectedBranch === 'ALL' ? mainTx.type : (mainTx.dest === selectedBranch ? 'INBOUND' : 'OUTBOUND')}
+                                            </span>
+                                        )}
+                                        {mainTx.referenceDocNo && (
+                                            <span className="text-[9px] font-bold text-slate-400 bg-slate-100 px-2 py-0.5 rounded italic">Ref: {mainTx.referenceDocNo}</span>
+                                        )}
+                                    </div>
+                                    <div className="flex gap-2">
+                                        {qtyIn !== '-' && <span className="text-[10px] font-black text-emerald-600">IN: {qtyIn}</span>}
+                                        {qtyOut !== '-' && <span className="text-[10px] font-black text-red-600">OUT: {qtyOut}</span>}
+                                    </div>
+                                </div>
+
+                                <div className="space-y-2 mb-3">
+                                    {txs.map((tx, idx) => (
+                                        <div key={idx} className="flex justify-between items-center py-1.5 px-2 bg-slate-50 rounded-lg text-xs">
+                                            <span className="font-bold text-slate-700">{PALLET_TYPES.find(p => p.id === tx.palletId)?.name || tx.palletId}</span>
+                                            <span className="font-black text-slate-900">{tx.qty} ตัว</span>
+                                        </div>
+                                    ))}
+                                </div>
+
+                                <div className="flex items-end justify-between text-[10px] pt-2 border-t border-slate-50">
+                                    <div className="flex flex-col gap-0.5">
+                                        <div className="font-bold text-slate-500 uppercase flex items-center gap-1">
+                                            <span>{([...BRANCHES, ...EXTERNAL_PARTNERS].find(b => b.id === mainTx.source)?.name || mainTx.source).substring(0, 15)}</span>
+                                            <span>→</span>
+                                            <span>{([...BRANCHES, ...EXTERNAL_PARTNERS].find(b => b.id === mainTx.dest)?.name || mainTx.dest).substring(0, 15)}</span>
+                                        </div>
+                                        {mainTx.carRegistration && <div className="text-slate-400 italic">Truck: {mainTx.carRegistration}</div>}
+                                    </div>
+                                    {mainTx.driverName && <div className="text-slate-400 font-bold">{mainTx.driverName}</div>}
+                                </div>
+                            </div>
+                        );
+                    })
+                )}
             </div>
 
             {/* Pagination Footer */}
