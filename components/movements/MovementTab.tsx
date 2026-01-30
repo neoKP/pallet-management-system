@@ -86,6 +86,7 @@ const MovementTab: React.FC<MovementTabProps> = ({ selectedBranch, transactions,
                             transportInfo={logic.transportInfo}
                             setTransportInfo={logic.setTransportInfo}
                             onSubmit={logic.handleSubmit}
+                            suggestions={logic.suggestions}
                             selectedBranch={selectedBranch}
                         />
 

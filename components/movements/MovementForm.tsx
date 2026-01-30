@@ -19,6 +19,11 @@ interface MovementFormProps {
     transportInfo: any;
     setTransportInfo: (info: any) => void;
     onSubmit: (e: React.FormEvent) => void;
+    suggestions?: {
+        carRegistrations: string[];
+        driverNames: string[];
+        transportCompanies: string[];
+    };
     selectedBranch: BranchId;
 }
 
@@ -38,6 +43,7 @@ const MovementForm: React.FC<MovementFormProps> = ({
     transportInfo,
     setTransportInfo,
     onSubmit,
+    suggestions,
     selectedBranch
 }) => {
     return (
@@ -145,9 +151,9 @@ const MovementForm: React.FC<MovementFormProps> = ({
                                 if (selectedBranch !== 'hub_nw') return false;
                             }
 
-                            // Rule 5: Sino only at Hub NW and Chiang Mai
+                            // Rule 5: Sino allowed at Hub NW, Chiang Mai, EKP, KPP, PLK, and MS
                             if (p.id === 'sino') {
-                                if (!['hub_nw', 'cm'].includes(selectedBranch)) return false;
+                                if (!['hub_nw', 'cm', 'ekp', 'kpp', 'plk', 'ms'].includes(selectedBranch)) return false;
                             }
 
                             return true;
@@ -203,6 +209,7 @@ const MovementForm: React.FC<MovementFormProps> = ({
                                 className="w-full px-3 py-2 rounded-lg border border-slate-300 text-sm focus:ring-2 focus:ring-blue-500"
                                 placeholder="เช่น 1กข-1234"
                                 title="ทะเบียนรถ"
+                                list="car-registrations-list"
                                 aria-label="Enter car registration"
                             />
                         </div>
@@ -230,6 +237,7 @@ const MovementForm: React.FC<MovementFormProps> = ({
                                 className="w-full px-3 py-2 rounded-lg border border-slate-300 text-sm focus:ring-2 focus:ring-blue-500"
                                 placeholder="ชื่อ-นามสกุล"
                                 title="ชื่อคนขับ"
+                                list="driver-names-list"
                                 aria-label="Enter driver name"
                             />
                         </div>
@@ -242,10 +250,22 @@ const MovementForm: React.FC<MovementFormProps> = ({
                                 className="w-full px-3 py-2 rounded-lg border border-slate-300 text-sm focus:ring-2 focus:ring-blue-500"
                                 placeholder="ชื่อบริษัท"
                                 title="บริษัทขนส่ง"
+                                list="transport-companies-list"
                                 aria-label="Enter transport company"
                             />
                         </div>
                     </div>
+
+                    {/* Datalists for Autocomplete Suggestions */}
+                    <datalist id="car-registrations-list">
+                        {suggestions?.carRegistrations.map(reg => <option key={reg} value={reg} />)}
+                    </datalist>
+                    <datalist id="driver-names-list">
+                        {suggestions?.driverNames.map(name => <option key={name} value={name} />)}
+                    </datalist>
+                    <datalist id="transport-companies-list">
+                        {suggestions?.transportCompanies.map(comp => <option key={comp} value={comp} />)}
+                    </datalist>
                 </div>
 
                 <div>

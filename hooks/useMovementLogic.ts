@@ -32,6 +32,24 @@ export function useMovementLogic(selectedBranch: BranchId, transactions: Transac
     const [isPreviewOpen, setIsPreviewOpen] = useState(false);
     const [previewData, setPreviewData] = useState<any>(null);
 
+    const suggestions = useMemo(() => {
+        const registrations = new Set<string>();
+        const drivers = new Set<string>();
+        const companies = new Set<string>();
+
+        transactions.forEach(tx => {
+            if (tx.carRegistration) registrations.add(tx.carRegistration);
+            if (tx.driverName) drivers.add(tx.driverName);
+            if (tx.transportCompany) companies.add(tx.transportCompany);
+        });
+
+        return {
+            carRegistrations: Array.from(registrations).sort(),
+            driverNames: Array.from(drivers).sort(),
+            transportCompanies: Array.from(companies).sort()
+        };
+    }, [transactions]);
+
     const { pendingGroups, historyGroups } = useMemo(() => {
         const pGroups: Record<string, Transaction[]> = {};
         const hGroups: Record<string, Transaction[]> = {};
@@ -393,6 +411,7 @@ export function useMovementLogic(selectedBranch: BranchId, transactions: Transac
         isPreviewOpen, setIsPreviewOpen,
         previewData, setPreviewData,
         pendingGroups, historyGroups,
+        suggestions,
         handleAddItem, handleRemoveItem, handleItemChange,
         handleViewTimeline, handleVerifyDocument, handleSubmit, handleConfirmSave,
         handleBatchConfirm, handleConfirmReceive,
