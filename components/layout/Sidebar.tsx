@@ -23,9 +23,11 @@ const Sidebar: React.FC<SidebarProps> = ({
         <aside className={`fixed left-0 top-0 h-screen bg-white border-r border-slate-200 shadow-xl z-50 hidden md:flex flex-col transition-all duration-300 ${isCollapsed ? 'w-20' : 'w-64'}`}>
             {/* Logo Section */}
             <div className={`p-6 border-b border-slate-100 flex items-center gap-3 relative overflow-hidden h-[85px] shrink-0`}>
-                <div className={`bg-gradient-to-br from-blue-600 to-blue-800 text-white p-2 rounded-xl shadow-lg shrink-0 transition-all duration-300 ${isCollapsed ? 'mx-auto' : ''}`}>
-                    <Menu size={20} />
-                </div>
+                <img
+                    src="/neosiam-logo.png.jpg"
+                    alt="NeoSiam Logo"
+                    className={`rounded-xl shadow-lg shrink-0 transition-all duration-300 ${isCollapsed ? 'h-10 mx-auto' : 'h-12'}`}
+                />
                 {!isCollapsed && (
                     <h1 className="font-black text-2xl tracking-tight text-slate-800 whitespace-nowrap animate-in fade-in duration-300">
                         Neo<span className="text-blue-600">Siam</span>

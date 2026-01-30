@@ -133,7 +133,7 @@ const HomePage: React.FC<HomePageProps> = ({
                             <img
                                 src="/neosiam-logo.png.jpg"
                                 alt="NeoSiam Logistics & Transport"
-                                className="h-10 sm:h-12 object-contain rounded-lg"
+                                className="h-10 sm:h-12 object-contain rounded-xl shadow-lg shadow-blue-500/30"
                             />
                         </div>
 
