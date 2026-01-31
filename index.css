@@ -43,6 +43,10 @@ body {
   font-family: 'Kanit', sans-serif;
 }
 
+.font-orbitron {
+  font-family: 'Orbitron', sans-serif;
+}
+
 /* Glassmorphism Effect - Light Mode */
 .glass {
   background: rgba(255, 255, 255, 0.7);

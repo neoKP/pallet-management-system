@@ -149,7 +149,7 @@ const HomePage: React.FC<HomePageProps> = ({
                                 />
                             </div>
                             <div className="hidden sm:flex flex-col">
-                                <span className="text-cyan-400 font-black text-sm sm:text-base md:text-lg tracking-tight" style={{ fontFamily: 'Orbitron, sans-serif' }}>
+                                <span className="text-cyan-400 font-black text-sm sm:text-base md:text-lg tracking-tight font-orbitron">
                                     NeoSiam Logistics
                                 </span>
                                 <span className="text-slate-500 text-[7px] sm:text-[8px] md:text-[9px] font-bold uppercase tracking-[0.2em] sm:tracking-[0.3em]">
