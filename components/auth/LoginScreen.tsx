@@ -1,14 +1,16 @@
 import React, { useState } from 'react';
-import { UserIcon, Lock, ShieldCheck, LogIn } from 'lucide-react';
+import { UserIcon, Lock, ShieldCheck, LogIn, X } from 'lucide-react';
 import BrandLogo from '../common/BrandLogo';
 import { User } from '../../types';
 import { AUTHORIZED_USERS } from '../../constants';
 
 interface LoginScreenProps {
     onLogin: (user: User) => void;
+    onClose?: () => void;
+    isModal?: boolean;
 }
 
-const LoginScreen: React.FC<LoginScreenProps> = ({ onLogin }) => {
+const LoginScreen: React.FC<LoginScreenProps> = ({ onLogin, onClose, isModal }) => {
     const [username, setUsername] = useState('');
     const [password, setPassword] = useState('');
     const [error, setError] = useState('');
@@ -29,12 +31,20 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ onLogin }) => {
     };
 
     return (
-        <div className="min-h-screen flex items-center justify-center p-4 md:p-6 bg-slate-50">
-            <div className="w-full max-w-md">
-                <div className="glass p-8 md:p-12 rounded-[3rem] shadow-2xl bg-white border border-slate-200">
+        <div className={`${isModal ? 'fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-md animate-in fade-in duration-300' : 'min-h-screen flex items-center justify-center p-4 md:p-6 bg-slate-50'}`}>
+            <div className={`w-full max-w-md ${isModal ? 'animate-in zoom-in-95 duration-300' : ''}`}>
+                <div className="glass p-8 md:p-12 rounded-[3rem] shadow-2xl bg-white border border-slate-200 relative">
+                    {isModal && onClose && (
+                        <button
+                            onClick={onClose}
+                            className="absolute top-6 right-6 p-2 hover:bg-slate-100 rounded-full transition-colors text-slate-400 hover:text-slate-600"
+                        >
+                            <X size={20} />
+                        </button>
+                    )}
                     <div className="text-center mb-8">
                         <div className="flex justify-center mb-6">
-                            <BrandLogo className="w-24 h-24 md:w-28 md:w-28" />
+                            <BrandLogo className="w-24 h-24 md:w-28" />
                         </div>
                         <h1 className="text-2xl md:text-3xl font-black text-slate-900 mb-2">
                             Neo Siam Logistics

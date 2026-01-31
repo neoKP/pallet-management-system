@@ -7,9 +7,10 @@ interface RepairInboundFormProps {
     form: { palletId: PalletId; qty: string; note: string; sourceBranchId: BranchId };
     onChange: (form: any) => void;
     onSubmit: (e: React.FormEvent) => void;
+    isProcessing?: boolean;
 }
 
-const RepairInboundForm: React.FC<RepairInboundFormProps> = ({ form, onChange, onSubmit }) => {
+const RepairInboundForm: React.FC<RepairInboundFormProps> = ({ form, onChange, onSubmit, isProcessing }) => {
     return (
         <div className="glass p-6 rounded-3xl border border-slate-200 bg-white shadow-sm">
             <h2 className="text-xl font-black text-slate-900 mb-6 flex items-center gap-2">
@@ -65,8 +66,17 @@ const RepairInboundForm: React.FC<RepairInboundFormProps> = ({ form, onChange, o
                         placeholder="เช่น พาเลทแตกหักจาก Hub"
                     />
                 </div>
-                <button type="submit" className="w-full py-4 bg-blue-600 text-white rounded-xl font-black hover:bg-blue-700 transition-all shadow-lg shadow-blue-200">
-                    ยืนยันรับเข้า
+                <button
+                    type="submit"
+                    disabled={isProcessing}
+                    className={`w-full py-4 rounded-xl font-black transition-all shadow-lg flex items-center justify-center gap-2 ${isProcessing ? 'bg-slate-400 cursor-not-allowed text-white' : 'bg-blue-600 text-white hover:bg-blue-700 shadow-blue-200'}`}
+                >
+                    {isProcessing ? (
+                        <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                    ) : (
+                        null
+                    )}
+                    {isProcessing ? 'กำลังบันทึก...' : 'ยืนยันรับเข้า'}
                 </button>
             </form>
         </div>

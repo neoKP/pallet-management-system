@@ -20,12 +20,14 @@ interface PendingTransfersProps {
     pendingGroups: Transaction[][];
     onViewTimeline: (tx: Transaction) => void;
     onBatchConfirm: (txs: Transaction[]) => void;
+    isProcessing?: boolean;
 }
 
 const PendingTransfers: React.FC<PendingTransfersProps> = ({
     pendingGroups,
     onViewTimeline,
-    onBatchConfirm
+    onBatchConfirm,
+    isProcessing
 }) => {
     if (pendingGroups.length === 0) return null;
 
@@ -97,10 +99,15 @@ const PendingTransfers: React.FC<PendingTransfersProps> = ({
                             </div>
                             <button
                                 onClick={() => onBatchConfirm(group)}
-                                className="w-full py-2 bg-slate-900 text-white rounded-xl font-bold text-sm hover:bg-slate-800 transition-colors flex items-center justify-center gap-2"
+                                disabled={isProcessing}
+                                className={`w-full py-2 rounded-xl font-bold text-sm transition-colors flex items-center justify-center gap-2 ${isProcessing ? 'bg-slate-300 cursor-not-allowed text-slate-500' : 'bg-slate-900 text-white hover:bg-slate-800'}`}
                             >
-                                <CheckCircle size={16} />
-                                ตรวจสอบ & รับของ
+                                {isProcessing ? (
+                                    <div className="w-4 h-4 border-2 border-slate-400 border-t-slate-600 rounded-full animate-spin" />
+                                ) : (
+                                    <CheckCircle size={16} />
+                                )}
+                                {isProcessing ? 'กำลังเปิด...' : 'ตรวจสอบ & รับของ'}
                             </button>
                         </div>
                     );

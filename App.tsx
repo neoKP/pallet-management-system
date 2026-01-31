@@ -27,8 +27,8 @@ export default function App() {
 
   const [activeTab, setActiveTab] = useState<'home' | 'dashboard' | 'record' | 'maintenance' | 'settings' | 'analytics' | 'history'>('home');
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
+  const [isLoginModalOpen, setIsLoginModalOpen] = useState(false);
   const [selectedBranch, setSelectedBranch] = useState<BranchId | 'ALL'>(() => {
-
     const savedUser = safeStorage.getItem('neo-siam-user');
     if (savedUser) {
       try {
@@ -39,33 +39,28 @@ export default function App() {
         }
       } catch (e) {
         console.error('Failed to parse saved user:', e);
-        // Optionally clear invalid data
         safeStorage.removeItem('neo-siam-user');
       }
     }
     return 'hub_nw';
   });
 
-
   const { isScannerOpen, setIsScannerOpen, handleScanSuccess } = useQRScanner(
-    currentUser,
+    currentUser as any, // QRScanner might expect non-null user, but it's handled inside
     transactions,
     confirmTransactionsBatch,
     setActiveTab
   );
 
-  // Only Admin can view all branches; regular users see only their own branch
   const canViewAll = currentUser?.role === 'ADMIN';
 
   useEffect(() => {
     if (currentUser) {
       if (currentUser.role === 'ADMIN') {
-        // Admin defaults to ALL if no valid selection
         if (!selectedBranch || (selectedBranch !== 'ALL' && !BRANCHES.some(b => b.id === selectedBranch))) {
           setSelectedBranch('ALL');
         }
       } else {
-        // Non-admin users are locked to their own branch
         if (currentUser.branchId && currentUser.branchId !== selectedBranch) {
           setSelectedBranch(currentUser.branchId as BranchId);
         }
@@ -96,39 +91,65 @@ export default function App() {
     });
   };
 
+  // Layer 1: Public-First Priority
+  if (activeTab === 'home') {
+    return (
+      <div className="min-h-screen bg-slate-900 overflow-x-hidden">
+        <HomePage
+          currentUser={currentUser}
+          selectedBranch={selectedBranch}
+          stock={stock}
+          transactions={transactions}
+          onNavigate={(tab: any) => {
+            if (!currentUser && tab !== 'home') {
+              setIsLoginModalOpen(true);
+            } else {
+              setActiveTab(tab);
+            }
+          }}
+          onLogout={handleLogout}
+          openLogin={() => setIsLoginModalOpen(true)}
+        />
+        {isLoginModalOpen && (
+          <LoginScreen
+            onLogin={(user) => {
+              login(user);
+              setIsLoginModalOpen(false);
+            }}
+            onClose={() => setIsLoginModalOpen(false)}
+            isModal={true}
+          />
+        )}
+      </div>
+    );
+  }
+
+  // Layer 2: Auth Guard
   if (!currentUser) {
     return <LoginScreen onLogin={login} />;
   }
 
   return (
     <div className="flex min-h-screen bg-slate-50 font-sans text-slate-900">
-      {/* Only show Sidebar when NOT on home page */}
-      {activeTab !== 'home' && (
-        <Sidebar
+      <Sidebar
+        activeTab={activeTab}
+        setActiveTab={setActiveTab}
+        currentUser={currentUser}
+        selectedBranch={selectedBranch}
+        isCollapsed={isSidebarCollapsed}
+        setIsCollapsed={setIsSidebarCollapsed}
+      />
+
+      <div className={`flex-1 flex flex-col transition-all duration-300 ${isSidebarCollapsed ? 'md:ml-20' : 'md:ml-64'}`}>
+        <Header
           activeTab={activeTab}
-          setActiveTab={setActiveTab}
           currentUser={currentUser}
           selectedBranch={selectedBranch}
-          isCollapsed={isSidebarCollapsed}
-          setIsCollapsed={setIsSidebarCollapsed}
+          setSelectedBranch={setSelectedBranch}
+          canViewAll={canViewAll}
+          handleLogout={handleLogout}
+          setIsScannerOpen={setIsScannerOpen}
         />
-      )}
-
-      {/* Main content area */}
-      <div className={`flex-1 flex flex-col transition-all duration-300 ${activeTab !== 'home' ? (isSidebarCollapsed ? 'md:ml-20' : 'md:ml-64') : ''}`}>
-
-        {/* Only show Header when NOT on home page */}
-        {activeTab !== 'home' && (
-          <Header
-            activeTab={activeTab}
-            currentUser={currentUser}
-            selectedBranch={selectedBranch}
-            setSelectedBranch={setSelectedBranch}
-            canViewAll={canViewAll}
-            handleLogout={handleLogout}
-            setIsScannerOpen={setIsScannerOpen}
-          />
-        )}
 
         <QRScannerModal
           isOpen={isScannerOpen}
@@ -136,83 +157,64 @@ export default function App() {
           onScanSuccess={handleScanSuccess}
         />
 
-        {/* Full screen home page WITHOUT padding */}
-        {activeTab === 'home' && (
-          <HomePage
-            currentUser={currentUser}
-            selectedBranch={selectedBranch}
-            stock={stock}
-            transactions={transactions}
-            onNavigate={setActiveTab}
-            onLogout={handleLogout}
-          />
-        )}
+        <main className="flex-1 p-4 md:p-8 overflow-y-auto w-full max-w-[1600px] mx-auto pb-24 md:pb-8">
+          {activeTab === 'dashboard' && (
+            <Dashboard
+              stock={stock}
+              selectedBranch={selectedBranch}
+              transactions={transactions}
+              addTransaction={addTransaction}
+              currentUser={currentUser}
+            />
+          )}
 
-        {/* Regular content area WITH padding */}
-        {activeTab !== 'home' && (
-          <main className="flex-1 p-4 md:p-8 overflow-y-auto w-full max-w-[1600px] mx-auto pb-24 md:pb-8">
-            {activeTab === 'dashboard' && (
-              <Dashboard
-                stock={stock}
-                selectedBranch={selectedBranch}
-                transactions={transactions}
-                addTransaction={addTransaction}
-                currentUser={currentUser}
-              />
-            )}
+          {activeTab === 'analytics' && (
+            <AnalyticsDashboard
+              transactions={transactions}
+              stock={stock}
+            />
+          )}
 
-            {activeTab === 'analytics' && (
-              <AnalyticsDashboard
-                transactions={transactions}
-                stock={stock}
-              />
-            )}
+          {activeTab === 'record' && selectedBranch !== 'ALL' && (
+            <MovementTab
+              transactions={transactions}
+              selectedBranch={selectedBranch}
+              currentUser={currentUser}
+            />
+          )}
 
-            {activeTab === 'record' && selectedBranch !== 'ALL' && (
-              <MovementTab
-                transactions={transactions}
-                selectedBranch={selectedBranch}
-                currentUser={currentUser}
-              />
-            )}
+          {activeTab === 'history' && (
+            <HistoryTab
+              transactions={transactions}
+              selectedBranch={selectedBranch}
+              currentUser={currentUser}
+            />
+          )}
 
-            {activeTab === 'history' && (
-              <HistoryTab
-                transactions={transactions}
-                selectedBranch={selectedBranch}
-                currentUser={currentUser}
-              />
-            )}
+          {activeTab === 'maintenance' && (
+            <MaintenanceTab
+              stock={stock}
+              selectedBranch={selectedBranch === 'ALL' ? (currentUser?.branchId || 'hub_nw') : selectedBranch}
+              transactions={transactions}
+              onBatchMaintenance={processBatchMaintenance}
+              onAddTransaction={addTransaction}
+            />
+          )}
 
-            {activeTab === 'maintenance' && (
-              <MaintenanceTab
-                stock={stock}
-                selectedBranch={selectedBranch === 'ALL' ? (currentUser?.branchId || 'hub_nw') : selectedBranch}
-                transactions={transactions}
-                onBatchMaintenance={processBatchMaintenance}
-                onAddTransaction={addTransaction}
-              />
-            )}
-
-            {activeTab === 'settings' && currentUser?.role === 'ADMIN' && (
-              <SettingsTab />
-            )}
-          </main>
-        )}
+          {activeTab === 'settings' && currentUser?.role === 'ADMIN' && (
+            <SettingsTab />
+          )}
+        </main>
       </div>
 
-      {/* Only show MobileNav when NOT on home page */}
-      {activeTab !== 'home' && (
-        <MobileNav
-          activeTab={activeTab}
-          setActiveTab={setActiveTab}
-          selectedBranch={selectedBranch}
-          currentUser={currentUser}
-        />
-      )}
+      <MobileNav
+        activeTab={activeTab}
+        setActiveTab={setActiveTab}
+        selectedBranch={selectedBranch}
+        currentUser={currentUser}
+      />
 
-      {/* Global Quick Loop Widget - only when not on home */}
-      {activeTab !== 'home' && (selectedBranch === 'sai3' || selectedBranch === 'hub_nw') && (
+      {(selectedBranch === 'sai3' || selectedBranch === 'hub_nw') && (
         <QuickLoopRecord selectedBranch={selectedBranch} />
       )}
     </div>

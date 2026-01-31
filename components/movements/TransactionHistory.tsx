@@ -1,4 +1,4 @@
-import { Clock, Building, Car, User as UserIcon, FileText, Printer } from 'lucide-react';
+import { Clock, Building, Car, User as UserIcon, FileText, Printer, Trash2 } from 'lucide-react';
 import { Transaction } from '../../types';
 import { PALLET_TYPES, VEHICLE_TYPES } from '../../constants';
 
@@ -19,12 +19,14 @@ interface TransactionHistoryProps {
     historyGroups: Transaction[][];
     onViewTimeline: (tx: Transaction) => void;
     onVerifyDocument: (txGroup: Transaction[]) => void;
+    onDelete?: (txGroup: Transaction[]) => void;
 }
 
 const TransactionHistory: React.FC<TransactionHistoryProps> = ({
     historyGroups,
     onViewTimeline,
-    onVerifyDocument
+    onVerifyDocument,
+    onDelete
 }) => {
     return (
         <div className="glass p-6 rounded-3xl border border-slate-200 bg-white">
@@ -69,6 +71,15 @@ const TransactionHistory: React.FC<TransactionHistoryProps> = ({
                                     >
                                         <Printer size={10} /> VERIFY
                                     </button>
+                                    {onDelete && (
+                                        <button
+                                            onClick={() => onDelete(group)}
+                                            className="text-[10px] flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-red-50 text-red-600 font-black hover:bg-red-600 hover:text-white transition-all shadow-sm border border-red-100"
+                                            title="ลบรายการ (Delete Transaction)"
+                                        >
+                                            <Trash2 size={10} /> DELETE
+                                        </button>
+                                    )}
                                 </div>
                             </div>
                             <div className="text-sm text-slate-600">

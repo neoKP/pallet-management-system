@@ -8,9 +8,10 @@ interface ReceiveModalProps {
     onClose: () => void;
     group: Transaction[]; // The group of transactions (items) in this shipment
     onConfirm: (group: Transaction[]) => void;
+    isProcessing?: boolean;
 }
 
-const ReceiveModal: React.FC<ReceiveModalProps> = ({ isOpen, onClose, group, onConfirm }) => {
+const ReceiveModal: React.FC<ReceiveModalProps> = ({ isOpen, onClose, group, onConfirm, isProcessing }) => {
     // Local state for items being verified, allowing adjustments and splits
     const [adjustedItems, setAdjustedItems] = useState<Transaction[]>([]);
     const [error, setError] = useState<string | null>(null);
@@ -201,10 +202,15 @@ const ReceiveModal: React.FC<ReceiveModalProps> = ({ isOpen, onClose, group, onC
                         </button>
                         <button
                             onClick={handleConfirm}
-                            className="px-10 py-3 bg-blue-600 text-white rounded-2xl font-black shadow-xl shadow-blue-200 hover:bg-blue-700 hover:scale-[1.02] active:scale-95 transition-all flex items-center gap-2"
+                            disabled={isProcessing}
+                            className={`px-10 py-3 rounded-2xl font-black shadow-xl transition-all flex items-center gap-2 ${isProcessing ? 'bg-slate-400 cursor-not-allowed' : 'bg-blue-600 text-white shadow-blue-200 hover:bg-blue-700 hover:scale-[1.02] active:scale-95'}`}
                         >
-                            <Check size={20} />
-                            ยืนยันการรับเข้า
+                            {isProcessing ? (
+                                <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                            ) : (
+                                <Check size={20} />
+                            )}
+                            {isProcessing ? 'กำลังบันทึก...' : 'ยืนยันการรับเข้า'}
                         </button>
                     </div>
                 </div>

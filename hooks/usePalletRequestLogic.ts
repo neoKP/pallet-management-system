@@ -20,6 +20,7 @@ export function usePalletRequestLogic(selectedBranch: BranchId, currentUser?: Us
         branchId: selectedBranch // Keep track for the form
     });
     const [editingRequestId, setEditingRequestId] = useState<string | null>(null);
+    const [isProcessing, setIsProcessing] = useState(false);
 
     useEffect(() => {
         setNewRequestMeta(prev => ({ ...prev, branchId: selectedBranch }));
@@ -52,8 +53,9 @@ export function usePalletRequestLogic(selectedBranch: BranchId, currentUser?: Us
         setRequestItems(newItems);
     };
 
-    const handleCreateRequest = (e: React.FormEvent) => {
+    const handleCreateRequest = async (e: React.FormEvent) => {
         e.preventDefault();
+        if (isProcessing) return;
 
         const validItems = requestItems.filter(i => i.palletId && parseInt(i.qty) > 0);
 
@@ -88,24 +90,31 @@ export function usePalletRequestLogic(selectedBranch: BranchId, currentUser?: Us
             note: newRequestMeta.note,
         };
 
-        if (editingRequestId) {
-            const original = palletRequests.find(r => r.id === editingRequestId);
-            if (original) {
-                updatePalletRequest({ ...original, ...reqData });
-                Swal.fire('สำเร็จ!', 'แก้ไขคำขอเรียบร้อยแล้ว', 'success');
+        try {
+            setIsProcessing(true);
+            if (editingRequestId) {
+                const original = palletRequests.find(r => r.id === editingRequestId);
+                if (original) {
+                    await updatePalletRequest({ ...original, ...reqData });
+                    Swal.fire('สำเร็จ!', 'แก้ไขคำขอเรียบร้อยแล้ว', 'success');
+                }
+            } else {
+                await createPalletRequest(reqData);
+                Swal.fire({
+                    icon: 'success',
+                    title: 'ส่งคำขอแล้ว',
+                    text: 'รายการคำขอของคุณถูกบันทึกลงระบบแล้ว',
+                    timer: 2000,
+                    showConfirmButton: false
+                });
             }
-        } else {
-            createPalletRequest(reqData);
-            Swal.fire({
-                icon: 'success',
-                title: 'ส่งคำขอแล้ว',
-                text: 'รายการคำขอของคุณถูกบันทึกลงระบบแล้ว',
-                timer: 2000,
-                showConfirmButton: false
-            });
+            handleCloseModal();
+        } catch (error: any) {
+            console.error("Pallet request failed:", error);
+            Swal.fire('Error', error.message || 'ไม่สามารถบันทึกข้อมูลได้', 'error');
+        } finally {
+            setIsProcessing(false);
         }
-
-        handleCloseModal();
     };
 
     const handleCloseModal = () => {
@@ -156,10 +165,18 @@ export function usePalletRequestLogic(selectedBranch: BranchId, currentUser?: Us
             showCancelButton: true,
             confirmButtonText: 'อนุมัติ',
             cancelButtonText: 'ยกเลิก'
-        }).then((result: any) => {
+        }).then(async (result: any) => {
             if (result.isConfirmed) {
-                updatePalletRequest({ ...req, status: 'APPROVED' });
-                Swal.fire('สำเร็จ!', 'อนุมัติคำขอเรียบร้อยแล้ว', 'success');
+                if (isProcessing) return;
+                try {
+                    setIsProcessing(true);
+                    await updatePalletRequest({ ...req, status: 'APPROVED' });
+                    Swal.fire('สำเร็จ!', 'อนุมัติคำขอเรียบร้อยแล้ว', 'success');
+                } catch (err: any) {
+                    Swal.fire('Error', err.message || 'ไม่สามารถอนุมัติได้', 'error');
+                } finally {
+                    setIsProcessing(false);
+                }
             }
         });
     };
@@ -172,10 +189,18 @@ export function usePalletRequestLogic(selectedBranch: BranchId, currentUser?: Us
             showCancelButton: true,
             confirmButtonText: 'ปฏิเสธคำขอ',
             confirmButtonColor: '#d33',
-        }).then((result: any) => {
+        }).then(async (result: any) => {
             if (result.isConfirmed) {
-                updatePalletRequest({ ...req, status: 'REJECTED', note: result.value ? `REJECT REASON: ${result.value}` : req.note });
-                Swal.fire('บันทึกแล้ว', 'ปฏิเสธคำขอเรียบร้อยแล้ว', 'info');
+                if (isProcessing) return;
+                try {
+                    setIsProcessing(true);
+                    await updatePalletRequest({ ...req, status: 'REJECTED', note: result.value ? `REJECT REASON: ${result.value}` : req.note });
+                    Swal.fire('บันทึกแล้ว', 'ปฏิเสธคำขอเรียบร้อยแล้ว', 'info');
+                } catch (err: any) {
+                    Swal.fire('Error', err.message || 'ไม่สามารถปฏิเสธคำขอได้', 'error');
+                } finally {
+                    setIsProcessing(false);
+                }
             }
         });
     };
@@ -211,7 +236,9 @@ export function usePalletRequestLogic(selectedBranch: BranchId, currentUser?: Us
             confirmButtonColor: '#3b82f6',
         }).then(async (result: any) => {
             if (result.isConfirmed) {
+                if (isProcessing) return;
                 try {
+                    setIsProcessing(true);
                     const datePart = new Date().toISOString().split('T')[0].replace(/-/g, '');
                     let docPrefix = 'RET';
                     if (req.requestType === 'PULL') docPrefix = 'COLL';
@@ -238,6 +265,7 @@ export function usePalletRequestLogic(selectedBranch: BranchId, currentUser?: Us
                         confirmButtonColor: '#10b981',
                     });
                 } catch (error: any) {
+                    console.error("Ship request failed:", error);
                     Swal.fire({
                         icon: 'error',
                         title: 'ไม่สามารถดำเนินการได้!',
@@ -245,6 +273,8 @@ export function usePalletRequestLogic(selectedBranch: BranchId, currentUser?: Us
                         confirmButtonText: 'ตกลง',
                         confirmButtonColor: '#d33',
                     });
+                } finally {
+                    setIsProcessing(false);
                 }
             }
         });
@@ -256,6 +286,7 @@ export function usePalletRequestLogic(selectedBranch: BranchId, currentUser?: Us
 
     return {
         isModalOpen, setIsModalOpen,
+        isProcessing,
         requestItems, setRequestItems,
         newRequestMeta, setNewRequestMeta,
         editingRequestId,

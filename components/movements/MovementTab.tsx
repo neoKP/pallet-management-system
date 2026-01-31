@@ -52,6 +52,7 @@ const MovementTab: React.FC<MovementTabProps> = ({ selectedBranch, transactions,
                         pendingGroups={logic.pendingGroups}
                         onViewTimeline={logic.handleViewTimeline}
                         onBatchConfirm={logic.handleBatchConfirm}
+                        isProcessing={logic.isProcessing}
                     />
 
                     <ReceiveModal
@@ -59,6 +60,7 @@ const MovementTab: React.FC<MovementTabProps> = ({ selectedBranch, transactions,
                         onClose={() => logic.setIsReceiveModalOpen(false)}
                         group={logic.verifyingGroup || []}
                         onConfirm={logic.handleConfirmReceive}
+                        isProcessing={logic.isProcessing}
                     />
 
                     {logic.timelineTx && (
@@ -88,12 +90,14 @@ const MovementTab: React.FC<MovementTabProps> = ({ selectedBranch, transactions,
                             onSubmit={logic.handleSubmit}
                             suggestions={logic.suggestions}
                             selectedBranch={selectedBranch}
+                            isProcessing={logic.isProcessing}
                         />
 
                         <TransactionHistory
                             historyGroups={logic.historyGroups}
                             onViewTimeline={logic.handleViewTimeline}
                             onVerifyDocument={logic.handleVerifyDocument}
+                            onDelete={logic.handleDeleteGroup}
                         />
                     </div>
                 </>
@@ -105,6 +109,7 @@ const MovementTab: React.FC<MovementTabProps> = ({ selectedBranch, transactions,
                 isOpen={logic.isPreviewOpen}
                 onClose={() => logic.setIsPreviewOpen(false)}
                 onConfirm={logic.handleConfirmSave}
+                isProcessing={logic.isProcessing}
                 data={logic.previewData}
             />
         </div>

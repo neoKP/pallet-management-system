@@ -42,6 +42,7 @@ const MaintenanceTab: React.FC<MaintenanceTabProps> = ({ stock, selectedBranch, 
                     form={logic.inboundForm}
                     onChange={logic.setInboundForm}
                     onSubmit={logic.handleInboundSubmit}
+                    isProcessing={logic.isProcessing}
                 />
             ) : (
                 <RepairProcessForm
@@ -60,6 +61,7 @@ const MaintenanceTab: React.FC<MaintenanceTabProps> = ({ stock, selectedBranch, 
                     setTargetBranchId={logic.setTargetBranchId}
                     totalProcessed={logic.totalProcessed}
                     onSubmit={logic.handleSubmit}
+                    isProcessing={logic.isProcessing}
                 />
             )}
 

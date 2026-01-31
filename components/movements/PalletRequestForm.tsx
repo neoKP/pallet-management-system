@@ -14,6 +14,7 @@ interface PalletRequestFormProps {
     newRequestMeta: any;
     setNewRequestMeta: (meta: any) => void;
     isEditing?: boolean;
+    isProcessing?: boolean;
 }
 
 const PalletRequestForm: React.FC<PalletRequestFormProps> = ({
@@ -26,7 +27,8 @@ const PalletRequestForm: React.FC<PalletRequestFormProps> = ({
     handleItemChange,
     newRequestMeta,
     setNewRequestMeta,
-    isEditing = false
+    isEditing = false,
+    isProcessing = false
 }) => {
     if (!isOpen) return null;
 
@@ -196,10 +198,15 @@ const PalletRequestForm: React.FC<PalletRequestFormProps> = ({
 
                     <button
                         type="submit"
-                        className={`w-full py-5 text-white rounded-[2rem] font-black text-lg transition-all shadow-xl flex items-center justify-center gap-3 ${isEditing ? 'bg-emerald-600 hover:bg-emerald-700 shadow-emerald-100' : 'bg-blue-600 hover:bg-blue-700 shadow-blue-100'}`}
+                        disabled={isProcessing}
+                        className={`w-full py-5 text-white rounded-[2rem] font-black text-lg transition-all shadow-xl flex items-center justify-center gap-3 ${isProcessing ? 'bg-slate-400 cursor-not-allowed' : (isEditing ? 'bg-emerald-600 hover:bg-emerald-700 shadow-emerald-100' : 'bg-blue-600 hover:bg-blue-700 shadow-blue-100')}`}
                     >
-                        <Send size={24} />
-                        {isEditing ? 'บันทึกการแก้ไข (Update Request)' : 'ส่งคำขอ (Submit Request)'}
+                        {isProcessing ? (
+                            <div className="w-6 h-6 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                        ) : (
+                            <Send size={24} />
+                        )}
+                        {isProcessing ? 'กำลังส่งคำขอ...' : (isEditing ? 'บันทึกการแก้ไข (Update Request)' : 'ส่งคำขอ (Submit Request)')}
                     </button>
                 </form>
             </div>

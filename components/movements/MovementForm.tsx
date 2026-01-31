@@ -25,6 +25,7 @@ interface MovementFormProps {
         transportCompanies: string[];
     };
     selectedBranch: BranchId;
+    isProcessing?: boolean;
 }
 
 const MovementForm: React.FC<MovementFormProps> = ({
@@ -44,7 +45,8 @@ const MovementForm: React.FC<MovementFormProps> = ({
     setTransportInfo,
     onSubmit,
     suggestions,
-    selectedBranch
+    selectedBranch,
+    isProcessing
 }) => {
     return (
         <div className="glass p-6 rounded-3xl border border-slate-200 bg-white">
@@ -329,10 +331,15 @@ const MovementForm: React.FC<MovementFormProps> = ({
 
                 <button
                     type="submit"
-                    className="w-full py-4 bg-blue-600 text-white rounded-xl font-black hover:bg-blue-700 transition-all shadow-xl shadow-blue-200 flex items-center justify-center gap-2"
+                    disabled={isProcessing}
+                    className={`w-full py-4 rounded-xl font-black transition-all shadow-xl flex items-center justify-center gap-2 ${isProcessing ? 'bg-slate-400 cursor-not-allowed' : 'bg-blue-600 text-white hover:bg-blue-700 shadow-blue-200'}`}
                 >
-                    <Save size={20} />
-                    Register Movement
+                    {isProcessing ? (
+                        <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                    ) : (
+                        <Save size={20} />
+                    )}
+                    {isProcessing ? 'กำลังประมวลผล...' : 'Register Movement'}
                 </button>
             </form>
         </div>

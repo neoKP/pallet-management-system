@@ -19,6 +19,7 @@ interface RepairProcessFormProps {
     setTargetBranchId: (val: BranchId) => void;
     totalProcessed: number;
     onSubmit: (e: React.FormEvent) => void;
+    isProcessing?: boolean;
 }
 
 const RepairProcessForm: React.FC<RepairProcessFormProps> = ({
@@ -36,7 +37,8 @@ const RepairProcessForm: React.FC<RepairProcessFormProps> = ({
     targetBranchId,
     setTargetBranchId,
     totalProcessed,
-    onSubmit
+    onSubmit,
+    isProcessing
 }) => {
     return (
         <div className="glass p-6 rounded-3xl border border-slate-200 bg-white shadow-sm">
@@ -222,11 +224,15 @@ const RepairProcessForm: React.FC<RepairProcessFormProps> = ({
 
                 <button
                     type="submit"
-                    disabled={totalProcessed === 0 || fixedQty + scrappedQty !== totalProcessed}
-                    className="w-full py-5 bg-blue-600 text-white rounded-[2rem] font-black text-lg hover:bg-blue-700 transition-all shadow-xl shadow-blue-200 disabled:opacity-30 disabled:shadow-none flex items-center justify-center gap-2"
+                    disabled={isProcessing || totalProcessed === 0 || fixedQty + scrappedQty !== totalProcessed}
+                    className={`w-full py-5 rounded-[2rem] font-black text-lg transition-all shadow-xl flex items-center justify-center gap-2 ${isProcessing ? 'bg-slate-400 cursor-not-allowed' : 'bg-blue-600 text-white hover:bg-blue-700 shadow-blue-200'} disabled:opacity-30 disabled:shadow-none`}
                 >
-                    <Save size={20} />
-                    บันทึกผลการซ่อม
+                    {isProcessing ? (
+                        <div className="w-6 h-6 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                    ) : (
+                        <Save size={20} />
+                    )}
+                    {isProcessing ? 'กำลังบันทึก...' : 'บันทึกผลการซ่อม'}
                 </button>
             </form>
         </div>

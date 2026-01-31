@@ -11,6 +11,7 @@ export function useMaintenanceLogic(
     onAddTransaction: (transaction: Partial<Transaction>) => void
 ) {
     const [subTab, setSubTab] = useState<'inbound' | 'process'>('inbound');
+    const [isProcessing, setIsProcessing] = useState(false);
 
     // Inbound State
     const [inboundForm, setInboundForm] = useState({
@@ -33,10 +34,13 @@ export function useMaintenanceLogic(
 
     const handleInboundSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
+        if (isProcessing) return;
+
         const qty = parseInt(inboundForm.qty);
         if (qty <= 0) return;
 
         try {
+            setIsProcessing(true);
             await (onAddTransaction({
                 type: 'OUT',
                 source: inboundForm.sourceBranchId,
@@ -55,6 +59,7 @@ export function useMaintenanceLogic(
             });
             setInboundForm({ ...inboundForm, qty: '', note: '' });
         } catch (error: any) {
+            console.error("Inbound submit failed:", error);
             Swal.fire({
                 icon: 'error',
                 title: 'ไม่สามารถส่งซ่อมได้!',
@@ -62,6 +67,8 @@ export function useMaintenanceLogic(
                 confirmButtonText: 'ตกลง',
                 confirmButtonColor: '#d33',
             });
+        } finally {
+            setIsProcessing(false);
         }
     };
 
@@ -81,6 +88,7 @@ export function useMaintenanceLogic(
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
+        if (isProcessing) return;
 
         for (const item of batchItems) {
             const currentPending = pendingStock[item.palletId] || 0;
@@ -104,6 +112,7 @@ export function useMaintenanceLogic(
         }
 
         try {
+            setIsProcessing(true);
             await (onBatchMaintenance({
                 items: batchItems,
                 fixedQty,
@@ -128,6 +137,7 @@ export function useMaintenanceLogic(
                 showConfirmButton: false
             });
         } catch (error: any) {
+            console.error("Maintenance submit failed:", error);
             Swal.fire({
                 icon: 'error',
                 title: 'ไม่สามารถดำเนินการซ่อมได้!',
@@ -135,11 +145,14 @@ export function useMaintenanceLogic(
                 confirmButtonText: 'ตกลง',
                 confirmButtonColor: '#d33',
             });
+        } finally {
+            setIsProcessing(false);
         }
     };
 
     return {
         subTab, setSubTab,
+        isProcessing,
         inboundForm, setInboundForm,
         batchItems, addBatchItem, removeBatchItem, updateBatchItem,
         fixedQty, setFixedQty,

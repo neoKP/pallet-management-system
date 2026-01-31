@@ -6,7 +6,7 @@ import Swal from 'sweetalert2';
 import { AUTOMATION_RULES, EXTERNAL_PARTNERS, BRANCHES } from '../constants';
 
 export function useMovementLogic(selectedBranch: BranchId, transactions: Transaction[]) {
-    const { addMovementBatch, confirmTransactionsBatch } = useStock();
+    const { addMovementBatch, confirmTransactionsBatch, deleteTransaction } = useStock();
 
     const [subTab, setSubTab] = useState<'movement' | 'requests'>('movement');
     const [mode, setMode] = useState<'standard' | 'quick'>('standard');
@@ -31,6 +31,7 @@ export function useMovementLogic(selectedBranch: BranchId, transactions: Transac
     const [isTimelineOpen, setIsTimelineOpen] = useState(false);
     const [isPreviewOpen, setIsPreviewOpen] = useState(false);
     const [previewData, setPreviewData] = useState<any>(null);
+    const [isProcessing, setIsProcessing] = useState(false);
 
     const suggestions = useMemo(() => {
         const registrations = new Set<string>();
@@ -235,7 +236,9 @@ export function useMovementLogic(selectedBranch: BranchId, transactions: Transac
     };
 
     const saveTransaction = async (data: any) => {
+        if (isProcessing) return;
         try {
+            setIsProcessing(true);
             await addMovementBatch(data);
 
             // Handle Secondary Auto-Transaction (NW Case)
@@ -293,6 +296,8 @@ export function useMovementLogic(selectedBranch: BranchId, transactions: Transac
                 confirmButtonText: 'ตกลง',
                 confirmButtonColor: '#d33',
             });
+        } finally {
+            setIsProcessing(false);
         }
     };
 
@@ -307,17 +312,32 @@ export function useMovementLogic(selectedBranch: BranchId, transactions: Transac
         setIsReceiveModalOpen(true);
     };
 
-    const handleConfirmReceive = (txs: Transaction[]) => {
-        confirmTransactionsBatch(txs);
-        Swal.fire({
-            icon: 'success',
-            title: 'เรียบร้อย!',
-            text: 'ยืนยันการรับของเสร็จสมบูรณ์',
-            timer: 1500,
-            showConfirmButton: false
-        });
-        setVerifyingGroup(null);
-        setIsReceiveModalOpen(false);
+    const handleConfirmReceive = async (txs: Transaction[]) => {
+        if (isProcessing) return;
+        try {
+            setIsProcessing(true);
+            await confirmTransactionsBatch(txs);
+            Swal.fire({
+                icon: 'success',
+                title: 'เรียบร้อย!',
+                text: 'ยืนยันการรับของเสร็จสมบูรณ์',
+                timer: 1500,
+                showConfirmButton: false
+            });
+            setVerifyingGroup(null);
+            setIsReceiveModalOpen(false);
+        } catch (error: any) {
+            console.error("Confirm receive failed:", error);
+            Swal.fire({
+                icon: 'error',
+                title: 'เกิดข้อผิดพลาด!',
+                text: 'ไม่สามารถยืนยันการรับของได้ กรุณาลองใหม่อีกครั้ง',
+                confirmButtonText: 'ตกลง',
+                confirmButtonColor: '#d33',
+            });
+        } finally {
+            setIsProcessing(false);
+        }
     };
 
     const handleQuickSubmit = async (
@@ -395,6 +415,28 @@ export function useMovementLogic(selectedBranch: BranchId, transactions: Transac
         await saveTransaction(data);
     };
 
+    const handleDeleteGroup = (txGroup: Transaction[]) => {
+        Swal.fire({
+            title: 'ยืนยันการลบ?',
+            text: `ต้องการลบรายการเลขที่ ${txGroup[0].docNo} ทั้งหมดหรือไม่? ยอดสต๊อกจะถูกปรับคืนโดยอัตโนมัติ`,
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonColor: '#d33',
+            cancelButtonColor: '#3085d6',
+            confirmButtonText: 'ลบข้อมูล',
+            cancelButtonText: 'ยกเลิก'
+        }).then((result: any) => {
+            if (result.isConfirmed) {
+                txGroup.forEach(tx => deleteTransaction(tx.id));
+                Swal.fire(
+                    'ลบสำเร็จ!',
+                    'รายการถูกยกเลิกและคืนยอดสต๊อกแล้ว',
+                    'success'
+                );
+            }
+        });
+    };
+
     return {
         subTab, setSubTab,
         mode, setMode,
@@ -406,6 +448,7 @@ export function useMovementLogic(selectedBranch: BranchId, transactions: Transac
         transportInfo, setTransportInfo,
         verifyingGroup, setVerifyingGroup,
         isReceiveModalOpen, setIsReceiveModalOpen,
+        isProcessing,
         timelineTx, setTimelineTx,
         isTimelineOpen, setIsTimelineOpen,
         isPreviewOpen, setIsPreviewOpen,
@@ -415,6 +458,7 @@ export function useMovementLogic(selectedBranch: BranchId, transactions: Transac
         handleAddItem, handleRemoveItem, handleItemChange,
         handleViewTimeline, handleVerifyDocument, handleSubmit, handleConfirmSave,
         handleBatchConfirm, handleConfirmReceive,
-        handleQuickSubmit
+        handleQuickSubmit,
+        handleDeleteGroup
     };
 }

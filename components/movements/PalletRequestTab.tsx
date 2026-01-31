@@ -50,6 +50,7 @@ const PalletRequestTab: React.FC<PalletRequestTabProps> = ({ selectedBranch, cur
                 newRequestMeta={logic.newRequestMeta}
                 setNewRequestMeta={logic.setNewRequestMeta}
                 isEditing={!!logic.editingRequestId}
+                isProcessing={logic.isProcessing}
             />
         </div>
     );

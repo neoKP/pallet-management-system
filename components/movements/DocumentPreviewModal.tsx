@@ -8,6 +8,7 @@ interface DocumentPreviewModalProps {
     isOpen: boolean;
     onClose: () => void;
     onConfirm: () => void;
+    isProcessing?: boolean;
     data: {
         source: string;
         dest: string;
@@ -22,7 +23,7 @@ interface DocumentPreviewModalProps {
     } | null;
 }
 
-const DocumentPreviewModal: React.FC<DocumentPreviewModalProps> = ({ isOpen, onClose, onConfirm, data }) => {
+const DocumentPreviewModal: React.FC<DocumentPreviewModalProps> = ({ isOpen, onClose, onConfirm, isProcessing, data }) => {
     if (!isOpen || !data) return null;
 
     const sourceBranch = BRANCHES.find(b => b.id === data.source);
@@ -290,9 +291,15 @@ const DocumentPreviewModal: React.FC<DocumentPreviewModalProps> = ({ isOpen, onC
                     </button>
                     <button
                         onClick={onConfirm}
-                        className="px-6 py-2 rounded-xl bg-blue-600 text-white font-bold hover:bg-blue-700 transition-colors shadow-lg shadow-blue-200 flex items-center gap-2"
+                        disabled={isProcessing}
+                        className={`px-6 py-2 rounded-xl font-bold transition-colors shadow-lg flex items-center gap-2 ${isProcessing ? 'bg-slate-400 cursor-not-allowed text-white' : 'bg-blue-600 text-white hover:bg-blue-700 shadow-blue-200'}`}
                     >
-                        <CheckCircle size={18} /> ยืนยัน & บันทึก (Confirm & Save)
+                        {isProcessing ? (
+                            <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                        ) : (
+                            <CheckCircle size={18} />
+                        )}
+                        {isProcessing ? 'กำลังบันทึก...' : 'ยืนยัน & บันทึก (Confirm & Save)'}
                     </button>
                 </div>
             </div>
