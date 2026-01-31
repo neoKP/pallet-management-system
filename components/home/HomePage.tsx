@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import {
     LayoutDashboard,
@@ -16,7 +16,9 @@ import {
     Lock,
     LayoutGrid,
     Activity,
-    History
+    History,
+    User as UserIcon,
+    Calendar
 } from 'lucide-react';
 import { User, BranchId, Stock, Transaction, PalletId } from '../../types';
 import { PALLET_TYPES, BRANCHES } from '../../constants';
@@ -32,11 +34,8 @@ interface HomePageProps {
 }
 
 const headerNavItems = [
-    { id: 'home', label: 'Home', icon: LayoutGrid },
-    { id: 'dashboard', label: 'Dashboard', icon: Activity },
-    { id: 'record', label: 'Movement', icon: ClipboardList },
-    { id: 'history', label: 'Inventory Log', icon: History, showBadge: true },
-    { id: 'analytics', label: 'Analytics', icon: BarChart3 },
+    { id: 'home', label: 'HOME HUB', icon: LayoutGrid },
+    { id: 'dashboard', label: 'DASHBOARD', icon: Activity },
 ];
 
 const navItems = [
@@ -57,6 +56,36 @@ const HomePage: React.FC<HomePageProps> = ({
     onLogout,
     openLogin,
 }) => {
+    // Real-time clock state
+    const [currentTime, setCurrentTime] = useState(new Date());
+
+    useEffect(() => {
+        const timer = setInterval(() => {
+            setCurrentTime(new Date());
+        }, 1000);
+        return () => clearInterval(timer);
+    }, []);
+
+    // Format date as "Saturday, January 31, 2026"
+    const formatDate = (date: Date): string => {
+        return date.toLocaleDateString('en-US', {
+            weekday: 'long',
+            year: 'numeric',
+            month: 'long',
+            day: 'numeric'
+        });
+    };
+
+    // Format time as "11:14:41 AM"
+    const formatTime = (date: Date): string => {
+        return date.toLocaleTimeString('en-US', {
+            hour: '2-digit',
+            minute: '2-digit',
+            second: '2-digit',
+            hour12: true
+        });
+    };
+
     // Calculate stats
     const calculateTotalStock = (): Record<PalletId, number> => {
         const totals: Record<string, number> = {};
@@ -105,77 +134,103 @@ const HomePage: React.FC<HomePageProps> = ({
             <div className="absolute inset-0 bg-cover bg-center bg-no-repeat opacity-60 bg-[url('https://images.unsplash.com/photo-1586528116311-ad8dd3c8310d?q=80&w=2070')]" />
             <div className="absolute inset-0 bg-gradient-to-t from-black via-black/40 to-black/20" />
 
-            {/* Top Navigation Bar - Pill Style */}
-            <header className="relative z-50 py-4 px-6">
-                <div className="max-w-full mx-auto flex items-center justify-between">
-                    {/* Left: Logo & Title Section */}
-                    <div className="flex items-center gap-4">
-                        <div className="bg-white p-2 rounded-lg shadow-lg">
-                            <img
-                                src="/neosiam-logo.png.jpg"
-                                alt="NeoSiam"
-                                className="h-10 object-contain"
-                            />
-                        </div>
-                        <div className="flex flex-col">
-                            <div className="flex items-baseline gap-2">
-                                <span className="text-white font-black text-xl tracking-tight">NEOSIAM</span>
-                                <span className="text-slate-400 text-[10px] font-bold uppercase tracking-widest">LOGISTICS & TRANSPORT</span>
+            {/* Top Navigation Bar - Glass Morphism Style */}
+            <header className="relative z-50">
+                {/* Main Header Bar with Glass Effect */}
+                <div className="bg-slate-900/70 backdrop-blur-2xl border-b border-white/10 shadow-2xl">
+                    <div className="max-w-full mx-auto px-6 py-3 flex items-center justify-between">
+                        {/* Left: Logo & Title Section */}
+                        <div className="flex items-center gap-4">
+                            <div className="bg-white p-1.5 rounded-lg shadow-lg shadow-white/10">
+                                <img
+                                    src="/logo.png"
+                                    alt="NeoSiam"
+                                    className="h-8 object-contain"
+                                />
                             </div>
-                            <span className="text-cyan-400 text-[10px] font-black tracking-[0.2em] uppercase">INOUT-RECORD SYSTEM</span>
+                            <div className="flex flex-col">
+                                <span className="text-cyan-400 font-black text-lg tracking-tight" style={{ fontFamily: 'Orbitron, sans-serif' }}>
+                                    NeoSiam Logistics
+                                </span>
+                                <span className="text-slate-500 text-[9px] font-bold uppercase tracking-[0.3em]">
+                                    PALLET-MANAGEMENT-SYSTEM
+                                </span>
+                            </div>
                         </div>
-                    </div>
 
-                    {/* Center: Pill Navigation */}
-                    <nav className="hidden lg:flex items-center bg-slate-900/80 backdrop-blur-xl border border-white/5 rounded-2xl p-1.5 shadow-2xl">
-                        {headerNavItems.map((item) => {
-                            const isActive = item.id === 'home';
-                            return (
-                                <button
-                                    key={item.id}
-                                    onClick={() => onNavigate(item.id as any)}
-                                    className={`relative flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-bold transition-all duration-300 ${isActive
-                                        ? 'bg-cyan-400 text-slate-900 shadow-lg shadow-cyan-400/20'
-                                        : 'text-slate-400 hover:text-white hover:bg-white/5'
-                                        }`}
-                                >
-                                    <item.icon size={18} />
-                                    {item.label}
-                                    {item.showBadge && transactions.filter(t => t.status === 'PENDING').length > 0 && (
-                                        <span className="absolute -top-1 -right-1 min-w-[1.25rem] h-5 bg-blue-600 text-white text-[10px] font-bold rounded-full flex items-center justify-center border-2 border-slate-900 px-1">
-                                            {transactions.filter(t => t.status === 'PENDING').length}+
-                                        </span>
-                                    )}
-                                </button>
-                            );
-                        })}
-                    </nav>
+                        {/* Center: Navigation Tabs */}
+                        <nav className="hidden lg:flex items-center gap-1">
+                            {headerNavItems.map((item, index) => {
+                                const isActive = item.id === 'home';
+                                return (
+                                    <button
+                                        key={item.id}
+                                        onClick={() => onNavigate(item.id as any)}
+                                        className={`relative px-6 py-2 text-sm font-bold tracking-wider transition-all duration-300 ${isActive
+                                            ? 'text-cyan-400'
+                                            : 'text-slate-400 hover:text-white'
+                                            }`}
+                                    >
+                                        {item.label}
+                                        {isActive && (
+                                            <div className="absolute bottom-0 left-1/2 -translate-x-1/2 w-full h-0.5 bg-cyan-400 rounded-full shadow-[0_0_10px_rgba(34,211,238,0.5)]" />
+                                        )}
+                                    </button>
+                                );
+                            })}
+                        </nav>
 
-                    {/* Right: User Section */}
-                    <div className="flex items-center gap-4">
-                        {currentUser ? (
-                            <div className="bg-slate-900/80 backdrop-blur-xl border border-white/5 rounded-2xl pl-5 pr-2 py-1.5 flex items-center gap-6 shadow-2xl">
-                                <div className="text-right">
-                                    <p className="text-white font-black text-sm leading-tight uppercase">{currentUser.username}</p>
-                                    <p className="text-cyan-400 text-[9px] font-black uppercase tracking-wider">{branchName || currentUser.role}</p>
+                        {/* Right: Date, Time, User Section */}
+                        <div className="flex items-center gap-4">
+                            {/* Date Display */}
+                            <div className="hidden md:flex items-center gap-2 text-slate-300">
+                                <Calendar size={14} className="text-slate-500" />
+                                <span className="text-sm font-medium tracking-wide">
+                                    {formatDate(currentTime)}
+                                </span>
+                            </div>
+
+                            {/* Time Display with Cyan Background */}
+                            <div className="bg-gradient-to-r from-cyan-500 to-cyan-400 rounded-lg px-4 py-2 shadow-lg shadow-cyan-500/30">
+                                <div className="flex items-center gap-2">
+                                    <Clock size={14} className="text-slate-900" />
+                                    <span className="text-slate-900 font-black text-sm tracking-wide font-mono">
+                                        {formatTime(currentTime)}
+                                    </span>
                                 </div>
-                                <div className="w-[1px] h-8 bg-white/10" />
-                                <button
-                                    onClick={onLogout}
-                                    className="p-2 text-slate-400 hover:text-white transition-colors"
-                                    title="Logout"
-                                >
-                                    <LogOut size={20} className="rotate-180" />
-                                </button>
                             </div>
-                        ) : (
-                            <button
-                                onClick={openLogin}
-                                className="px-8 py-3 bg-cyan-400 hover:bg-cyan-300 text-slate-900 font-black rounded-2xl transition-all shadow-lg shadow-cyan-400/20 uppercase text-xs tracking-widest"
-                            >
-                                LOGIN
-                            </button>
-                        )}
+
+                            {/* User Section */}
+                            {currentUser ? (
+                                <div className="flex items-center gap-3 bg-slate-800/50 backdrop-blur-xl border border-white/5 rounded-xl px-3 py-1.5">
+                                    {/* User Icon */}
+                                    <div className="w-8 h-8 bg-slate-700 rounded-full flex items-center justify-center border border-slate-600">
+                                        <UserIcon size={16} className="text-slate-300" />
+                                    </div>
+                                    {/* Username */}
+                                    <span className="text-white font-bold text-sm uppercase hidden sm:block">
+                                        {currentUser.username}
+                                    </span>
+                                    {/* Divider */}
+                                    <div className="w-px h-6 bg-white/10" />
+                                    {/* Sign Out Button */}
+                                    <button
+                                        onClick={onLogout}
+                                        className="px-3 py-1.5 bg-cyan-500/20 hover:bg-cyan-500/30 text-cyan-400 text-xs font-bold rounded-lg transition-all border border-cyan-500/30 uppercase tracking-wider"
+                                        title="ออกจากระบบ"
+                                    >
+                                        SIGN OUT
+                                    </button>
+                                </div>
+                            ) : (
+                                <button
+                                    onClick={openLogin}
+                                    className="px-6 py-2 bg-cyan-400 hover:bg-cyan-300 text-slate-900 font-black rounded-xl transition-all shadow-lg shadow-cyan-400/20 uppercase text-xs tracking-widest"
+                                >
+                                    LOGIN
+                                </button>
+                            )}
+                        </div>
                     </div>
                 </div>
 
