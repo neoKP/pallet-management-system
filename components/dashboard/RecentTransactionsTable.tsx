@@ -408,12 +408,28 @@ const RecentTransactionsTable: React.FC<RecentTransactionsTableProps> = ({
                                 </div>
 
                                 <div className="space-y-2 mb-3">
-                                    {txs.map((tx, idx) => (
-                                        <div key={idx} className="flex justify-between items-center py-1.5 px-2 bg-slate-50 rounded-lg text-xs">
-                                            <span className="font-bold text-slate-700">{PALLET_TYPES.find(p => p.id === tx.palletId)?.name || tx.palletId}</span>
-                                            <span className="font-black text-slate-900">{tx.qty} ตัว</span>
-                                        </div>
-                                    ))}
+                                    {txs.map((tx, idx) => {
+                                        const isEdited = !!tx.originalPalletId || (tx.originalQty !== undefined && tx.originalQty !== tx.qty);
+                                        const isSplit = tx.note?.includes('[รายการแยก]');
+                                        return (
+                                            <div key={idx} className="flex flex-col gap-1 py-1.5 px-2 bg-slate-50 rounded-lg text-xs">
+                                                <div className="flex justify-between items-center">
+                                                    <span className="font-bold text-slate-700">{PALLET_TYPES.find(p => p.id === tx.palletId)?.name || tx.palletId}</span>
+                                                    <span className="font-black text-slate-900">{tx.qty} ตัว</span>
+                                                </div>
+                                                {(isEdited || isSplit) && (
+                                                    <div className="flex items-center gap-1 flex-wrap">
+                                                        {isEdited && (
+                                                            <span className="px-1.5 py-0.5 bg-amber-100 text-amber-700 text-[9px] font-black rounded uppercase">แก้ไขแล้ว</span>
+                                                        )}
+                                                        {isSplit && (
+                                                            <span className="px-1.5 py-0.5 bg-blue-100 text-blue-700 text-[9px] font-black rounded uppercase">รายการแยก</span>
+                                                        )}
+                                                    </div>
+                                                )}
+                                            </div>
+                                        );
+                                    })}
                                 </div>
 
                                 <div className="flex items-end justify-between text-[10px] pt-2 border-t border-slate-50">
