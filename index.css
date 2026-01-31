@@ -27,14 +27,20 @@
 
 body {
   font-family: 'Kanit', 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-  background-color: #f8fafc;
-  /* Slate-50 */
-  background-image:
-    radial-gradient(at 0% 0%, rgba(37, 99, 235, 0.05) 0px, transparent 50%),
-    radial-gradient(at 100% 100%, rgba(79, 70, 229, 0.05) 0px, transparent 50%);
+  background-color: #020617;
+  /* Changing to deep slate/black for premium look */
   min-height: 100vh;
-  color: var(--slate-900);
+  color: var(--slate-100);
   line-height: 1.6;
+}
+
+.font-premium {
+  font-family: 'Oswald', sans-serif;
+  text-transform: uppercase;
+}
+
+.font-thai {
+  font-family: 'Kanit', sans-serif;
 }
 
 /* Glassmorphism Effect - Light Mode */

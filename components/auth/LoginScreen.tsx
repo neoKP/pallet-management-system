@@ -38,6 +38,8 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ onLogin, onClose, isModal }) 
                         <button
                             onClick={onClose}
                             className="absolute top-6 right-6 p-2 hover:bg-slate-100 rounded-full transition-colors text-slate-400 hover:text-slate-600"
+                            title="ปิด"
+                            aria-label="Close login modal"
                         >
                             <X size={20} />
                         </button>

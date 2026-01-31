@@ -204,10 +204,10 @@ const HomePage: React.FC<HomePageProps> = ({
                         animate={{ opacity: 1, y: 0 }}
                         className="flex flex-col items-center"
                     >
-                        <h1 className="text-6xl md:text-9xl font-bold text-white tracking-tighter leading-none" style={{ fontFamily: "'Oswald', sans-serif" }}>
+                        <h1 className="text-6xl md:text-9xl font-bold text-white tracking-tighter leading-none font-premium">
                             NEOSIAM <span className="bg-gradient-to-r from-cyan-400 to-blue-600 bg-clip-text text-transparent">LOGISTICS</span>
                         </h1>
-                        <h1 className="text-5xl md:text-8xl font-bold text-white tracking-[0.2em] leading-none mt-4" style={{ fontFamily: "'Oswald', sans-serif" }}>
+                        <h1 className="text-5xl md:text-8xl font-bold text-white tracking-[0.2em] leading-none mt-4 font-premium">
                             & TRANSPORT
                         </h1>
                     </motion.div>
@@ -218,14 +218,14 @@ const HomePage: React.FC<HomePageProps> = ({
                         transition={{ delay: 0.2 }}
                         className="mt-12 flex flex-col items-center"
                     >
-                        <p className="text-white text-xl md:text-4xl font-bold tracking-wide mb-6" style={{ fontFamily: "'Kanit', sans-serif" }}>
+                        <p className="text-white text-xl md:text-4xl font-bold tracking-wide mb-6 font-thai">
                             บริษัท นีโอสยาม โลจิสติกส์ แอนด์ ทรานสปอร์ต จำกัด
                         </p>
 
                         {/* Cyan Separator */}
                         <div className="w-48 h-1 bg-cyan-500 rounded-full mb-8 shadow-[0_0_15px_rgba(6,182,212,0.5)]" />
 
-                        <p className="text-slate-300 text-lg md:text-2xl italic font-medium tracking-wide max-w-4xl" style={{ fontFamily: "'Kanit', sans-serif" }}>
+                        <p className="text-slate-300 text-lg md:text-2xl italic font-medium tracking-wide max-w-4xl font-thai">
                             " ให้บริการด้านการขนส่ง และกระจายสินค้า<br />
                             ทั้งแบบสินค้าพัสดุภัณฑ์ทั่วไป และแบบสินค้าเหมาคัน "
                         </p>
