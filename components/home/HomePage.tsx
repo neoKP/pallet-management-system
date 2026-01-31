@@ -148,7 +148,7 @@ const HomePage: React.FC<HomePageProps> = ({
                                     className="h-6 sm:h-7 md:h-8 object-contain"
                                 />
                             </div>
-                            <div className="hidden xs:flex flex-col">
+                            <div className="hidden sm:flex flex-col">
                                 <span className="text-cyan-400 font-black text-sm sm:text-base md:text-lg tracking-tight" style={{ fontFamily: 'Orbitron, sans-serif' }}>
                                     NeoSiam Logistics
                                 </span>
@@ -158,23 +158,22 @@ const HomePage: React.FC<HomePageProps> = ({
                             </div>
                         </div>
 
-                        {/* Center: Navigation Tabs - Hidden on Mobile/Tablet */}
-                        <nav className="hidden lg:flex items-center gap-1">
-                            {headerNavItems.map((item, index) => {
+                        {/* Center: Navigation Tabs - NOW VISIBLE ON ALL SCREENS */}
+                        <nav className="flex items-center gap-0.5 sm:gap-1 bg-slate-800/50 rounded-lg sm:rounded-xl p-0.5 sm:p-1 border border-white/5">
+                            {headerNavItems.map((item) => {
                                 const isActive = item.id === 'home';
                                 return (
                                     <button
                                         key={item.id}
                                         onClick={() => onNavigate(item.id as any)}
-                                        className={`relative px-4 xl:px-6 py-2 text-xs xl:text-sm font-bold tracking-wider transition-all duration-300 ${isActive
-                                            ? 'text-cyan-400'
-                                            : 'text-slate-400 hover:text-white'
+                                        className={`relative flex items-center gap-1 sm:gap-1.5 px-2 sm:px-3 md:px-4 xl:px-6 py-1.5 sm:py-2 text-[9px] sm:text-[10px] md:text-xs xl:text-sm font-bold tracking-wider transition-all duration-300 rounded-md sm:rounded-lg whitespace-nowrap ${isActive
+                                            ? 'bg-cyan-400 text-slate-900 shadow-lg shadow-cyan-400/30'
+                                            : 'text-slate-400 hover:text-white hover:bg-white/5'
                                             }`}
                                     >
-                                        {item.label}
-                                        {isActive && (
-                                            <div className="absolute bottom-0 left-1/2 -translate-x-1/2 w-full h-0.5 bg-cyan-400 rounded-full shadow-[0_0_10px_rgba(34,211,238,0.5)]" />
-                                        )}
+                                        <item.icon size={12} className="sm:hidden" />
+                                        <item.icon size={14} className="hidden sm:block" />
+                                        <span className="hidden sm:inline">{item.label}</span>
                                     </button>
                                 );
                             })}
@@ -211,19 +210,19 @@ const HomePage: React.FC<HomePageProps> = ({
                                         <UserIcon size={16} className="text-slate-300 hidden md:block" />
                                     </div>
                                     {/* Username - Hidden on small mobile */}
-                                    <span className="text-white font-bold text-xs sm:text-sm uppercase hidden md:block">
+                                    <span className="text-white font-bold text-xs sm:text-sm uppercase hidden lg:block">
                                         {currentUser.username}
                                     </span>
                                     {/* Divider - Hidden on mobile */}
-                                    <div className="w-px h-4 sm:h-5 md:h-6 bg-white/10 hidden sm:block" />
+                                    <div className="w-px h-4 sm:h-5 md:h-6 bg-white/10 hidden md:block" />
                                     {/* Sign Out Button - Compact on Mobile */}
                                     <button
                                         onClick={onLogout}
                                         className="px-2 sm:px-3 py-1 sm:py-1.5 bg-cyan-500/20 hover:bg-cyan-500/30 text-cyan-400 text-[9px] sm:text-[10px] md:text-xs font-bold rounded-md sm:rounded-lg transition-all border border-cyan-500/30 uppercase tracking-wider"
                                         title="ออกจากระบบ"
                                     >
-                                        <span className="hidden sm:inline">SIGN OUT</span>
-                                        <LogOut size={12} className="sm:hidden" />
+                                        <span className="hidden md:inline">SIGN OUT</span>
+                                        <LogOut size={12} className="md:hidden" />
                                     </button>
                                 </div>
                             ) : (
@@ -236,23 +235,6 @@ const HomePage: React.FC<HomePageProps> = ({
                             )}
                         </div>
                     </div>
-                </div>
-
-                {/* Mobile Navigation Pill - Improved for mobile */}
-                <div className="lg:hidden mt-2 sm:mt-3 md:mt-4 flex justify-center px-2">
-                    <nav className="flex items-center bg-slate-900/80 backdrop-blur-xl border border-white/5 rounded-lg sm:rounded-xl p-0.5 sm:p-1 overflow-x-auto max-w-full scrollbar-hide">
-                        {headerNavItems.slice(0, 4).map((item) => (
-                            <button
-                                key={item.id}
-                                onClick={() => onNavigate(item.id as any)}
-                                className={`flex items-center gap-1 sm:gap-1.5 px-2 sm:px-3 py-1.5 sm:py-2 rounded-md sm:rounded-lg text-[9px] sm:text-[10px] font-bold transition-all whitespace-nowrap ${item.id === 'home' ? 'bg-cyan-400 text-slate-900' : 'text-slate-400'}`}
-                            >
-                                <item.icon size={12} className="sm:hidden" />
-                                <item.icon size={14} className="hidden sm:block" />
-                                <span className="hidden xs:inline">{item.label}</span>
-                            </button>
-                        ))}
-                    </nav>
                 </div>
             </header>
 
