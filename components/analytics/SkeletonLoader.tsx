@@ -9,8 +9,8 @@ interface SkeletonProps {
 
 const SkeletonBase: React.FC<SkeletonProps> = ({ className = '', isDarkMode, style }) => (
     <div
-        className={`animate-pulse rounded-lg ${className} ${isDarkMode ? 'bg-slate-800' : 'bg-slate-200'}`}
-        style={style}
+        className={`animate-pulse rounded-lg js-dynamic-height js-dynamic-vars ${className} ${isDarkMode ? 'bg-slate-800' : 'bg-slate-200'}`}
+        style={{ ...style, '--dynamic-height': style?.height } as React.CSSProperties}
     />
 );
 
@@ -37,12 +37,12 @@ export const ChartSkeleton: React.FC<{ title: string; isDarkMode: boolean; heigh
             <h3 className={`text-lg font-bold ${isDarkMode ? 'text-white' : 'text-slate-900'}`}>{title}</h3>
             <SkeletonBase className="h-4 w-16" isDarkMode={isDarkMode} />
         </div>
-        <div style={{ height: `${height}px` } as React.CSSProperties} className="flex items-end gap-2 px-2">
+        <div style={{ height } as React.CSSProperties} className="flex items-end gap-2 px-2">
             {[...Array(12)].map((_, i) => (
                 <SkeletonBase
                     key={i}
                     className="flex-1"
-                    style={{ height: `${20 + Math.random() * 80}%` } as React.CSSProperties}
+                    style={{ '--dynamic-height': `${20 + Math.random() * 80}%` } as React.CSSProperties}
                     isDarkMode={isDarkMode}
                 />
             ))}

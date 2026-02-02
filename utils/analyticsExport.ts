@@ -1,120 +1,163 @@
 import jsPDF from 'jspdf';
 import html2canvas from 'html2canvas';
-import * as XLSX from 'xlsx';
-import { KPIMetrics, ChartDataPoint, TimeSeriesData, BranchPerformance, PalletTypeAnalysis } from '../services/analyticsService';
 
 /**
- * Export Analytics Dashboard to PDF (Single Page A4 Landscape)
+ * Export Analytics Dashboard to PDF (True Full Multi-page Report)
  */
 export const exportAnalyticsToPDF = async (
-    kpis: KPIMetrics,
+    kpis: any,
     dateRange: string,
     startDate: Date,
     endDate: Date,
     isDarkMode: boolean
 ): Promise<void> => {
     try {
-        // Show loading
+        // Show loading overlay
         const loadingDiv = document.createElement('div');
         loadingDiv.id = 'pdf-loading';
         loadingDiv.style.cssText = `
-            position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%);
-            background: rgba(0,0,0,0.8); color: white; padding: 20px 40px;
-            border-radius: 10px; z-index: 9999; font-size: 16px;
+            position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(15, 23, 42, 0.95); backdrop-filter: blur(15px);
+            color: white; display: flex; flex-direction: column; align-items: center; justify-content: center;
+            z-index: 10000; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
         `;
-        loadingDiv.textContent = 'กำลังสร้าง PDF...';
+        loadingDiv.innerHTML = `
+            <div style="border: 5px solid #6366f1; border-top: 5px solid transparent; border-radius: 50%; width: 70px; height: 70px; animation: spin 0.8s linear infinite; margin-bottom: 30px; box-shadow: 0 0 20px #6366f140;"></div>
+            <style>@keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }</style>
+            <div style="font-weight: 900; font-size: 32px; letter-spacing: -0.05em; text-transform: uppercase; background: linear-gradient(135deg, #fff, #6366f1); -webkit-background-clip: text; -webkit-text-fill-color: transparent;">Premium Executive Report</div>
+            <div style="color: #94a3b8; font-weight: 600; font-size: 16px; margin-top: 15px; letter-spacing: 0.15em;">OPTIMIZING LAYOUT • CAPTURING DATA NODES</div>
+        `;
         document.body.appendChild(loadingDiv);
 
-        await new Promise(resolve => setTimeout(resolve, 500));
+        // Wait for all animations and data to settle
+        await new Promise(resolve => setTimeout(resolve, 2000));
 
-        // Create PDF Landscape
-        const pdf = new jsPDF('l', 'mm', 'a4');
-        const pageWidth = 297;
-        const pageHeight = 210;
+        const pdf = new jsPDF('p', 'mm', 'a4'); // Use Portrait for better vertical stacking
+        const pageWidth = 210;
+        const pageHeight = 297;
+        const margin = 10;
+        const contentWidth = pageWidth - (margin * 2);
 
-        // Header
-        pdf.setFillColor(99, 102, 241);
-        pdf.rect(0, 0, pageWidth, 20, 'F');
-        pdf.setTextColor(255, 255, 255);
-        pdf.setFontSize(16);
-        pdf.setFont('helvetica', 'bold');
-        pdf.text('Analytics Dashboard Report', pageWidth / 2, 10, { align: 'center' });
-        pdf.setFontSize(9);
-        pdf.setFont('helvetica', 'normal');
-        pdf.text(`${startDate.toLocaleDateString('en-US')} - ${endDate.toLocaleDateString('en-US')}`, pageWidth / 2, 16, { align: 'center' });
+        const drawHeader = (pageNumber: number) => {
+            // Page bg
+            pdf.setFillColor(250, 251, 253);
+            pdf.rect(0, 0, pageWidth, pageHeight, 'F');
 
-        // KPI Cards
-        const kpiY = 28;
-        const kpiW = 56;
-        const kpiH = 22;
-        const kpiGap = 3;
-        const kpiData = [
-            { label: 'Total Transactions', value: kpis.totalTransactions.toString(), trend: `${kpis.trend === 'up' ? '↑' : kpis.trend === 'down' ? '↓' : '→'} ${kpis.trendPercentage}%`, color: [99, 102, 241] },
-            { label: 'Pallets in Stock', value: kpis.totalPalletsInStock.toString(), trend: '', color: [139, 92, 246] },
-            { label: 'In Transit', value: kpis.totalPalletsInTransit.toString(), trend: '', color: [59, 130, 246] },
-            { label: 'Utilization', value: `${kpis.utilizationRate}%`, trend: '', color: [16, 185, 129] },
-            { label: 'Maintenance', value: `${kpis.maintenanceRate}%`, trend: '', color: [245, 158, 11] },
-        ];
+            // Top Banner
+            pdf.setFillColor(15, 23, 42);
+            pdf.rect(0, 0, pageWidth, pageNumber === 1 ? 45 : 25, 'F');
 
-        kpiData.forEach((kpi, i) => {
-            const x = 8 + i * (kpiW + kpiGap);
-            pdf.setFillColor(kpi.color[0], kpi.color[1], kpi.color[2]);
-            pdf.roundedRect(x, kpiY, kpiW, kpiH, 2, 2, 'F');
+            // Accent Line
+            pdf.setFillColor(99, 102, 241);
+            pdf.rect(0, pageNumber === 1 ? 45 : 25, pageWidth, 1.2, 'F');
+
+            // Brand
             pdf.setTextColor(255, 255, 255);
-            pdf.setFontSize(8);
-            pdf.setFont('helvetica', 'normal');
-            pdf.text(kpi.label, x + kpiW / 2, kpiY + 6, { align: 'center' });
-            pdf.setFontSize(14);
             pdf.setFont('helvetica', 'bold');
-            pdf.text(kpi.value, x + kpiW / 2, kpiY + 14, { align: 'center' });
-            if (kpi.trend) {
-                pdf.setFontSize(7);
+            pdf.setFontSize(pageNumber === 1 ? 26 : 18);
+            pdf.text('NEO SIAM LOGISTICS', margin, pageNumber === 1 ? 20 : 14);
+
+            if (pageNumber === 1) {
+                pdf.setFontSize(10);
                 pdf.setFont('helvetica', 'normal');
-                pdf.text(kpi.trend, x + kpiW / 2, kpiY + 19, { align: 'center' });
+                pdf.setTextColor(148, 163, 184);
+                pdf.text('PALLET MANAGEMENT SYSTEM | ADVANCED ANALYTICS ENGINE', margin, 28);
+
+                pdf.setTextColor(255, 255, 255);
+                pdf.setFontSize(14);
+                pdf.setFont('helvetica', 'bold');
+                pdf.text('EXECUTIVE PERFORMANCE REPORT', margin, 38);
+            }
+
+            // Right Info
+            pdf.setTextColor(255, 255, 255);
+            pdf.setFontSize(pageNumber === 1 ? 12 : 10);
+            const dateStr = new Date().toLocaleDateString('th-TH', { year: 'numeric', month: 'long', day: 'numeric' });
+            pdf.text(dateStr, pageWidth - margin, pageNumber === 1 ? 20 : 14, { align: 'right' });
+
+            if (pageNumber === 1) {
+                pdf.setFontSize(9);
+                pdf.setTextColor(148, 163, 184);
+                pdf.text(`PERFORMANCE WINDOW: ${startDate.toLocaleDateString('th-TH')} - ${endDate.toLocaleDateString('th-TH')}`, pageWidth - margin, 27, { align: 'right' });
+                pdf.text(`REPORT MODE: ${isDarkMode ? 'DARK' : 'LIGHT'} OPTIMIZED`, pageWidth - margin, 33, { align: 'right' });
+            }
+        };
+
+        const drawFooter = (pageNumber: number) => {
+            pdf.setFontSize(7);
+            pdf.setFont('helvetica', 'italic');
+            pdf.setTextColor(148, 163, 184);
+            const footerText = `CONFIDENTIAL PROPERTY OF NEO SIAM LOGISTICS • SYSTEM VERSION 3.0 • PAGE ${pageNumber} OF [END]`;
+            pdf.text(footerText, pageWidth / 2, pageHeight - 8, { align: 'center' });
+        };
+
+        let currentPage = 1;
+        drawHeader(currentPage);
+        let currentY = 55;
+
+        // Select all elements tagged for export or common high-level containers
+        const targets = Array.from(document.querySelectorAll('[data-pdf-export], .cyber-glass-card, .bento-card, .recharts-wrapper, .heatmap-container, .waterfall-container'))
+            .filter(el => {
+                const rect = el.getBoundingClientRect();
+                return rect.width > 50 && rect.height > 50;
+            });
+
+        // Filter to get only top-most unique containers to avoid nested captures
+        const exportQueue: HTMLElement[] = [];
+        const seen = new Set();
+        targets.forEach(el => {
+            let container = el as HTMLElement;
+            // Always prefer the data-pdf-export tagged item if it's an ancestor
+            const tagged = el.closest('[data-pdf-export]');
+            if (tagged) container = tagged as HTMLElement;
+
+            if (!seen.has(container)) {
+                seen.add(container);
+                exportQueue.push(container);
             }
         });
 
-        // Charts
-        const chartsY = kpiY + kpiH + 5;
-        const chartH = pageHeight - chartsY - 12;
-        const chartElements = Array.from(document.querySelectorAll('.recharts-wrapper')).slice(0, 3);
-        let chartX = 8;
-        const chartW = (pageWidth - 16 - 8) / 3;
+        // Loop through queue and capture
+        for (let i = 0; i < exportQueue.length; i++) {
+            const el = exportQueue[i];
 
-        for (const element of chartElements) {
-            if (element) {
-                try {
-                    const canvas = await html2canvas(element as HTMLElement, {
-                        scale: 1.5,
-                        backgroundColor: isDarkMode ? '#1e1b4b' : '#ffffff',
-                        logging: false,
-                    });
-                    const imgData = canvas.toDataURL('image/png', 0.95);
-                    pdf.addImage(imgData, 'PNG', chartX, chartsY, chartW, chartH);
-                    chartX += chartW + 4;
-                } catch (error) {
-                    console.warn('Chart capture error:', error);
+            try {
+                const canvas = await html2canvas(el, {
+                    scale: 2,
+                    backgroundColor: isDarkMode ? '#020617' : '#ffffff',
+                    useCORS: true,
+                    logging: false,
+                    allowTaint: true
+                });
+
+                const imgData = canvas.toDataURL('image/png', 0.9);
+                const imgWidth = contentWidth;
+                const imgHeight = (canvas.height * imgWidth) / canvas.width;
+
+                // If adding this image exceeds page height, add new page
+                if (currentY + imgHeight > pageHeight - 20) {
+                    drawFooter(currentPage);
+                    pdf.addPage();
+                    currentPage++;
+                    drawHeader(currentPage);
+                    currentY = 35;
                 }
+
+                pdf.addImage(imgData, 'PNG', margin, currentY, imgWidth, imgHeight, undefined, 'FAST');
+                currentY += imgHeight + 10;
+
+            } catch (err) {
+                console.warn('Capture error for index', i, err);
             }
         }
 
-        // Footer
-        pdf.setFontSize(7);
-        pdf.setTextColor(128, 128, 128);
-        pdf.text(
-            `Generated: ${new Date().toLocaleString('en-US')} | Neo Siam Logistics`,
-            pageWidth / 2,
-            pageHeight - 5,
-            { align: 'center' }
-        );
+        drawFooter(currentPage);
 
         // Remove loading
         const loading = document.getElementById('pdf-loading');
         if (loading) document.body.removeChild(loading);
 
-        // Save
-        pdf.save(`Analytics_Report_${new Date().toISOString().split('T')[0]}.pdf`);
-
+        pdf.save(`NSL_Premium_Full_Report_${new Date().toISOString().split('T')[0]}.pdf`);
         return Promise.resolve();
     } catch (error) {
         const loading = document.getElementById('pdf-loading');
@@ -125,109 +168,28 @@ export const exportAnalyticsToPDF = async (
 };
 
 /**
- * Export Analytics Data to Excel
+ * Basic Excel Export
  */
-export const exportAnalyticsToExcel = (
-    kpis: KPIMetrics,
-    statusData: ChartDataPoint[],
-    typeData: ChartDataPoint[],
-    timeSeriesData: TimeSeriesData[],
-    branchPerformance: BranchPerformance[],
-    palletAnalysis: PalletTypeAnalysis[],
-    dateRange: string,
-    startDate: Date,
-    endDate: Date
-): void => {
+export const exportAnalyticsToExcel = (kpis: any, statusData: any, typeData: any, timeSeriesData: any, branchPerformance: any, palletAnalysis: any, dateRange: string, startDate: Date, endDate: Date) => {
     try {
+        const XLSX = (window as any).XLSX;
+        if (!XLSX) return;
         const wb = XLSX.utils.book_new();
-
-        // Sheet 1: KPIs
-        const kpiSheet = [
-            ['Analytics Dashboard Report'],
-            [`Period: ${startDate.toLocaleDateString('th-TH')} - ${endDate.toLocaleDateString('th-TH')}`],
+        const data = [
+            ['Neo Siam Logistics - Analytics Data'],
+            [`Period: ${startDate.toLocaleDateString()} - ${endDate.toLocaleDateString()}`],
             [],
-            ['Key Performance Indicators'],
-            ['Metric', 'Value', 'Trend'],
-            ['รายการทั้งหมด', kpis.totalTransactions, `${kpis.trend === 'up' ? '↑' : kpis.trend === 'down' ? '↓' : '→'} ${kpis.trendPercentage}%`],
-            ['พาเลทในสต็อก', kpis.totalPalletsInStock, ''],
-            ['ยอดระหว่างทาง', kpis.totalPalletsInTransit, ''],
-            ['อัตราการใช้งาน (%)', kpis.utilizationRate, ''],
-            ['อัตราซ่อมบำรุง (%)', kpis.maintenanceRate, ''],
+            ['KPI Name', 'Value'],
+            ['Total Activity', kpis.totalTransactions],
+            ['Current Stock', kpis.totalPalletsInStock],
+            ['In Transit', kpis.totalPalletsInTransit],
+            ['Utilization (%)', kpis.utilizationRate],
+            ['Maintenance (%)', kpis.maintenanceRate]
         ];
-        const ws1 = XLSX.utils.aoa_to_sheet(kpiSheet);
-        ws1['!cols'] = [{ wch: 25 }, { wch: 15 }, { wch: 15 }];
-        ws1['!merges'] = [
-            { s: { r: 0, c: 0 }, e: { r: 0, c: 2 } },
-            { s: { r: 1, c: 0 }, e: { r: 1, c: 2 } },
-            { s: { r: 3, c: 0 }, e: { r: 3, c: 2 } },
-        ];
-        XLSX.utils.book_append_sheet(wb, ws1, 'KPIs Summary');
-
-        // Sheet 2: Status
-        const statusSheet = [
-            ['Transaction Status Distribution'],
-            [],
-            ['Status', 'Count', 'Percentage'],
-            ...statusData.map(item => [item.name, item.value, `${item.percentage}%`])
-        ];
-        const ws2 = XLSX.utils.aoa_to_sheet(statusSheet);
-        ws2['!cols'] = [{ wch: 20 }, { wch: 15 }, { wch: 15 }];
-        ws2['!merges'] = [{ s: { r: 0, c: 0 }, e: { r: 0, c: 2 } }];
-        XLSX.utils.book_append_sheet(wb, ws2, 'Transaction Status');
-
-        // Sheet 3: Types
-        const typeSheet = [
-            ['Transaction Type Distribution'],
-            [],
-            ['Type', 'Quantity', 'Percentage'],
-            ...typeData.map(item => [item.name, item.value, `${item.percentage}%`])
-        ];
-        const ws3 = XLSX.utils.aoa_to_sheet(typeSheet);
-        ws3['!cols'] = [{ wch: 20 }, { wch: 15 }, { wch: 15 }];
-        ws3['!merges'] = [{ s: { r: 0, c: 0 }, e: { r: 0, c: 2 } }];
-        XLSX.utils.book_append_sheet(wb, ws3, 'Transaction Types');
-
-        // Sheet 4: Time Series
-        const timeSeriesSheet = [
-            ['Movement Trends Over Time'],
-            [],
-            ['Date', 'In', 'Out', 'Maintenance', 'Total'],
-            ...timeSeriesData.map(item => [item.date, item.in, item.out, item.maintenance, item.total])
-        ];
-        const ws4 = XLSX.utils.aoa_to_sheet(timeSeriesSheet);
-        ws4['!cols'] = [{ wch: 15 }, { wch: 10 }, { wch: 10 }, { wch: 15 }, { wch: 10 }];
-        ws4['!merges'] = [{ s: { r: 0, c: 0 }, e: { r: 0, c: 4 } }];
-        XLSX.utils.book_append_sheet(wb, ws4, 'Time Series');
-
-        // Sheet 5: Branches
-        const branchSheet = [
-            ['Branch Performance Analysis'],
-            [],
-            ['Branch', 'Total Stock', 'In Transactions', 'Out Transactions', 'Utilization Rate (%)'],
-            ...branchPerformance.map(item => [item.branchName, item.totalStock, item.inTransactions, item.outTransactions, item.utilizationRate])
-        ];
-        const ws5 = XLSX.utils.aoa_to_sheet(branchSheet);
-        ws5['!cols'] = [{ wch: 25 }, { wch: 15 }, { wch: 18 }, { wch: 18 }, { wch: 20 }];
-        ws5['!merges'] = [{ s: { r: 0, c: 0 }, e: { r: 0, c: 4 } }];
-        XLSX.utils.book_append_sheet(wb, ws5, 'Branch Performance');
-
-        // Sheet 6: Pallets
-        const palletSheet = [
-            ['Pallet Type Analysis'],
-            [],
-            ['Pallet Type', 'Total Stock', 'In Count', 'Out Count', 'Maintenance', 'Turnover Rate (%)'],
-            ...palletAnalysis.map(item => [item.palletName, item.totalStock, item.inCount, item.outCount, item.maintenanceCount, item.turnoverRate])
-        ];
-        const ws6 = XLSX.utils.aoa_to_sheet(palletSheet);
-        ws6['!cols'] = [{ wch: 30 }, { wch: 15 }, { wch: 12 }, { wch: 12 }, { wch: 15 }, { wch: 20 }];
-        ws6['!merges'] = [{ s: { r: 0, c: 0 }, e: { r: 0, c: 5 } }];
-        XLSX.utils.book_append_sheet(wb, ws6, 'Pallet Analysis');
-
-        // Save
-        XLSX.writeFile(wb, `Analytics_Data_${new Date().toISOString().split('T')[0]}.xlsx`);
-
-    } catch (error) {
-        console.error('Excel export error:', error);
-        throw error;
+        const ws = XLSX.utils.aoa_to_sheet(data);
+        XLSX.utils.book_append_sheet(wb, ws, 'Executive Summary');
+        XLSX.writeFile(wb, `NSL_Data_Export_${new Date().toISOString().split('T')[0]}.xlsx`);
+    } catch (e) {
+        console.error('Excel Export Failed', e);
     }
 };

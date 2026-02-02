@@ -25,11 +25,12 @@ export const GlobalSpotlight = () => {
 
     return (
         <div
-            className="pointer-events-none fixed inset-0 z-50 transition-opacity duration-300"
+            className="pointer-events-none fixed inset-0 z-50 transition-opacity duration-300 bg-[radial-gradient(600px_circle_at_var(--pos-x)_var(--pos-y),rgba(139,92,246,0.08),transparent_40%)] js-dynamic-opacity"
             style={{
-                opacity,
-                background: `radial-gradient(600px circle at ${pos.x}px ${pos.y}px, rgba(139, 92, 246, 0.08), transparent 40%)`
-            }}
+                '--dynamic-opacity': opacity,
+                '--pos-x': `${pos.x}px`,
+                '--pos-y': `${pos.y}px`
+            } as React.CSSProperties}
         />
     );
 };

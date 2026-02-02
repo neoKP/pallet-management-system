@@ -155,6 +155,7 @@ export const RechartsBarChart: React.FC<RechartsBarChartProps> = ({
                 }
                 ${isHovering ? 'dynamic-shadow' : ''}
             `}
+            data-pdf-export="chart"
             style={{
                 '--dynamic-shadow-value': isHovering ? `0 20px 40px rgba(var(--theme-primary-rgb), 0.15)` : 'none'
             } as React.CSSProperties}

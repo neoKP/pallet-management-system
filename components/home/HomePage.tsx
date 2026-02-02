@@ -66,7 +66,7 @@ const HomePage: React.FC<HomePageProps> = ({
         return () => clearInterval(timer);
     }, []);
 
-    // Format date as "Saturday, January 31, 2026"
+    // Format date
     const formatDate = (date: Date): string => {
         return date.toLocaleDateString('en-US', {
             weekday: 'long',
@@ -76,7 +76,7 @@ const HomePage: React.FC<HomePageProps> = ({
         });
     };
 
-    // Format time as "11:14:41 AM"
+    // Format time
     const formatTime = (date: Date): string => {
         return date.toLocaleTimeString('en-US', {
             hour: '2-digit',
@@ -84,27 +84,6 @@ const HomePage: React.FC<HomePageProps> = ({
             second: '2-digit',
             hour12: true
         });
-    };
-
-    // Calculate stats
-    const calculateTotalStock = (): Record<PalletId, number> => {
-        const totals: Record<string, number> = {};
-        PALLET_TYPES.forEach(p => totals[p.id] = 0);
-
-        if (selectedBranch === 'ALL') {
-            BRANCHES.forEach(branch => {
-                if (stock[branch.id]) {
-                    PALLET_TYPES.forEach(p => {
-                        totals[p.id] += stock[branch.id][p.id] || 0;
-                    });
-                }
-            });
-        } else if (stock[selectedBranch]) {
-            PALLET_TYPES.forEach(p => {
-                totals[p.id] = stock[selectedBranch][p.id] || 0;
-            });
-        }
-        return totals as Record<PalletId, number>;
     };
 
     const totalJobs = transactions.length;
@@ -124,232 +103,243 @@ const HomePage: React.FC<HomePageProps> = ({
         return true;
     });
 
-    const branchName = currentUser?.branchId
-        ? BRANCHES.find(b => b.id === currentUser.branchId)?.name || currentUser.branchId
-        : '';
-
     return (
-        <div className="min-h-screen bg-black flex flex-col relative overflow-hidden font-sans">
+        <div className="min-h-screen bg-black flex flex-col relative overflow-hidden font-sans selection:bg-cyan-500/30">
             {/* Background Image with High Contrast Overlay */}
             <div className="absolute inset-0 bg-cover bg-center bg-no-repeat opacity-60 bg-[url('https://images.unsplash.com/photo-1586528116311-ad8dd3c8310d?q=80&w=2070')]" />
-            <div className="absolute inset-0 bg-gradient-to-t from-black via-black/40 to-black/20" />
+            <div className="absolute inset-0 bg-gradient-to-t from-black via-black/60 to-black/30" />
 
-            {/* Top Navigation Bar - Glass Morphism Style - Mobile Adaptive */}
+            {/* Top Navigation Bar */}
             <header className="relative z-50">
-                {/* Main Header Bar with Glass Effect */}
                 <div className="bg-slate-900/70 backdrop-blur-2xl border-b border-white/10 shadow-2xl">
-                    <div className="max-w-full mx-auto px-3 sm:px-4 md:px-6 py-2 sm:py-3 flex items-center justify-between gap-2 sm:gap-4">
-                        {/* Left: Logo & Title Section - Adaptive */}
-                        <div className="flex items-center gap-2 sm:gap-3 md:gap-4 shrink-0">
-                            <div className="bg-white p-1 sm:p-1.5 rounded-lg shadow-lg shadow-white/10">
+                    <div className="max-w-full mx-auto px-4 md:px-6 py-3 flex items-center justify-between gap-4">
+                        {/* Left: Logo & Title Section */}
+                        <motion.div
+                            initial={{ x: -20, opacity: 0 }}
+                            animate={{ x: 0, opacity: 1 }}
+                            className="flex items-center gap-4 shrink-0"
+                        >
+                            <div className="bg-white p-1.5 rounded-lg shadow-xl shadow-cyan-500/10">
                                 <img
                                     src="/logo.png"
                                     alt="NeoSiam"
-                                    className="h-6 sm:h-7 md:h-8 object-contain"
+                                    className="h-8 object-contain"
                                 />
                             </div>
                             <div className="hidden sm:flex flex-col">
-                                <span className="text-cyan-400 font-black text-sm sm:text-base md:text-lg tracking-tight font-orbitron">
-                                    NeoSiam Logistics
+                                <span className="text-white font-black text-lg tracking-tight font-orbitron">
+                                    Neo<span className="text-cyan-400">Siam</span>
                                 </span>
-                                <span className="text-slate-500 text-[7px] sm:text-[8px] md:text-[9px] font-bold uppercase tracking-[0.2em] sm:tracking-[0.3em]">
-                                    PALLET-MANAGEMENT-SYSTEM
+                                <span className="text-slate-500 text-[9px] font-black uppercase tracking-[0.3em] mt-0.5">
+                                    Operational Systems
                                 </span>
                             </div>
-                        </div>
+                        </motion.div>
 
-                        {/* Center: Navigation Tabs - NOW VISIBLE ON ALL SCREENS */}
-                        <nav className="flex items-center gap-0.5 sm:gap-1 bg-slate-800/50 rounded-lg sm:rounded-xl p-0.5 sm:p-1 border border-white/5">
+                        {/* Center: Navigation Tabs */}
+                        <nav className="flex items-center gap-1 bg-slate-900/50 rounded-2xl p-1 border border-white/5">
                             {headerNavItems.map((item) => {
                                 const isActive = item.id === 'home';
                                 return (
-                                    <button
+                                    <motion.button
                                         key={item.id}
+                                        whileHover={{ y: -1 }}
+                                        whileTap={{ scale: 0.95 }}
                                         onClick={() => onNavigate(item.id as any)}
-                                        className={`relative flex items-center gap-1 sm:gap-1.5 px-2 sm:px-3 md:px-4 xl:px-6 py-1.5 sm:py-2 text-[9px] sm:text-[10px] md:text-xs xl:text-sm font-bold tracking-wider transition-all duration-300 rounded-md sm:rounded-lg whitespace-nowrap ${isActive
-                                            ? 'bg-cyan-400 text-slate-900 shadow-lg shadow-cyan-400/30'
+                                        className={`relative flex items-center gap-2 px-6 py-2.5 text-xs font-black tracking-widest transition-all duration-300 rounded-xl cursor-pointer ${isActive
+                                            ? 'bg-gradient-to-r from-cyan-500 to-blue-600 text-slate-900 shadow-xl shadow-cyan-500/20'
                                             : 'text-slate-400 hover:text-white hover:bg-white/5'
                                             }`}
                                     >
-                                        <item.icon size={12} className="sm:hidden" />
-                                        <item.icon size={14} className="hidden sm:block" />
-                                        <span className="hidden sm:inline">{item.label}</span>
-                                    </button>
+                                        <item.icon size={14} />
+                                        <span className="hidden md:inline uppercase">{item.label}</span>
+                                    </motion.button>
                                 );
                             })}
                         </nav>
 
-                        {/* Right: Date, Time, User Section - Adaptive */}
-                        <div className="flex items-center gap-2 sm:gap-3 md:gap-4">
-                            {/* Date Display - Hidden on smaller screens */}
-                            <div className="hidden xl:flex items-center gap-2 text-slate-300">
-                                <Calendar size={14} className="text-slate-500" />
-                                <span className="text-sm font-medium tracking-wide">
-                                    {formatDate(currentTime)}
+                        {/* Right: Date, Time, User Section */}
+                        <div className="flex items-center gap-4">
+                            {/* Time Display */}
+                            <motion.div
+                                initial={{ opacity: 0 }}
+                                animate={{ opacity: 1 }}
+                                className="bg-gradient-to-r from-cyan-500/20 to-blue-500/20 border border-cyan-500/30 rounded-2xl px-4 py-2 hidden sm:flex items-center gap-3"
+                            >
+                                <Clock size={16} className="text-cyan-400" />
+                                <span className="text-cyan-400 font-black text-sm tracking-widest font-mono">
+                                    {formatTime(currentTime)}
                                 </span>
-                            </div>
+                            </motion.div>
 
-                            {/* Time Display with Cyan Background - Compact on Mobile */}
-                            <div className="bg-gradient-to-r from-cyan-500 to-cyan-400 rounded-lg px-2 sm:px-3 md:px-4 py-1.5 sm:py-2 shadow-lg shadow-cyan-500/30">
-                                <div className="flex items-center gap-1 sm:gap-2">
-                                    <Clock size={12} className="text-slate-900 sm:hidden" />
-                                    <Clock size={14} className="text-slate-900 hidden sm:block" />
-                                    <span className="text-slate-900 font-black text-[10px] sm:text-xs md:text-sm tracking-wide font-mono">
-                                        {formatTime(currentTime)}
-                                    </span>
-                                </div>
-                            </div>
-
-                            {/* User Section - Adaptive */}
+                            {/* User Section */}
                             {currentUser ? (
-                                <div className="flex items-center gap-1.5 sm:gap-2 md:gap-3 bg-slate-800/50 backdrop-blur-xl border border-white/5 rounded-lg sm:rounded-xl px-2 sm:px-3 py-1 sm:py-1.5">
-                                    {/* User Icon */}
-                                    <div className="w-6 h-6 sm:w-7 sm:h-7 md:w-8 md:h-8 bg-slate-700 rounded-full flex items-center justify-center border border-slate-600">
-                                        <UserIcon size={12} className="text-slate-300 sm:hidden" />
-                                        <UserIcon size={14} className="text-slate-300 hidden sm:block md:hidden" />
-                                        <UserIcon size={16} className="text-slate-300 hidden md:block" />
+                                <div className="flex items-center gap-4 bg-white/5 backdrop-blur-3xl border border-white/10 rounded-2xl px-3 py-1.5 hover:bg-white/10 transition-colors">
+                                    <div className="w-8 h-8 bg-gradient-to-br from-cyan-500 to-blue-600 rounded-full flex items-center justify-center border border-white/10 shadow-lg">
+                                        <UserIcon size={16} className="text-slate-900" />
                                     </div>
-                                    {/* Username - Hidden on small mobile */}
-                                    <span className="text-white font-bold text-xs sm:text-sm uppercase hidden lg:block">
-                                        {currentUser.username}
-                                    </span>
-                                    {/* Divider - Hidden on mobile */}
-                                    <div className="w-px h-4 sm:h-5 md:h-6 bg-white/10 hidden md:block" />
-                                    {/* Sign Out Button - Compact on Mobile */}
-                                    <button
+                                    <div className="hidden lg:flex flex-col">
+                                        <span className="text-white font-black text-[10px] uppercase leading-none">
+                                            {currentUser.username}
+                                        </span>
+                                        <span className="text-cyan-400 text-[8px] font-black uppercase tracking-tighter mt-1 opacity-80">
+                                            {currentUser.role}
+                                        </span>
+                                    </div>
+                                    <div className="w-px h-6 bg-white/10 hidden lg:block" />
+                                    <motion.button
+                                        whileHover={{ scale: 1.1, color: '#f87171' }}
+                                        whileTap={{ scale: 0.9 }}
                                         onClick={onLogout}
-                                        className="px-2 sm:px-3 py-1 sm:py-1.5 bg-cyan-500/20 hover:bg-cyan-500/30 text-cyan-400 text-[9px] sm:text-[10px] md:text-xs font-bold rounded-md sm:rounded-lg transition-all border border-cyan-500/30 uppercase tracking-wider"
-                                        title="ออกจากระบบ"
+                                        className="p-2 text-slate-400 hover:text-red-400 transition-all cursor-pointer"
+                                        title="คิกออฟ"
                                     >
-                                        <span className="hidden md:inline">SIGN OUT</span>
-                                        <LogOut size={12} className="md:hidden" />
-                                    </button>
+                                        <LogOut size={16} />
+                                    </motion.button>
                                 </div>
                             ) : (
-                                <button
+                                <motion.button
+                                    whileHover={{ scale: 1.05, boxShadow: '0 0 20px rgba(6,182,212,0.4)' }}
+                                    whileTap={{ scale: 0.95 }}
                                     onClick={openLogin}
-                                    className="px-3 sm:px-4 md:px-6 py-1.5 sm:py-2 bg-cyan-400 hover:bg-cyan-300 text-slate-900 font-black rounded-lg sm:rounded-xl transition-all shadow-lg shadow-cyan-400/20 uppercase text-[9px] sm:text-[10px] md:text-xs tracking-widest"
+                                    className="px-8 py-2.5 bg-cyan-400 hover:bg-cyan-300 text-slate-900 font-black rounded-2xl transition-all shadow-xl shadow-cyan-400/20 uppercase text-xs tracking-[0.2em] cursor-pointer"
                                 >
-                                    LOGIN
-                                </button>
+                                    Login
+                                </motion.button>
                             )}
                         </div>
                     </div>
                 </div>
             </header>
 
-            {/* Main Hero Section - Adaptive Layout */}
-            <main className="relative z-10 flex-1 flex flex-col items-center justify-center px-3 sm:px-4 md:px-6 max-w-7xl mx-auto w-full py-4 sm:py-6 md:py-8">
-                <div className="text-center mb-6 sm:mb-8 md:mb-12">
+            {/* Main Hero Section */}
+            <main className="relative z-10 flex-1 flex flex-col items-center justify-center px-4 md:px-6 max-w-7xl mx-auto w-full py-8">
+                <div className="text-center mb-12">
                     <motion.div
-                        initial={{ opacity: 0, y: -20 }}
+                        initial={{ opacity: 0, y: -40 }}
                         animate={{ opacity: 1, y: 0 }}
                         className="flex flex-col items-center"
                     >
-                        {/* Main Title - Fully Adaptive Font Sizes */}
-                        <h1 className="text-3xl xs:text-4xl sm:text-5xl md:text-7xl lg:text-8xl xl:text-9xl font-bold text-white tracking-tighter leading-none font-premium">
-                            NEOSIAM <span className="bg-gradient-to-r from-cyan-400 to-blue-600 bg-clip-text text-transparent">LOGISTICS</span>
+                        <h1 className="text-4xl xs:text-5xl sm:text-6xl md:text-8xl lg:text-9xl font-black text-white tracking-tighter leading-none font-premium filter drop-shadow-2xl">
+                            NEOSIAM <span className="bg-gradient-to-r from-cyan-400 via-blue-500 to-indigo-600 bg-clip-text text-transparent">LOGISTICS</span>
                         </h1>
-                        <h1 className="text-2xl xs:text-3xl sm:text-4xl md:text-5xl lg:text-7xl xl:text-8xl font-bold text-white tracking-[0.1em] sm:tracking-[0.15em] md:tracking-[0.2em] leading-none mt-2 sm:mt-3 md:mt-4 font-premium">
+                        <h1 className="text-3xl xs:text-4xl sm:text-5xl md:text-6xl lg:text-8xl font-black text-white tracking-[0.2em] leading-none mt-4 font-premium opacity-90">
                             & TRANSPORT
                         </h1>
                     </motion.div>
 
                     <motion.div
-                        initial={{ opacity: 0, y: 20 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        transition={{ delay: 0.2 }}
-                        className="mt-6 sm:mt-8 md:mt-12 flex flex-col items-center px-2"
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        transition={{ delay: 0.4 }}
+                        className="mt-12 flex flex-col items-center"
                     >
-                        {/* Thai Company Name - Adaptive */}
-                        <p className="text-white text-sm xs:text-base sm:text-xl md:text-2xl lg:text-3xl xl:text-4xl font-bold tracking-wide mb-3 sm:mb-4 md:mb-6 font-thai">
+                        <p className="text-white text-base xs:text-lg sm:text-2xl md:text-3xl font-black tracking-[0.1em] mb-6 font-thai">
                             บริษัท นีโอสยาม โลจิสติกส์ แอนด์ ทรานสปอร์ต จำกัด
                         </p>
-
-                        {/* Cyan Separator - Adaptive Width */}
-                        <div className="w-24 sm:w-32 md:w-40 lg:w-48 h-0.5 sm:h-1 bg-cyan-500 rounded-full mb-4 sm:mb-6 md:mb-8 shadow-[0_0_15px_rgba(6,182,212,0.5)]" />
-
-                        {/* Description - Adaptive */}
-                        <p className="text-slate-300 text-xs sm:text-sm md:text-lg lg:text-xl xl:text-2xl italic font-medium tracking-wide max-w-xs sm:max-w-md md:max-w-2xl lg:max-w-3xl xl:max-w-4xl font-thai leading-relaxed">
-                            " ให้บริการด้านการขนส่ง และกระจายสินค้า<br className="hidden sm:block" />
-                            <span className="sm:hidden"> </span>ทั้งแบบสินค้าพัสดุภัณฑ์ทั่วไป และแบบสินค้าเหมาคัน "
+                        <div className="w-48 h-1 bg-gradient-to-r from-transparent via-cyan-500 to-transparent rounded-full mb-8 shadow-[0_0_20px_rgba(6,182,212,0.8)]" />
+                        <p className="text-slate-300 text-sm sm:text-lg md:text-2xl font-bold tracking-wide max-w-4xl font-thai leading-relaxed italic">
+                            " ให้บริการด้านการขนส่ง และกระจายสินค้า ครบวงจร<br className="hidden sm:block" />
+                            <span className="text-cyan-400 not-italic font-black mt-2 inline-block">ก้าวไปข้างหน้ากับระบบจัดการข้อมูลที่แม่นยำ</span> "
                         </p>
                     </motion.div>
                 </div>
 
-                {/* Stats Grid - Adaptive Cards */}
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4 md:gap-6 w-full max-w-sm sm:max-w-2xl md:max-w-4xl lg:max-w-5xl xl:max-w-6xl mt-4 sm:mt-6 md:mt-8">
-                    {/* Card 1: Total Jobs */}
-                    <div className="bg-slate-900/80 backdrop-blur-2xl border border-white/5 rounded-xl sm:rounded-2xl md:rounded-[2rem] p-4 sm:p-6 md:p-8 lg:p-10 flex flex-col items-center justify-center transition-all hover:bg-slate-800/80 active:scale-[0.98]">
-                        <div className="w-10 h-10 sm:w-12 sm:h-12 md:w-14 md:h-14 lg:w-16 lg:h-16 bg-cyan-950/50 rounded-xl sm:rounded-2xl flex items-center justify-center mb-3 sm:mb-4 md:mb-6 border border-cyan-500/20 shadow-inner">
-                            <Truck className="text-cyan-400" size={20} />
+                {/* Stats Grid */}
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-6 w-full max-w-6xl mt-8">
+                    <motion.div
+                        initial={{ opacity: 0, y: 20 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ delay: 0.5 }}
+                        whileHover={{ y: -10, backgroundColor: 'rgba(15, 23, 42, 0.9)' }}
+                        className="bg-slate-900/80 backdrop-blur-3xl border border-white/5 rounded-[2.5rem] p-10 flex flex-col items-center justify-center transition-all shadow-2xl group cursor-help"
+                    >
+                        <div className="w-16 h-16 bg-cyan-950/30 rounded-2xl flex items-center justify-center mb-6 border border-cyan-500/20 shadow-inner group-hover:scale-110 transition-transform">
+                            <Truck className="text-cyan-400" size={24} />
                         </div>
-                        <p className="text-slate-400 text-[10px] sm:text-xs font-black uppercase tracking-[0.2em] sm:tracking-[0.3em] mb-1 sm:mb-2">Total Jobs</p>
+                        <p className="text-slate-500 text-[10px] font-black uppercase tracking-[0.4em] mb-2">Total Activity</p>
                         {currentUser ? (
-                            <p className="text-white text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-black">{totalJobs}</p>
+                            <p className="text-white text-6xl font-black tracking-tighter">{totalJobs.toLocaleString()}</p>
                         ) : (
-                            <Lock className="text-slate-700" size={32} />
+                            <Lock className="text-slate-800" size={40} />
                         )}
-                    </div>
+                    </motion.div>
 
-                    {/* Card 2: Active Movement */}
-                    <div className="bg-slate-900/80 backdrop-blur-2xl border border-white/5 rounded-xl sm:rounded-2xl md:rounded-[2rem] p-4 sm:p-6 md:p-8 lg:p-10 flex flex-col items-center justify-center transition-all hover:bg-slate-800/80 active:scale-[0.98]">
-                        <div className="w-10 h-10 sm:w-12 sm:h-12 md:w-14 md:h-14 lg:w-16 lg:h-16 bg-blue-950/50 rounded-xl sm:rounded-2xl flex items-center justify-center mb-3 sm:mb-4 md:mb-6 border border-blue-500/20 shadow-inner">
-                            <Clock className="text-blue-400" size={20} />
+                    <motion.div
+                        initial={{ opacity: 0, y: 20 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ delay: 0.6 }}
+                        whileHover={{ y: -10, backgroundColor: 'rgba(15, 23, 42, 0.9)' }}
+                        className="bg-slate-900/80 backdrop-blur-3xl border border-white/5 rounded-[2.5rem] p-10 flex flex-col items-center justify-center transition-all shadow-2xl group cursor-help"
+                    >
+                        <div className="w-16 h-16 bg-blue-950/30 rounded-2xl flex items-center justify-center mb-6 border border-blue-500/20 shadow-inner group-hover:scale-110 transition-transform">
+                            <Clock className="text-blue-400" size={24} />
                         </div>
-                        <p className="text-slate-400 text-[10px] sm:text-xs font-black uppercase tracking-[0.2em] sm:tracking-[0.3em] mb-1 sm:mb-2">Active Movement</p>
+                        <p className="text-slate-500 text-[10px] font-black uppercase tracking-[0.4em] mb-2">Ongoing Flow</p>
                         {currentUser ? (
-                            <p className="text-white text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-black">{activeMovement}</p>
+                            <p className="text-white text-6xl font-black tracking-tighter">{activeMovement.toLocaleString()}</p>
                         ) : (
-                            <Lock className="text-slate-700" size={32} />
+                            <Lock className="text-slate-800" size={40} />
                         )}
-                    </div>
+                    </motion.div>
 
-                    {/* Card 3: Success Rate */}
-                    <div className="bg-slate-900/80 backdrop-blur-2xl border border-white/5 rounded-xl sm:rounded-2xl md:rounded-[2rem] p-4 sm:p-6 md:p-8 lg:p-10 flex flex-col items-center justify-center transition-all hover:bg-slate-800/80 active:scale-[0.98]">
-                        <div className="w-10 h-10 sm:w-12 sm:h-12 md:w-14 md:h-14 lg:w-16 lg:h-16 bg-green-950/50 rounded-xl sm:rounded-2xl flex items-center justify-center mb-3 sm:mb-4 md:mb-6 border border-green-500/20 shadow-inner">
-                            <CheckCircle2 className="text-green-400" size={20} />
+                    <motion.div
+                        initial={{ opacity: 0, y: 20 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ delay: 0.7 }}
+                        whileHover={{ y: -10, backgroundColor: 'rgba(15, 23, 42, 0.9)' }}
+                        className="bg-slate-900/80 backdrop-blur-3xl border border-white/5 rounded-[2.5rem] p-10 flex flex-col items-center justify-center transition-all shadow-2xl group cursor-help"
+                    >
+                        <div className="w-16 h-16 bg-green-950/30 rounded-2xl flex items-center justify-center mb-6 border border-green-500/20 shadow-inner group-hover:scale-110 transition-transform">
+                            <CheckCircle2 className="text-green-400" size={24} />
                         </div>
-                        <p className="text-slate-400 text-[10px] sm:text-xs font-black uppercase tracking-[0.2em] sm:tracking-[0.3em] mb-1 sm:mb-2">Success Rate</p>
+                        <p className="text-slate-500 text-[10px] font-black uppercase tracking-[0.4em] mb-2">Success Rate</p>
                         {currentUser ? (
-                            <p className="text-white text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-black">{successRate}%</p>
+                            <p className="text-white text-6xl font-black tracking-tighter">{successRate}%</p>
                         ) : (
-                            <Lock className="text-slate-700" size={32} />
+                            <Lock className="text-slate-800" size={40} />
                         )}
-                    </div>
+                    </motion.div>
                 </div>
 
-                {/* Sub Navigation / CTA for logged-in users - Adaptive Grid */}
+                {/* Sub Navigation */}
                 {currentUser && (
-                    <div className="mt-6 sm:mt-8 md:mt-12 w-full max-w-sm sm:max-w-2xl md:max-w-4xl lg:max-w-5xl">
-                        <div className="grid grid-cols-2 sm:grid-cols-3 md:flex md:flex-wrap md:justify-center gap-2 sm:gap-3 md:gap-4">
+                    <motion.div
+                        initial={{ opacity: 0, y: 20 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ delay: 0.9 }}
+                        className="mt-16 w-full max-w-5xl"
+                    >
+                        <div className="flex flex-wrap justify-center gap-4">
                             {visibleNavItems.map((item) => (
-                                <button
+                                <motion.button
                                     key={item.id}
+                                    whileHover={{ y: -5, backgroundColor: 'rgba(255, 255, 255, 0.1)' }}
+                                    whileTap={{ scale: 0.95 }}
                                     onClick={() => onNavigate(item.id as any)}
-                                    className="px-3 sm:px-4 md:px-6 py-2 sm:py-2.5 md:py-3 bg-white/5 hover:bg-white/10 active:bg-white/15 rounded-lg sm:rounded-xl text-white text-[10px] sm:text-xs md:text-sm font-bold border border-white/10 transition-all flex items-center justify-center gap-1.5 sm:gap-2 md:gap-3"
+                                    className="px-8 py-4 bg-white/5 backdrop-blur-xl hover:bg-white/10 rounded-2xl text-white text-xs font-black uppercase tracking-widest border border-white/10 transition-all flex items-center justify-center gap-3 cursor-pointer shadow-lg active:shadow-inner"
                                 >
-                                    <item.icon size={14} className="text-cyan-400 sm:hidden" />
-                                    <item.icon size={16} className="text-cyan-400 hidden sm:block md:hidden" />
-                                    <item.icon size={18} className="text-cyan-400 hidden md:block" />
-                                    <span className="truncate">{item.label}</span>
-                                </button>
+                                    <item.icon size={18} className="text-cyan-400" />
+                                    <span>{item.label}</span>
+                                </motion.button>
                             ))}
                         </div>
-                    </div>
+                    </motion.div>
                 )}
             </main>
 
-            {/* Footer - Adaptive */}
-            <footer className="relative z-10 py-4 sm:py-6 md:py-8">
-                <div className="max-w-7xl mx-auto px-3 sm:px-4 text-center">
-                    <p className="text-slate-600 text-[8px] xs:text-[9px] sm:text-[10px] md:text-xs uppercase font-bold tracking-wider sm:tracking-widest">
-                        © 2569 NEOSIAM LOGISTICS \ TRANSPORT. ALL RIGHTS RESERVED.
+            {/* Footer */}
+            <footer className="relative z-10 py-10">
+                <div className="max-w-7xl mx-auto px-4 text-center">
+                    <div className="w-full h-px bg-gradient-to-r from-transparent via-white/10 to-transparent mb-6" />
+                    <p className="text-slate-700 text-[10px] font-black uppercase tracking-[0.5em] hover:text-slate-500 transition-colors cursor-default">
+                        © 2569 NEOSIAM LOGISTICS & TRANSPORT. ENTERPRISE GRADE SYSTEM.
                     </p>
                 </div>
             </footer>
         </div>
     );
 };
+
 
 export default HomePage;

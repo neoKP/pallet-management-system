@@ -101,6 +101,21 @@ export interface PartnerBalanceData {
     balance: number;
 }
 
+export interface StockPrediction {
+    branchId: BranchId;
+    branchName: string;
+    palletId: PalletId;
+    palletName: string;
+    currentStock: number;
+    avgDailyIn: number;
+    avgDailyOut: number;
+    burnRate: number; // Avg Daily Out - Avg Daily In
+    daysUntilEmpty: number;
+    predictedDate: string;
+    status: 'Safe' | 'Warning' | 'Critical';
+    recommendedReplenishment: number;
+}
+
 /**
  * Helper: Filter transactions by date range
  */
@@ -595,4 +610,63 @@ export const getScrappedByBranch = (transactions: Transaction[], startDate: Date
         }
     });
     return Object.entries(branchScraps).map(([name, value], i) => ({ name, value, color: ['#ef4444', '#f87171', '#b91c1c', '#991b1b', '#7f1d1d'][i % 5] })).sort((a, b) => b.value - a.value);
+};
+
+export const getStockDepletionPredictions = (
+    transactions: Transaction[],
+    stock: Stock,
+    branchNames: Record<BranchId, string>,
+    palletNames: Record<PalletId, string>
+): StockPrediction[] => {
+    const predictions: StockPrediction[] = [];
+    const validBranchIds: BranchId[] = ['hub_nw', 'kpp', 'plk', 'cm', 'ekp', 'ms', 'sai3'];
+    const validPalletIds: PalletId[] = ['loscam_red', 'hiq', 'plastic_circular'];
+
+    const now = new Date();
+    const thirtyDaysAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+    const recentTx = transactions.filter(t => new Date(t.date) >= thirtyDaysAgo && t.status === 'COMPLETED');
+
+    validBranchIds.forEach(bid => {
+        const bStock = stock[bid] || {};
+        validPalletIds.forEach(pid => {
+            const currentQty = bStock[pid] || 0;
+            const bTx = recentTx.filter(t => t.palletId === pid && (t.source === bid || t.dest === bid));
+
+            const totalIn = bTx.filter(t => t.dest === bid && t.type === 'IN').reduce((sum, t) => sum + t.qty, 0);
+            const totalOut = bTx.filter(t => t.source === bid && t.type === 'OUT').reduce((sum, t) => sum + t.qty, 0);
+
+            // Daily averages over 30 days
+            const avgIn = totalIn / 30;
+            const avgOut = totalOut / 30;
+            const burnRate = avgOut - avgIn;
+
+            if (burnRate > 0) {
+                const daysUntilEmpty = Math.floor(currentQty / burnRate);
+                const predictedDate = new Date();
+                predictedDate.setDate(now.getDate() + daysUntilEmpty);
+
+                const status = daysUntilEmpty < 3 ? 'Critical' : daysUntilEmpty < 7 ? 'Warning' : 'Safe';
+
+                // Only include if it's running out soon (less than 14 days) or already critical
+                if (daysUntilEmpty < 14 || status === 'Critical') {
+                    predictions.push({
+                        branchId: bid,
+                        branchName: branchNames[bid] || bid,
+                        palletId: pid,
+                        palletName: palletNames[pid] || pid,
+                        currentStock: currentQty,
+                        avgDailyIn: Math.round(avgIn * 10) / 10,
+                        avgDailyOut: Math.round(avgOut * 10) / 10,
+                        burnRate: Math.round(burnRate * 10) / 10,
+                        daysUntilEmpty,
+                        predictedDate: predictedDate.toISOString().split('T')[0],
+                        status,
+                        recommendedReplenishment: Math.round(burnRate * 14) // Recommend 2 weeks of stock
+                    });
+                }
+            }
+        });
+    });
+
+    return predictions.sort((a, b) => a.daysUntilEmpty - b.daysUntilEmpty);
 };

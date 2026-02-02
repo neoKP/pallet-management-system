@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { BranchId } from './types';
 import { useAuth } from './contexts/AuthContext';
 import { useStock } from './contexts/StockContext';
@@ -28,6 +28,10 @@ export default function App() {
   const [activeTab, setActiveTab] = useState<'home' | 'dashboard' | 'record' | 'maintenance' | 'settings' | 'analytics' | 'history'>('home');
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
   const [isLoginModalOpen, setIsLoginModalOpen] = useState(false);
+
+  // Memoize canViewAll for performance
+  const canViewAll = useMemo(() => currentUser?.role === 'ADMIN', [currentUser]);
+
   const [selectedBranch, setSelectedBranch] = useState<BranchId | 'ALL'>(() => {
     const savedUser = safeStorage.getItem('neo-siam-user');
     if (savedUser) {
@@ -46,14 +50,13 @@ export default function App() {
   });
 
   const { isScannerOpen, setIsScannerOpen, handleScanSuccess } = useQRScanner(
-    currentUser as any, // QRScanner might expect non-null user, but it's handled inside
+    currentUser as any,
     transactions,
     confirmTransactionsBatch,
     setActiveTab
   );
 
-  const canViewAll = currentUser?.role === 'ADMIN';
-
+  // Sync selectedBranch when currentUser changes
   useEffect(() => {
     if (currentUser) {
       if (currentUser.role === 'ADMIN') {
@@ -66,7 +69,7 @@ export default function App() {
         }
       }
     }
-  }, [currentUser, selectedBranch]);
+  }, [currentUser]); // Optimized dependency array
 
   const handleLogout = () => {
     Swal.fire({
@@ -80,7 +83,7 @@ export default function App() {
       cancelButtonText: 'ยกเลิก',
       background: '#fff',
       customClass: {
-        popup: 'rounded-3xl shadow-xl border border-slate-100',
+        popup: 'rounded-[2rem] shadow-2xl border border-slate-100',
         title: 'font-black text-slate-800',
         htmlContainer: 'text-slate-600'
       }
@@ -91,22 +94,24 @@ export default function App() {
     });
   };
 
+  const handleNavigate = (tab: any) => {
+    if (!currentUser && tab !== 'home') {
+      setIsLoginModalOpen(true);
+    } else {
+      setActiveTab(tab);
+    }
+  };
+
   // Layer 1: Public-First Priority
   if (activeTab === 'home') {
     return (
-      <div className="min-h-screen bg-slate-900 overflow-x-hidden">
+      <div className="min-h-screen bg-slate-900 overflow-x-hidden selection:bg-blue-500/30">
         <HomePage
           currentUser={currentUser}
           selectedBranch={selectedBranch}
           stock={stock}
           transactions={transactions}
-          onNavigate={(tab: any) => {
-            if (!currentUser && tab !== 'home') {
-              setIsLoginModalOpen(true);
-            } else {
-              setActiveTab(tab);
-            }
-          }}
+          onNavigate={handleNavigate}
           onLogout={handleLogout}
           openLogin={() => setIsLoginModalOpen(true)}
         />
@@ -130,7 +135,7 @@ export default function App() {
   }
 
   return (
-    <div className="flex min-h-screen bg-slate-50 font-sans text-slate-900">
+    <div className="flex min-h-screen bg-slate-50 font-sans text-slate-900 selection:bg-blue-600/10">
       <Sidebar
         activeTab={activeTab}
         setActiveTab={setActiveTab}
@@ -140,7 +145,7 @@ export default function App() {
         setIsCollapsed={setIsSidebarCollapsed}
       />
 
-      <div className={`flex-1 flex flex-col transition-all duration-300 ${isSidebarCollapsed ? 'md:ml-20' : 'md:ml-64'}`}>
+      <div className={`flex-1 flex flex-col transition-all duration-300 ease-in-out ${isSidebarCollapsed ? 'md:ml-20' : 'md:ml-64'}`}>
         <Header
           activeTab={activeTab}
           currentUser={currentUser}
@@ -220,3 +225,4 @@ export default function App() {
     </div>
   );
 }
+

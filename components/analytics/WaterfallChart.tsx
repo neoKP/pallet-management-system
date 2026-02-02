@@ -64,12 +64,13 @@ export const WaterfallChart: React.FC<WaterfallChartProps> = ({
                 shadow-2xl transition-all duration-500
             `}
         >
-            <div style={{
-                position: 'absolute',
-                inset: 0,
-                boxShadow: isDarkMode ? `0 0 50px -10px ${currentTheme.primary}20` : '0 20px 40px -10px rgba(0,0,0,0.1)',
-                pointerEvents: 'none'
-            }} />
+            <div
+                className="absolute inset-0 pointer-events-none js-dynamic-shadow js-dynamic-opacity"
+                style={{
+                    '--dynamic-opacity': 1,
+                    '--dynamic-shadow': isDarkMode ? `0 0 50px -10px ${currentTheme.primary}20` : '0 20px 40px -10px rgba(0,0,0,0.1)'
+                } as React.CSSProperties}
+            />
 
             {/* Title with Cyberpunk underline */}
             <div className="relative mb-8 inline-block">
@@ -77,8 +78,8 @@ export const WaterfallChart: React.FC<WaterfallChartProps> = ({
                     {title}
                 </h3>
                 <motion.div
-                    className="h-1 rounded-full mt-1"
-                    style={{ background: `linear-gradient(90deg, ${currentTheme.primary}, transparent)` }}
+                    className="h-1 rounded-full mt-1 js-dynamic-bg"
+                    style={{ '--dynamic-bg': `linear-gradient(90deg, ${currentTheme.primary}, transparent)` } as React.CSSProperties}
                     initial={{ width: 0 }}
                     animate={{ width: '100%' }}
                     transition={{ delay: 0.5, duration: 1 }}
@@ -90,8 +91,10 @@ export const WaterfallChart: React.FC<WaterfallChartProps> = ({
                 <svg
                     width={data.length * (barWidth + gap) + gap}
                     height={chartHeight}
-                    className="mx-auto"
-                    style={{ overflow: 'visible' }}
+                    className="mx-auto overflow-visible"
+                    style={{
+                        '--chart-primary': currentTheme.primary
+                    } as React.CSSProperties}
                 >
                     <defs>
                         {/* Advanced Glow Filter */}
@@ -141,11 +144,12 @@ export const WaterfallChart: React.FC<WaterfallChartProps> = ({
                                     key={index}
                                     onMouseEnter={() => setFocusedIndex(index)}
                                     onMouseLeave={() => setFocusedIndex(null)}
+                                    className={`cursor-pointer transition-opacity duration-500 js-dynamic-opacity`}
                                     style={{
-                                        opacity: isFocused ? 1 : 0.3, // Dim non-focused elements
-                                        transition: 'opacity 0.4s ease',
-                                        cursor: 'pointer'
-                                    }}
+                                        '--dynamic-opacity': isFocused ? 1 : 0.3,
+                                        '--bar-color': baseColor,
+                                        '--bar-bg': isDarkMode ? `${baseColor}60` : `${baseColor}40`
+                                    } as React.CSSProperties}
                                 >
                                     {/* Connector Beam with Particles */}
                                     {index > 0 && !item.isTotal && (
@@ -155,7 +159,7 @@ export const WaterfallChart: React.FC<WaterfallChartProps> = ({
                                                 y1={getY(chartData[index - 1].end)}
                                                 x2={x}
                                                 y2={getY(item.start)}
-                                                stroke={baseColor}
+                                                stroke="var(--bar-color)"
                                                 strokeWidth="2"
                                                 strokeOpacity="0.3"
                                             />
@@ -188,7 +192,7 @@ export const WaterfallChart: React.FC<WaterfallChartProps> = ({
                                             y={barY}
                                             width={barWidth}
                                             height={barHeight}
-                                            fill={baseColor}
+                                            fill="var(--bar-color)"
                                             rx="8"
                                             initial={{ scaleY: 0, opacity: 0 }}
                                             animate={{
@@ -202,9 +206,7 @@ export const WaterfallChart: React.FC<WaterfallChartProps> = ({
                                                 stiffness: 120,
                                                 delay: index * 0.1 // Staggered entrance
                                             }}
-                                            style={{
-                                                transformOrigin: '50% 50%' // Scale from center
-                                            }}
+                                            className="origin-center"
                                         />
 
                                         {/* Texture Overlay */}
@@ -215,7 +217,7 @@ export const WaterfallChart: React.FC<WaterfallChartProps> = ({
                                             height={barHeight}
                                             fill="url(#scanlines)"
                                             rx="8"
-                                            style={{ pointerEvents: 'none' }}
+                                            className="pointer-events-none"
                                         />
                                     </g>
 
@@ -231,15 +233,11 @@ export const WaterfallChart: React.FC<WaterfallChartProps> = ({
                                     >
                                         <div className={`
                                             flex items-center justify-center h-full rounded-lg text-xs font-bold
-                                            ${isFocused ? 'scale-110 shadow-lg text-white' : 'scale-100'}
+                                            ${isFocused ? 'scale-110 shadow-lg' : 'scale-100'}
+                                            ${isDarkMode ? 'text-white' : 'text-slate-900'}
+                                            bg-[var(--bar-bg)] border border-[var(--bar-color)] backdrop-blur-[4px]
                                             transition-all duration-300
-                                        `}
-                                            style={{
-                                                background: isDarkMode ? `${baseColor}60` : `${baseColor}40`, // Brighter background
-                                                color: isDarkMode ? '#fff' : '#000',
-                                                border: `1px solid ${baseColor}`,
-                                                backdropFilter: 'blur(4px)'
-                                            }}>
+                                        `}>
                                             {item.value > 0 && !item.isTotal ? '+' : ''}{Math.round(item.value).toLocaleString()}
                                         </div>
                                     </motion.foreignObject>
@@ -272,7 +270,10 @@ export const WaterfallChart: React.FC<WaterfallChartProps> = ({
                         className="flex items-center gap-2 px-3 py-1.5 rounded-full border border-white/5 bg-white/5 backdrop-blur-md"
                         whileHover={{ scale: 1.1, boxShadow: `0 0 15px ${l.color}`, borderColor: l.color }}
                     >
-                        <div className="w-2 h-2 rounded-full shadow-[0_0_10px_currentColor]" style={{ backgroundColor: l.color, color: l.color }} />
+                        <div
+                            className="w-2 h-2 rounded-full js-dynamic-shadow js-dynamic-vars"
+                            style={{ backgroundColor: l.color, color: l.color, '--dynamic-shadow': `0 0 10px ${l.color}` } as React.CSSProperties}
+                        />
                         <span className={`text-xs font-medium ${isDarkMode ? 'text-gray-300' : 'text-gray-600'}`}>
                             {l.label}
                         </span>

@@ -61,13 +61,14 @@ export const TargetActualCard: React.FC<TargetActualCardProps> = ({
                 }
                 backdrop-blur-sm shadow-lg hover:shadow-xl transition-all
             `}
+            style={{
+                '--status-color': statusColor,
+                '--status-bg': `${statusColor}20`
+            } as React.CSSProperties}
         >
             {/* Background Glow */}
             <div
-                className="absolute inset-0 opacity-10"
-                style={{
-                    background: `radial-gradient(circle at top right, ${statusColor}, transparent 70%)`,
-                } as React.CSSProperties}
+                className="absolute inset-0 opacity-10 bg-[radial-gradient(circle_at_top_right,var(--status-color),transparent_70%)]"
             />
 
             {/* Header */}
@@ -78,8 +79,7 @@ export const TargetActualCard: React.FC<TargetActualCardProps> = ({
                     </h3>
                 </div>
                 <div
-                    className="p-2 rounded-lg"
-                    style={{ backgroundColor: `${statusColor}20`, color: statusColor } as React.CSSProperties}
+                    className="p-2 rounded-lg bg-[var(--status-bg)] text-[var(--status-color)]"
                 >
                     <Target className="w-5 h-5" />
                 </div>
@@ -116,8 +116,7 @@ export const TargetActualCard: React.FC<TargetActualCardProps> = ({
                 <div className="relative mt-4">
                     <div className={`h-4 rounded-full overflow-hidden ${isDarkMode ? 'bg-slate-700' : 'bg-gray-200'}`}>
                         <motion.div
-                            className="h-full rounded-full relative"
-                            style={{ backgroundColor: statusColor } as React.CSSProperties}
+                            className="h-full rounded-full relative bg-[var(--status-color)]"
                             initial={{ width: '0%' }}
                             animate={{
                                 width: ['0%', '100%', `${cappedPercentage}%`]  // Overshoot animation
@@ -143,8 +142,7 @@ export const TargetActualCard: React.FC<TargetActualCardProps> = ({
                             initial={{ opacity: 0 }}
                             animate={{ opacity: 1 }}
                             transition={{ delay: delay + 0.5 }}
-                            className="text-sm font-bold"
-                            style={{ color: statusColor } as React.CSSProperties}
+                            className="text-sm font-bold text-[var(--status-color)]"
                         >
                             {percentage.toFixed(1)}%
                         </motion.span>
@@ -165,7 +163,7 @@ export const TargetActualCard: React.FC<TargetActualCardProps> = ({
                     `}
                 >
                     <div className="flex items-center gap-2">
-                        <span style={{ color: statusColor } as React.CSSProperties}>
+                        <span className="text-[var(--status-color)]">
                             {getStatusIcon()}
                         </span>
                         <span className={`text-sm font-medium ${isDarkMode ? 'text-gray-300' : 'text-gray-700'}`}>
@@ -173,11 +171,7 @@ export const TargetActualCard: React.FC<TargetActualCardProps> = ({
                         </span>
                     </div>
                     <div
-                        className="flex items-center gap-1 px-3 py-1 rounded-full text-sm font-bold"
-                        style={{
-                            backgroundColor: `${statusColor}20`,
-                            color: statusColor,
-                        } as React.CSSProperties}
+                        className="flex items-center gap-1 px-3 py-1 rounded-full text-sm font-bold bg-[var(--status-bg)] text-[var(--status-color)]"
                     >
                         {isAchieved ? (
                             <TrendingUp className="w-4 h-4" />

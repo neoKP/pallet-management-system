@@ -161,6 +161,7 @@ export const HeatmapCalendar: React.FC<HeatmapCalendarProps> = ({
 
     return (
         <div
+            className="js-dynamic-vars"
             style={{
                 '--primary-theme': currentTheme.primary,
                 '--grid-color': isDarkMode ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.05)',

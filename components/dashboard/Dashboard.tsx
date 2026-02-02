@@ -14,6 +14,7 @@ import StockVisualizer from './StockVisualizer';
 import { BRANCHES, EXTERNAL_PARTNERS, PALLET_TYPES } from '../../constants';
 import { getAgingRentalAnalysis } from '../../services/analyticsService';
 import { useStock } from '../../contexts/StockContext';
+import { NeoAIBriefing } from './NeoAIBriefing';
 import {
     AreaChart,
     Area,
@@ -34,7 +35,7 @@ interface DashboardProps {
     currentUser: User | null;
 }
 
-const DashboardTrendChart = ({ transactions, selectedBranch }: { transactions: Transaction[], selectedBranch: string }) => {
+const DashboardTrendChart = React.memo(({ transactions, selectedBranch }: { transactions: Transaction[], selectedBranch: string }) => {
     const data = useMemo(() => {
         const days = Array.from({ length: 14 }, (_, i) => subDays(new Date(), 13 - i));
 
@@ -120,7 +121,7 @@ const DashboardTrendChart = ({ transactions, selectedBranch }: { transactions: T
             </div>
         </div>
     );
-};
+});
 
 const Dashboard: React.FC<DashboardProps> = ({ stock, selectedBranch, transactions, currentUser }) => {
     const { thresholds } = useStock();
@@ -268,8 +269,60 @@ const Dashboard: React.FC<DashboardProps> = ({ stock, selectedBranch, transactio
         return activeAlerts;
     }, [thresholds, selectedBranch, stats]);
 
+    const handleExportPDF = async () => {
+        try {
+            // @ts-ignore
+            const Swal = (await import('sweetalert2')).default;
+            Swal.fire({ title: 'กำลัง Export PDF...', allowOutsideClick: false, didOpen: () => Swal.showLoading() });
+
+            const kpis = {
+                totalTransactions: transactions.length,
+                totalPalletsInStock: stats.totalStock,
+                totalPalletsInTransit: stats.totalPending,
+                totalMovements: transactions.reduce((sum, t) => sum + t.qty, 0),
+                utilizationRate: 85, // Dummy for main dashboard
+                maintenanceRate: 2.4, // Dummy
+                trend: 'stable' as const,
+                trendPercentage: 0
+            };
+
+            const { exportAnalyticsToPDF } = await import('../../utils/analyticsExport');
+            await exportAnalyticsToPDF(
+                // @ts-ignore
+                kpis,
+                'current',
+                new Date(),
+                new Date(),
+                false // light mode for export
+            );
+            Swal.fire({ icon: 'success', title: 'Export สำเร็จ!', timer: 3000 });
+        } catch (error) {
+            console.error(error);
+            // @ts-ignore
+            const Swal = (await import('sweetalert2')).default;
+            Swal.fire({ icon: 'error', title: 'เกิดข้อผิดพลาด', text: 'ไม่สามารถ Export PDF ได้' });
+        }
+    };
+
     return (
         <div className="space-y-6">
+            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-2">
+                <div>
+                    <h1 className="text-3xl font-black text-slate-900 tracking-tighter">
+                        Command <span className="text-indigo-600">Center</span>
+                    </h1>
+                    <p className="text-sm font-medium text-slate-500">Real-time Pallet Network Monitor & Control</p>
+                </div>
+                <div className="flex items-center gap-2">
+                    <button
+                        onClick={handleExportPDF}
+                        className="px-4 py-2 bg-white border border-slate-200 rounded-xl text-xs font-black uppercase tracking-wider text-slate-600 shadow-sm hover:shadow-md transition-all flex items-center gap-2"
+                    >
+                        <AlertCircle className="w-3 h-3" /> นำออก (Export PDF)
+                    </button>
+                </div>
+            </div>
+
             {alerts.length > 0 && (
                 <div className="space-y-3">
                     {alerts.map((alert, idx) => (
@@ -291,6 +344,7 @@ const Dashboard: React.FC<DashboardProps> = ({ stock, selectedBranch, transactio
                     ))}
                 </div>
             )}
+
 
             <div className="grid grid-cols-2 lg:grid-cols-4 xl:grid-cols-4 gap-4">
                 <StatsCard

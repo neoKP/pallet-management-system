@@ -27,6 +27,7 @@ import {
     getHubTransferEfficiency,
     getBranchPalletBreakdown,
     getPartnerVelocity,
+    getStockDepletionPredictions,
     ChartDataPoint,
     HeatmapData,
     WaterfallDataPoint,
@@ -46,6 +47,9 @@ import {
     Filter,
     ArrowDownCircle,
     ArrowUpCircle,
+    ShieldCheck,
+    Brain,
+    Palette
 } from 'lucide-react';
 import { BRANCHES, PALLET_TYPES, EXTERNAL_PARTNERS } from '../../constants';
 import { isSameDay, startOfWeek, endOfWeek, subWeeks, format, isWithinInterval } from 'date-fns';
@@ -68,10 +72,11 @@ import { WoWComparisonChart } from './WoWComparisonChart';
 import { ActionableInsights } from './ActionableInsights';
 import { ThemeEngine, THEMES } from './ThemeEngine';
 import { DrillThroughModal } from './DrillThroughModal';
-import { Filter as FilterIcon, Brain, Palette } from 'lucide-react';
 import { GlobalSpotlight } from './GlobalSpotlight';
 import { AgingRentalReport } from './AgingRentalReport';
 import { ExecutivePalletSummary } from './ExecutivePalletSummary';
+import { PredictiveStockAlerts } from './PredictiveStockAlerts';
+import * as TelegramService from '../../services/telegramService';
 import { getAgingRentalAnalysis } from '../../services/analyticsService';
 
 const ExecutivePillCard = ({ title, value, suffix, color, trend, isDarkMode }: any) => (
@@ -276,37 +281,31 @@ export const AnalyticsDashboard: React.FC<AnalyticsDashboardProps> = ({
         [transactions, stock]
     );
 
-    // NEW: Centralized Return Insight (Hub NW focus)
     const centralizedReturnData = useMemo(() =>
         getCentralizedReturnAnalysis(transactions, ['sino', 'neo_corp', 'loscam_wangnoi']),
         [transactions]
     );
 
-    // NEW: Sino Aging Analysis
     const sinoAgingData = useMemo(() =>
         getSinoAgingAnalysis(transactions),
         [transactions]
     );
 
-    // NEW: Logistic & Truck Insight
     const logisticData = useMemo(() =>
         getLogisticInsight(filteredTransactions),
         [filteredTransactions]
     );
 
-    // NEW: Performance Insight
     const quickLoopPerformance = useMemo(() =>
         getQuickLoopPerformance(filteredTransactions),
         [filteredTransactions]
     );
 
-    // NEW: Peak Hours
     const peakHourData = useMemo(() =>
         getPeakHourAnalysis(filteredTransactions),
         [filteredTransactions]
     );
 
-    // NEW: Sai 3 Specifics
     const sai3StockBreakdown = useMemo(() =>
         getBranchPalletBreakdown(stock, 'sai3', palletNames, palletColors),
         [stock, palletNames, palletColors]
@@ -322,7 +321,6 @@ export const AnalyticsDashboard: React.FC<AnalyticsDashboardProps> = ({
         [transactions]
     );
 
-    // Premium Analytics Data - 7-Day Performance (Real Data Only)
     const { last7DaysData, last7DaysIn, last7DaysOut } = useMemo(() => {
         const days = Array.from({ length: 7 }, (_, i) => {
             const date = new Date();
@@ -351,7 +349,6 @@ export const AnalyticsDashboard: React.FC<AnalyticsDashboardProps> = ({
         return { last7DaysData: counts, last7DaysIn: inQtys, last7DaysOut: outQtys };
     }, [transactions]);
 
-    // 7-Day Performance Focus - Detailed Time Series (Real Data)
     const sevenDayPerformanceData = useMemo(() => {
         const thaiMonths = ['ม.ค.', 'ก.พ.', 'มี.ค.', 'เม.ย.', 'พ.ค.', 'มิ.ย.',
             'ก.ค.', 'ส.ค.', 'ก.ย.', 'ต.ค.', 'พ.ย.', 'ธ.ค.'];
@@ -449,7 +446,6 @@ export const AnalyticsDashboard: React.FC<AnalyticsDashboardProps> = ({
         });
     }, [filteredTransactions]);
 
-    // Forecast Data - Historical daily transactions for prediction
     const forecastHistoricalData = useMemo(() => {
         const last30Days: { date: string; value: number }[] = [];
         for (let i = 29; i >= 0; i--) {
@@ -464,22 +460,14 @@ export const AnalyticsDashboard: React.FC<AnalyticsDashboardProps> = ({
         return last30Days;
     }, [slicerFilteredTransactions]);
 
-    // Real YoY Data - Calculate from actual transactions grouped by year
     const yoyData = useMemo(() => {
         const yearCounts: Record<number, number> = {};
-
-        // Group transactions by year (using all transactions, not just filtered by date range)
         transactions.forEach(t => {
             const year = new Date(t.date).getFullYear();
             yearCounts[year] = (yearCounts[year] || 0) + 1;
         });
-
-        // Get years with data and sort
         const years = Object.keys(yearCounts).map(Number).sort((a, b) => a - b);
-
-        // Create color gradient for years
         const colors = ['#64748b', '#94a3b8', '#6366f1', '#8b5cf6', '#a855f7'];
-
         return years.map((year, index) => ({
             year,
             value: yearCounts[year],
@@ -487,97 +475,81 @@ export const AnalyticsDashboard: React.FC<AnalyticsDashboardProps> = ({
         }));
     }, [transactions]);
 
-    // Real WoW Data - Calculate from actual transactions grouped by week (last 8 weeks)
     const wowData = useMemo(() => {
         const weeksToShow = 8;
         const now = new Date();
         const weekData: { weekLabel: string; weekStart: string; value: number }[] = [];
-
         for (let i = weeksToShow - 1; i >= 0; i--) {
-            const weekStart = startOfWeek(subWeeks(now, i), { weekStartsOn: 1 }); // Monday start
+            const weekStart = startOfWeek(subWeeks(now, i), { weekStartsOn: 1 });
             const weekEnd = endOfWeek(subWeeks(now, i), { weekStartsOn: 1 });
-
-            // Count transactions in this week from ALL transactions (not filtered by date range)
             const weekTransactions = transactions.filter(t => {
                 const txDate = new Date(t.date);
                 return isWithinInterval(txDate, { start: weekStart, end: weekEnd });
             });
-
-            const weekLabel = i === 0
-                ? 'สัปดาห์นี้'
-                : i === 1
-                    ? 'สัปดาห์ที่แล้ว'
-                    : format(weekStart, 'd MMM', { locale: th });
-
+            const weekLabel = i === 0 ? 'สัปดาห์นี้' : i === 1 ? 'สัปดาห์ที่แล้ว' : format(weekStart, 'd MMM', { locale: th });
             weekData.push({
                 weekLabel,
                 weekStart: format(weekStart, 'yyyy-MM-dd'),
                 value: weekTransactions.length,
             });
         }
-
         return weekData;
     }, [transactions]);
 
-    // NEW: Periodic Scrapped Summaries
     const { scrapped7Days, scrappedMTD, scrappedYTD } = useMemo(() => {
         const now = new Date();
         const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
         const startOfYear = new Date(now.getFullYear(), 0, 1);
         const sevenDaysAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
-
         const getScrap = (tx: Transaction) => {
             if (tx.type !== 'MAINTENANCE' || tx.status !== 'COMPLETED') return 0;
             const match = tx.noteExtended?.match(/SCRAP:\s*(\d+)/);
             return match ? parseInt(match[1]) : 0;
         };
-
         const s7d = transactions.filter(t => new Date(t.date) >= sevenDaysAgo).reduce((sum, t) => sum + getScrap(t), 0);
         const mtd = transactions.filter(t => new Date(t.date) >= startOfMonth).reduce((sum, t) => sum + getScrap(t), 0);
         const ytd = transactions.filter(t => new Date(t.date) >= startOfYear).reduce((sum, t) => sum + getScrap(t), 0);
-
         return { scrapped7Days: s7d, scrappedMTD: mtd, scrappedYTD: ytd };
     }, [transactions]);
 
-    // NEW: Monthly Scrapped Trend
     const monthlyScrappedData = useMemo(() => {
         const thisYear = new Date().getFullYear();
         const MONTH_LABELS = ['ม.ค.', 'ก.พ.', 'มี.ค.', 'เม.ย.', 'พ.ค.', 'มิ.ย.', 'ก.ค.', 'ส.ค.', 'ก.ย.', 'ต.ค.', 'พ.ย.', 'ธ.ค.'];
         const data = MONTH_LABELS.map(name => ({ name, value: 0 }));
-
         transactions.forEach(t => {
             const date = new Date(t.date);
             if (date.getFullYear() === thisYear && t.type === 'MAINTENANCE' && t.status === 'COMPLETED') {
                 const match = t.noteExtended?.match(/SCRAP:\s*(\d+)/);
-                if (match) {
-                    data[date.getMonth()].value += parseInt(match[1]);
-                }
+                if (match) data[date.getMonth()].value += parseInt(match[1]);
             }
         });
         return data;
     }, [transactions]);
 
+    const stockDepletionPredictions = useMemo(() => {
+        const branchNamesMap: any = {};
+        BRANCHES.forEach(b => branchNamesMap[b.id] = b.name);
+        const palletNamesMap: any = {};
+        PALLET_TYPES.forEach(p => palletNamesMap[p.id] = p.name);
+        return getStockDepletionPredictions(transactions, stock, branchNamesMap, palletNamesMap);
+    }, [transactions, stock]);
+
     const [highlightedItem, setHighlightedItem] = useState<string | null>(null);
 
-    // Intelligence Summary based on actual operational data
     const smartInsight = useMemo(() => {
         const topBranch = branchPerformance[0];
         const topPallet = palletAnalysis[0];
         const trendDirection = kpis.trend === 'up' ? 'เพิ่มขึ้น' : 'ลดลง';
-
         return {
             text: `สาขา ${topBranch?.branchName || '-'} มีพาเลทในคลังสูงสุดที่ ${topBranch?.totalStock.toLocaleString()} ชิ้น พาเลทประเภท ${topPallet?.palletName || '-'} ถูกใช้งานมากที่สุด คิดเป็น ${(topPallet?.percentage || 0).toFixed(1)}% การหมุนเวียนสัปดาห์นี้${trendDirection} ${kpis.trendPercentage}% เมื่อเทียบกับช่วงก่อน ควรติดตามการกระจายพาเลทระหว่างสาขาให้สมดุล`,
             status: kpis.utilizationRate > 80 ? 'Optimal' : 'Checking'
         };
     }, [branchPerformance, palletAnalysis, kpis]);
 
-    // Handlers
     const handleDrillDown = (level: string) => {
         setDrillStack(prev => [...prev, level]);
         const branch = BRANCHES.find(b => b.name === level);
-        if (branch) {
-            updateFilters({ selectedBranches: [branch.id] });
-        }
+        if (branch) updateFilters({ selectedBranches: [branch.id] });
     };
 
     const handleBreadcrumbClick = (index: number) => {
@@ -588,9 +560,7 @@ export const AnalyticsDashboard: React.FC<AnalyticsDashboardProps> = ({
             const newStack = drillStack.slice(0, index + 1);
             setDrillStack(newStack);
             const branch = BRANCHES.find(b => b.name === newStack[newStack.length - 1]);
-            if (branch) {
-                updateFilters({ selectedBranches: [branch.id] });
-            }
+            if (branch) updateFilters({ selectedBranches: [branch.id] });
         }
     };
 
@@ -600,15 +570,11 @@ export const AnalyticsDashboard: React.FC<AnalyticsDashboardProps> = ({
             return;
         }
         setHighlightedItem(item.name);
-
-        // Open Drill-Through Modal with filtered transactions
         const branch = BRANCHES.find(b => b.name === item.name);
         const palletType = PALLET_TYPES.find(p => p.name === item.name);
-
         let filteredTx = filteredTransactions;
         let title = '';
         let subtitle = '';
-
         if (branch) {
             filteredTx = filteredTransactions.filter(t => t.source === branch.id || t.dest === branch.id);
             title = `📊 รายละเอียดสาขา: ${branch.name}`;
@@ -627,7 +593,6 @@ export const AnalyticsDashboard: React.FC<AnalyticsDashboardProps> = ({
             subtitle = `${filteredTransactions.length} รายการทั้งหมด`;
             filteredTx = filteredTransactions;
         }
-
         setDrillThroughData({ title, subtitle, transactions: filteredTx });
         setDrillThroughOpen(true);
     };
@@ -654,16 +619,10 @@ export const AnalyticsDashboard: React.FC<AnalyticsDashboardProps> = ({
         }
     };
 
-    const agingAnalysis = useMemo(() =>
-        getAgingRentalAnalysis(transactions),
-        [transactions]
-    );
+    const agingAnalysis = useMemo(() => getAgingRentalAnalysis(transactions), [transactions]);
 
     return (
-        <div
-            id="analytics-dashboard-root"
-            className={`min-h-screen p-4 md:p-8 transition-colors duration-500 ${isDarkMode ? 'bg-slate-950 text-white font-sans' : 'bg-slate-50 text-slate-900 font-sans'}`}
-        >
+        <div id="analytics-dashboard-root" className={`min-h-screen p-4 md:p-8 transition-colors duration-500 ${isDarkMode ? 'bg-slate-950 text-white font-sans' : 'bg-slate-50 text-slate-900 font-sans'}`}>
             <GlobalSpotlight />
             <style dangerouslySetInnerHTML={{
                 __html: `
@@ -677,62 +636,32 @@ export const AnalyticsDashboard: React.FC<AnalyticsDashboardProps> = ({
             `}} />
             <div className="max-w-7xl mx-auto space-y-8">
                 {/* Header */}
-                <motion.div
-                    initial={{ opacity: 0, y: -20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    className="flex flex-col md:flex-row md:items-center md:justify-between gap-6"
-                >
+                <motion.div initial={{ opacity: 0, y: -20 }} animate={{ opacity: 1, y: 0 }} className="flex flex-col md:flex-row md:items-center md:justify-between gap-6">
                     <div className="space-y-1">
                         <div className="flex items-center gap-3">
                             <div className="p-2 rounded-xl shadow-lg transition-all duration-500 theme-bg-primary theme-shadow-primary">
                                 <Sparkles className="w-8 h-8 text-white" />
                             </div>
                             <h1 className={`text-4xl font-extrabold tracking-tighter ${isDarkMode ? 'text-white' : 'text-slate-900'}`}>
-                                Premium <span className="text-transparent bg-clip-text transition-all duration-500 theme-gradient-primary">
-                                    Analytics
-                                </span>
+                                Premium <span className="text-transparent bg-clip-text transition-all duration-500 theme-gradient-primary">Analytics</span>
                             </h1>
                         </div>
-                        <p className={`text-sm font-medium pl-14 ${isDarkMode ? 'text-slate-400' : 'text-slate-500'}`}>
-                            Enterprise Logistics Intelligence & Data Visualization Center
-                        </p>
+                        <p className={`text-sm font-medium pl-14 ${isDarkMode ? 'text-slate-400' : 'text-slate-500'}`}>Enterprise Logistics Intelligence & Data Visualization Center</p>
                     </div>
 
                     <div className="flex flex-wrap items-center gap-2 p-1 bg-slate-900/5 dark:bg-white/5 rounded-2xl backdrop-blur-md border border-black/5 dark:border-white/10">
                         <div className="flex bg-slate-200/50 dark:bg-slate-800/50 p-1 rounded-xl mr-2">
-                            <button
-                                onClick={() => setActiveTab('overview')}
-                                className={`px-4 py-1.5 rounded-lg text-xs font-black transition-all ${activeTab === 'overview' ? 'bg-white dark:bg-slate-700 text-blue-600 shadow-sm' : 'text-slate-500'}`}
-                            >
-                                Overview
-                            </button>
-                            <button
-                                onClick={() => setActiveTab('aging')}
-                                className={`px-4 py-1.5 rounded-lg text-xs font-black transition-all ${activeTab === 'aging' ? 'bg-white dark:bg-slate-700 text-blue-600 shadow-sm' : 'text-slate-500'}`}
-                            >
-                                Aging & Rental
-                            </button>
+                            <button onClick={() => setActiveTab('overview')} className={`px-4 py-1.5 rounded-lg text-xs font-black transition-all ${activeTab === 'overview' ? 'bg-white dark:bg-slate-700 text-blue-600 shadow-sm' : 'text-slate-500'}`}>Overview</button>
+                            <button onClick={() => setActiveTab('aging')} className={`px-4 py-1.5 rounded-lg text-xs font-black transition-all ${activeTab === 'aging' ? 'bg-white dark:bg-slate-700 text-blue-600 shadow-sm' : 'text-slate-500'}`}>Aging & Rental</button>
                         </div>
                         <motion.button whileHover={{ y: -2 }} whileTap={{ scale: 0.95 }} onClick={handleExportPDF} className={`px-4 py-2 rounded-xl font-bold text-xs uppercase tracking-wider transition-all ${isDarkMode ? 'bg-white/5 text-slate-300 hover:bg-white/10' : 'bg-white text-slate-600 shadow-sm hover:shadow-md'}`}>PDF</motion.button>
                         <motion.button whileHover={{ y: -2 }} whileTap={{ scale: 0.95 }} onClick={handleExportExcel} className={`px-4 py-2 rounded-xl font-bold text-xs uppercase tracking-wider transition-all ${isDarkMode ? 'bg-white/5 text-slate-300 hover:bg-white/10' : 'bg-white text-slate-600 shadow-sm hover:shadow-md'}`}>Excel</motion.button>
                         <div className="w-px h-6 bg-slate-500/20 mx-1" />
-                        <motion.button
-                            whileHover={{ y: -2, scale: 1.02 }}
-                            whileTap={{ scale: 0.98 }}
-                            onClick={() => setIsSlicerOpen(true)}
-                            className="flex items-center gap-2 px-4 py-2 rounded-xl font-bold text-xs uppercase tracking-wider transition-all shadow-lg text-white theme-bg-primary theme-shadow-primary"
-                        >
-                            <Filter className="w-3.5 h-3.5" />
-                            Filters
+                        <motion.button whileHover={{ y: -2, scale: 1.02 }} whileTap={{ scale: 0.98 }} onClick={() => setIsSlicerOpen(true)} className="flex items-center gap-2 px-4 py-2 rounded-xl font-bold text-xs uppercase tracking-wider transition-all shadow-lg text-white theme-bg-primary theme-shadow-primary">
+                            <Filter className="w-3.5 h-3.5" /> Filters
                         </motion.button>
-                        <motion.button
-                            whileHover={{ y: -2, scale: 1.02 }}
-                            whileTap={{ scale: 0.98 }}
-                            onClick={() => setIsThemeOpen(true)}
-                            className="flex items-center gap-2 px-4 py-2 rounded-xl font-bold text-xs uppercase tracking-wider transition-all shadow-lg text-white theme-bg-accent theme-shadow-accent"
-                        >
-                            <Palette className="w-3.5 h-3.5" />
-                            Theme
+                        <motion.button whileHover={{ y: -2, scale: 1.02 }} whileTap={{ scale: 0.98 }} onClick={() => setIsThemeOpen(true)} className="flex items-center gap-2 px-4 py-2 rounded-xl font-bold text-xs uppercase tracking-wider transition-all shadow-lg text-white theme-bg-accent theme-shadow-accent">
+                            <Palette className="w-3.5 h-3.5" /> Theme
                         </motion.button>
                         <motion.button whileHover={{ rotate: 180 }} whileTap={{ scale: 0.9 }} onClick={toggleDarkMode} className="p-2 rounded-xl hover:bg-black/5 dark:hover:bg-white/10 transition-all">{isDarkMode ? <Sun className="w-5 h-5 text-yellow-400" /> : <Moon className="w-5 h-5 text-slate-600" />}</motion.button>
                     </div>
@@ -743,92 +672,44 @@ export const AnalyticsDashboard: React.FC<AnalyticsDashboardProps> = ({
                 ) : activeTab === 'aging' ? (
                     <AgingRentalReport transactions={transactions} isDarkMode={isDarkMode} />
                 ) : (
-                    <motion.div
-                        initial="hidden"
-                        animate="show"
-                        variants={{
-                            hidden: { opacity: 0 },
-                            show: { opacity: 1, transition: { staggerChildren: 0.07 } }
-                        }}
-                        className="space-y-8"
-                    >
-                        {/* Executive Pallet Summary */}
-                        <ExecutivePalletSummary analysis={agingAnalysis} />
+                    <motion.div initial="hidden" animate="show" variants={{ hidden: { opacity: 0 }, show: { opacity: 1, transition: { staggerChildren: 0.07 } } }} className="space-y-8">
+                        <div data-pdf-export="summary">
+                            <ExecutivePalletSummary analysis={agingAnalysis} />
+                        </div>
 
-                        {/* Smart Narrative Insight Overlay */}
-                        <motion.div
-                            variants={{ hidden: { opacity: 0, scale: 0.98 }, show: { opacity: 1, scale: 1 } }}
-                            className={`p-6 rounded-3xl border transition-all duration-500 ${isDarkMode ? 'bg-white/5 border-white/10' : 'bg-white border-slate-100 shadow-sm'} relative overflow-hidden`}
-                        >
+                        <motion.div data-pdf-export="insight" variants={{ hidden: { opacity: 0, scale: 0.98 }, show: { opacity: 1, scale: 1 } }} className={`p-6 rounded-3xl border transition-all duration-500 ${isDarkMode ? 'bg-white/5 border-white/10' : 'bg-white border-slate-100 shadow-sm'} relative overflow-hidden`}>
                             <div className="absolute inset-0 opacity-[0.03] pointer-events-none theme-gradient-primary" />
-                            <div className="absolute top-0 right-0 p-4">
-                                <span className="px-2 py-1 rounded-full text-[10px] font-black uppercase tracking-widest text-white theme-bg-primary">
-                                    AI Insight
-                                </span>
-                            </div>
+                            <div className="absolute top-0 right-0 p-4"><span className="px-2 py-1 rounded-full text-[10px] font-black uppercase tracking-widest text-white theme-bg-primary">AI Insight</span></div>
                             <div className="flex gap-4 items-start">
-                                <div className="p-3 rounded-2xl text-white shadow-lg theme-bg-primary theme-shadow-primary">
-                                    <Sparkles className="w-6 h-6" />
-                                </div>
+                                <div className="p-3 rounded-2xl text-white shadow-lg theme-bg-primary theme-shadow-primary"><Sparkles className="w-6 h-6" /></div>
                                 <div className="space-y-1 pr-20">
                                     <h4 className={`text-sm font-black transition-colors duration-500 theme-text-primary`}>Smart Narrative</h4>
-                                    <p className={`text-base font-medium leading-relaxed ${isDarkMode ? 'text-slate-300' : 'text-slate-700'}`}>
-                                        {smartInsight.text}
-                                    </p>
+                                    <p className={`text-base font-medium leading-relaxed ${isDarkMode ? 'text-slate-300' : 'text-slate-700'}`}>{smartInsight.text}</p>
                                 </div>
                             </div>
                         </motion.div>
 
-                        {/* Executive Highlights */}
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                            <ExecutivePillCard
-                                title="MAX POSSESSION"
-                                value={kpis.maxPossession}
-                                suffix="MAX"
-                                color="#f97316"
-                                isDarkMode={isDarkMode}
-                                trend={kpis.maxPossessionTrend}
-                            />
-                            <ExecutivePillCard
-                                title="TOTAL ACTIVITY"
-                                value={kpis.totalActivity}
-                                suffix="VOL"
-                                color="#10b981"
-                                isDarkMode={isDarkMode}
-                                trend={kpis.totalActivityTrend}
-                            />
+                            <ExecutivePillCard title="MAX POSSESSION" value={kpis.maxPossession} suffix="MAX" color="#f97316" isDarkMode={isDarkMode} trend={kpis.maxPossessionTrend} />
+                            <ExecutivePillCard title="TOTAL ACTIVITY" value={kpis.totalActivity} suffix="VOL" color="#10b981" isDarkMode={isDarkMode} trend={kpis.totalActivityTrend} />
                         </div>
 
-                        {/* Control Bar */}
                         <motion.div variants={{ hidden: { opacity: 0, y: 10 }, show: { opacity: 1, y: 0 } }} className="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-4">
-                            <DateRangeSelector
-                                selectedRange={filters.dateRange}
-                                startDate={filters.startDate}
-                                endDate={filters.endDate}
-                                onRangeChange={(range) => updateFilters({ dateRange: range })}
-                                onCustomDateChange={(start, end) => updateFilters({ startDate: start, endDate: end })}
-                                isDarkMode={isDarkMode}
-                            />
+                            <DateRangeSelector selectedRange={filters.dateRange} startDate={filters.startDate} endDate={filters.endDate} onRangeChange={(range) => updateFilters({ dateRange: range })} onCustomDateChange={(start, end) => updateFilters({ startDate: start, endDate: end })} isDarkMode={isDarkMode} />
                             {drillStack.length > 0 && (
                                 <div className={`flex items-center gap-2 p-1.5 px-4 rounded-2xl border ${isDarkMode ? 'bg-white/5 border-white/10 text-slate-300' : 'bg-white border-slate-200 text-slate-600'} text-xs font-bold uppercase tracking-wider`}>
                                     <button onClick={() => handleBreadcrumbClick(-1)}>Global View</button>
                                     {drillStack.map((level, i) => (
                                         <React.Fragment key={i}>
                                             <ChevronRight className="w-4 h-4 opacity-50" />
-                                            <button
-                                                onClick={() => handleBreadcrumbClick(i)}
-                                                className={`transition-colors duration-500 ${i === drillStack.length - 1 ? 'font-black theme-text-primary' : ''}`}
-                                            >
-                                                {level}
-                                            </button>
+                                            <button onClick={() => handleBreadcrumbClick(i)} className={`transition-colors duration-500 ${i === drillStack.length - 1 ? 'font-black theme-text-primary' : ''}`}>{level}</button>
                                         </React.Fragment>
                                     ))}
                                 </div>
                             )}
                         </motion.div>
 
-                        {/* KPI Grid */}
-                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 xl:grid-cols-7 gap-6">
+                        <div data-pdf-export="kpis" className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 xl:grid-cols-7 gap-6">
                             <EnhancedKPICard title="การเคลื่อนไหวรวม" value={kpis.totalTransactions} icon={<Activity />} trend={kpis.trend} trendValue={kpis.trendPercentage} sparklineData={last7DaysData} variant="primary" color={currentTheme.primary} isDarkMode={isDarkMode} delay={0.1} />
                             <EnhancedKPICard title="พาเลทในคลัง" value={kpis.totalPalletsInStock} suffix="ชิ้น" icon={<Package />} sparklineData={last7DaysData} variant="secondary" color={currentTheme.secondary} isDarkMode={isDarkMode} delay={0.2} />
                             <EnhancedKPICard title="ระหว่างทาง" value={kpis.totalPalletsInTransit} suffix="ชิ้น" icon={<Truck />} sparklineData={last7DaysData} variant="accent" color={currentTheme.accent} isDarkMode={isDarkMode} delay={0.3} />
@@ -838,34 +719,19 @@ export const AnalyticsDashboard: React.FC<AnalyticsDashboardProps> = ({
                             <EnhancedKPICard title="เข้าซ่อมบำรุง" value={kpis.maintenanceRate} suffix="%" icon={<Wrench />} sparklineData={last7DaysData} variant="accent" color="#ec4899" isDarkMode={isDarkMode} delay={0.5} />
                         </div>
 
-                        {/* Main Interaction Charts */}
                         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-                            <RechartsLineChart data={sevenDayPerformanceData} title="📅 การเคลื่อนไหวพาเลท 7 วันล่าสุด" isDarkMode={isDarkMode} />
-                            <RechartsPieChart data={statusData} title="🧿 สัดส่วนสถานะการเคลื่อนไหว" isDarkMode={isDarkMode} onSegmentClick={handleChartClick} />
-                            <RechartsBarChart
-                                data={branchPerformance.map(b => ({ name: b.branchName, value: b.totalStock }))}
-                                title="🏢 พาเลทในคลังแยกตามสาขา"
-                                isDarkMode={isDarkMode}
-                                highlightedItem={highlightedItem}
-                                onBarClick={(item) => { handleChartClick(item); handleDrillDown(item.name); }}
-                            />
-                            <RechartsBarChart
-                                data={palletAnalysis.map(p => ({ name: p.palletName, value: p.totalStock, color: palletColors[p.palletId] }))}
-                                title="🎨 สัดส่วนพาเลทแยกตามประเภท"
-                                isDarkMode={isDarkMode}
-                                onBarClick={handleChartClick}
-                            />
+                            <div data-pdf-export="chart"><RechartsLineChart data={sevenDayPerformanceData} title="📅 การเคลื่อนไหวพาเลท 7 วันล่าสุด" isDarkMode={isDarkMode} /></div>
+                            <div data-pdf-export="chart"><RechartsPieChart data={statusData} title="🧿 สัดส่วนสถานะการเคลื่อนไหว" isDarkMode={isDarkMode} onSegmentClick={handleChartClick} /></div>
+                            <div data-pdf-export="chart"><RechartsBarChart data={branchPerformance.map(b => ({ name: b.branchName, value: b.totalStock }))} title="🏢 พาเลทในคลังแยกตามสาขา" isDarkMode={isDarkMode} highlightedItem={highlightedItem} onBarClick={(item) => { handleChartClick(item); handleDrillDown(item.name); }} /></div>
+                            <div data-pdf-export="chart"><RechartsBarChart data={palletAnalysis.map(p => ({ name: p.palletName, value: p.totalStock, color: palletColors[p.palletId] }))} title="🎨 สัดส่วนพาเลทแยกตามประเภท" isDarkMode={isDarkMode} onBarClick={handleChartClick} /></div>
                         </div>
 
-                        {/* NEW: Hub NW Specialized Analytics */}
-                        <div className="space-y-6">
+                        {/* Hub NW Intelligence */}
+                        <div className="space-y-6" data-pdf-export="group">
                             <div className="flex items-center gap-3">
-                                <div className="p-1.5 rounded-lg bg-blue-500 text-white shadow-lg">
-                                    <Truck className="w-5 h-5" />
-                                </div>
+                                <div className="p-1.5 rounded-lg bg-blue-500 text-white shadow-lg"><Truck className="w-5 h-5" /></div>
                                 <h2 className="text-xl font-black tracking-tight">Hub NW & Logistics Intelligence</h2>
                             </div>
-
                             <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
                                 <RechartsPieChart data={centralizedReturnData} title="🔄 การรวมศูนย์การคืน (Hub NW vs สาขา)" isDarkMode={isDarkMode} />
                                 <RechartsPieChart data={sinoAgingData} title="⏳ Sino Aging Status (Grace Period)" isDarkMode={isDarkMode} />
@@ -873,45 +739,22 @@ export const AnalyticsDashboard: React.FC<AnalyticsDashboardProps> = ({
                             </div>
                         </div>
 
-                        {/* NEW: Sai 3 Operational Analytics */}
+                        {/* Sai 3 Operational Analytics */}
                         <div className="space-y-6">
                             <div className="flex items-center gap-3">
-                                <div className="p-1.5 rounded-lg bg-emerald-500 text-white shadow-lg">
-                                    <Activity className="w-5 h-5" />
-                                </div>
+                                <div className="p-1.5 rounded-lg bg-emerald-500 text-white shadow-lg"><Activity className="w-5 h-5" /></div>
                                 <h2 className="text-xl font-black tracking-tight">Sai 3 Performance & Partner Velocity</h2>
                             </div>
-
                             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-                                <EnhancedKPICard
-                                    title="โอนย้ายรอส่ง Hub"
-                                    value={sai3PendingTransfer}
-                                    suffix="ชิ้น"
-                                    icon={<Truck />}
-                                    variant="warning"
-                                    color="#f59e0b"
-                                    isDarkMode={isDarkMode}
-                                />
+                                <EnhancedKPICard title="โอนย้ายรอส่ง Hub" value={sai3PendingTransfer} suffix="ชิ้น" icon={<Truck />} variant="warning" color="#f59e0b" isDarkMode={isDarkMode} />
                                 <div className="lg:col-span-3 grid grid-cols-1 md:grid-cols-3 gap-6">
                                     <RechartsBarChart data={sai3PartnerVelocity} title="⚡ ความเร็วพาร์ทเนอร์สาย 3" isDarkMode={isDarkMode} />
                                     <RechartsPieChart data={sai3StockBreakdown} title="🎨 สต็อกสีพาเลทสาย 3" isDarkMode={isDarkMode} />
-                                    <RechartsLineChart
-                                        data={peakHourData.map(h => ({
-                                            date: h.hour,
-                                            total: h.activity,
-                                            in: 0,
-                                            out: 0,
-                                            maintenance: 0,
-                                            scrapped: 0
-                                        }))}
-                                        title="⏱️ ช่วงเวลาลงรายการหนาแน่น"
-                                        isDarkMode={isDarkMode}
-                                    />
+                                    <RechartsLineChart data={peakHourData.map(h => ({ date: h.hour, total: h.activity, in: 0, out: 0, maintenance: 0, scrapped: 0 }))} title="⏱️ ช่วงเวลาลงรายการหนาแน่น" isDarkMode={isDarkMode} />
                                 </div>
                             </div>
                         </div>
 
-                        {/* Operational Efficiency */}
                         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
                             <RechartsPieChart data={quickLoopPerformance} title="⚡ ประสิทธิภาพ Quick Loop" isDarkMode={isDarkMode} />
                             <LoscamRentalChart data={loscamRentalData} title="💰 วิเคราะห์ต้นทุนเช่าพาเลท (Loscam)" isDarkMode={isDarkMode} />
@@ -919,121 +762,49 @@ export const AnalyticsDashboard: React.FC<AnalyticsDashboardProps> = ({
 
                         {/* Scrapped Summary */}
                         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-                            <motion.div
-                                whileHover={{ y: -5 }}
-                                className={`p-8 rounded-[2rem] border flex flex-col items-center justify-center text-center gap-6 relative overflow-hidden ${isDarkMode ? 'bg-slate-900/40 border-red-500/20 shadow-2xl' : 'bg-white border-red-100 shadow-xl'}`}
-                            >
-                                {/* Decorative Glow */}
+                            <motion.div whileHover={{ y: -5 }} className={`p-8 rounded-[2rem] border flex flex-col items-center justify-center text-center gap-6 relative overflow-hidden ${isDarkMode ? 'bg-slate-900/40 border-red-500/20 shadow-2xl' : 'bg-white border-red-100 shadow-xl'}`}>
                                 <div className="absolute -top-24 -right-24 w-48 h-48 bg-red-500/10 blur-[80px] rounded-full" />
-
-                                <div className={`p-6 rounded-3xl ${isDarkMode ? 'bg-red-500/10 border border-red-500/20' : 'bg-red-50'}`}>
-                                    <Wrench className="w-12 h-12 text-red-500 animate-pulse" />
-                                </div>
-
+                                <div className={`p-6 rounded-3xl ${isDarkMode ? 'bg-red-500/10 border border-red-500/20' : 'bg-red-50'}`}><Wrench className="w-12 h-12 text-red-500 animate-pulse" /></div>
                                 <div>
-                                    <p className={`text-xs font-black uppercase tracking-[0.2em] mb-3 ${isDarkMode ? 'text-slate-500' : 'text-slate-400'}`}>
-                                        สรุปยอดพาเลทที่เสีย/ทิ้งรวม
-                                    </p>
-                                    <h3 className={`text-7xl font-black tracking-tighter ${isDarkMode ? 'text-white' : 'text-slate-900'}`}>
-                                        {totalScrappedSelected.toLocaleString()}
-                                        <span className="text-3xl ml-3 text-red-500/50 font-bold uppercase">QTY</span>
-                                    </h3>
+                                    <p className={`text-xs font-black uppercase tracking-[0.2em] mb-3 ${isDarkMode ? 'text-slate-500' : 'text-slate-400'}`}>สรุปยอดพาเลทที่เสีย/ทิ้งรวม</p>
+                                    <h3 className={`text-7xl font-black tracking-tighter ${isDarkMode ? 'text-white' : 'text-slate-900'}`}>{totalScrappedSelected.toLocaleString()}<span className="text-3xl ml-3 text-red-500/50 font-bold uppercase">QTY</span></h3>
                                 </div>
-
-                                <div className={`px-4 py-2 rounded-full text-[10px] font-black uppercase tracking-widest ${isDarkMode ? 'bg-red-500/10 text-red-400' : 'bg-red-50 text-red-600'}`}>
-                                    Total Damage Analysis
-                                </div>
+                                <div className={`px-4 py-2 rounded-full text-[10px] font-black uppercase tracking-widest ${isDarkMode ? 'bg-red-500/10 text-red-400' : 'bg-red-50 text-red-600'}`}>Total Damage Analysis</div>
                             </motion.div>
-                            <RechartsBarChart
-                                data={scrappedByBranchData}
-                                title="🏛️ พาเลทเสียแยกตามสาขา"
-                                isDarkMode={isDarkMode}
-                                onBarClick={handleChartClick}
-                            />
+                            <RechartsBarChart data={scrappedByBranchData} title="🏛️ พาเลทเสียแยกตามสาขา" isDarkMode={isDarkMode} onBarClick={handleChartClick} />
                         </div>
 
-                        <WasteDamageAnalysis
-                            data={monthlyScrappedData}
-                            summary={{
-                                sevenDays: scrapped7Days,
-                                mtd: scrappedMTD,
-                                ytd: scrappedYTD
-                            }}
-                            title="🗑️ วิเคราะห์พาเลทเสีย/ทิ้ง (Loss Analytics)"
-                            isDarkMode={isDarkMode}
-                        />
+                        <WasteDamageAnalysis data={monthlyScrappedData} summary={{ sevenDays: scrapped7Days, mtd: scrappedMTD, ytd: scrappedYTD }} title="🗑️ วิเคราะห์พาเลทเสีย/ทิ้ง (Loss Analytics)" isDarkMode={isDarkMode} />
 
+                        {/* Partner Analysis */}
                         <div className="space-y-4">
                             <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
                                 <div className="flex items-center gap-3">
                                     <RefreshCw className="w-8 h-8 text-blue-500" />
                                     <h2 className={`text-2xl font-black ${isDarkMode ? 'text-white' : 'text-slate-900'}`}>Partner Borrow-Return</h2>
                                 </div>
-
                                 <div className="flex items-center gap-4">
                                     <div className={`p-1 rounded-xl flex items-center ${isDarkMode ? 'bg-slate-900 border border-white/10' : 'bg-slate-100'}`}>
-                                        <button
-                                            onClick={() => setPartnerRange('7d')}
-                                            className={`px-3 py-1.5 rounded-lg text-[10px] font-black tracking-tighter transition-all ${partnerRange === '7d' ? (isDarkMode ? 'bg-blue-600 text-white shadow-lg' : 'bg-white text-blue-600 shadow-sm') : (isDarkMode ? 'text-slate-500 hover:text-slate-300' : 'text-slate-500 hover:text-slate-700')}`}
-                                        >
-                                            7 วันล่าสุด
-                                        </button>
-                                        <button
-                                            onClick={() => setPartnerRange('all')}
-                                            className={`px-3 py-1.5 rounded-lg text-[10px] font-black tracking-tighter transition-all ${partnerRange === 'all' ? (isDarkMode ? 'bg-blue-600 text-white shadow-lg' : 'bg-white text-blue-600 shadow-sm') : (isDarkMode ? 'text-slate-500 hover:text-slate-300' : 'text-slate-500 hover:text-slate-700')}`}
-                                        >
-                                            ตามที่เลือก
-                                        </button>
+                                        <button onClick={() => setPartnerRange('7d')} className={`px-3 py-1.5 rounded-lg text-[10px] font-black tracking-tighter transition-all ${partnerRange === '7d' ? 'bg-blue-600 text-white shadow-lg' : 'text-slate-500'}`}>7 วันล่าสุด</button>
+                                        <button onClick={() => setPartnerRange('all')} className={`px-3 py-1.5 rounded-lg text-[10px] font-black tracking-tighter transition-all ${partnerRange === 'all' ? 'bg-blue-600 text-white shadow-lg' : 'text-slate-500'}`}>ตามที่เลือก</button>
                                     </div>
-
-                                    <div className="flex items-center gap-2">
-                                        <label className={`text-xs font-bold uppercase tracking-wider ${isDarkMode ? 'text-slate-500' : 'text-slate-400'}`}>Select Partner:</label>
-                                        <select
-                                            value={activePartnerId}
-                                            onChange={(e) => setActivePartnerId(e.target.value)}
-                                            className={`px-4 py-2 rounded-xl text-sm font-bold border outline-none transition-all ${isDarkMode ? 'bg-slate-900 border-white/10 text-white focus:border-blue-500' : 'bg-white border-slate-200 text-slate-700 focus:border-blue-500 shadow-sm'}`}
-                                            title="เลือกคู่ค้าภายนอก"
-                                        >
-                                            <option value="all">📊 สรุปยอดรวม (ทุกเจ้า)</option>
-                                            {EXTERNAL_PARTNERS.map(p => (
-                                                <option key={p.id} value={p.id}>{p.name}</option>
-                                            ))}
-                                        </select>
-                                    </div>
+                                    <select value={activePartnerId} onChange={(e) => setActivePartnerId(e.target.value)} className={`px-4 py-2 rounded-xl text-sm font-bold border outline-none transition-all ${isDarkMode ? 'bg-slate-900 border-white/10 text-white focus:border-blue-500' : 'bg-white border-slate-200 focus:border-blue-500 shadow-sm'}`} title="เลือกคู่ค้าภายนอก">
+                                        <option value="all">📊 สรุปยอดรวม (ทุกเจ้า)</option>
+                                        {EXTERNAL_PARTNERS.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
+                                    </select>
                                 </div>
                             </div>
-
                             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                                <PartnerBalanceChart
-                                    data={partnerBalanceData}
-                                    title={activePartnerId === 'all'
-                                        ? "🤝 แนวโน้มยอดรวมพาเลทสะสม (Market Balance)"
-                                        : `🤝 สรุปยอดยืม–คืน: ${EXTERNAL_PARTNERS.find(p => p.id === activePartnerId)?.name || activePartnerId}`
-                                    }
-                                    isDarkMode={isDarkMode}
-                                    showOnlyBalance={activePartnerId === 'all'}
-                                />
-                                <RechartsBarChart
-                                    data={partnerSummaryData}
-                                    title={activePartnerId === 'all'
-                                        ? "📊 ยอดรวมพาเลทคงค้างแยกตามเจ้า (Net Balance)"
-                                        : `📊 ยอดคงค้างแยกตามประเภท: ${EXTERNAL_PARTNERS.find(p => p.id === activePartnerId)?.name || activePartnerId}`
-                                    }
-                                    isDarkMode={isDarkMode}
-                                />
+                                <PartnerBalanceChart data={partnerBalanceData} title={activePartnerId === 'all' ? "🤝 แนวโน้มยอดรวมพาเลทสะสม (Market Balance)" : `🤝 สรุปยอดยืม–คืน: ${EXTERNAL_PARTNERS.find(p => p.id === activePartnerId)?.name}`} isDarkMode={isDarkMode} showOnlyBalance={activePartnerId === 'all'} />
+                                <RechartsBarChart data={partnerSummaryData} title={activePartnerId === 'all' ? "📊 ยอดรวมพาเลทคงค้างแยกตามเจ้า (Net Balance)" : `📊 ยอดคงค้างแยกตามประเภท: ${EXTERNAL_PARTNERS.find(p => p.id === activePartnerId)?.name}`} isDarkMode={isDarkMode} />
                             </div>
                         </div>
 
                         <div className="space-y-4 pt-6">
                             <div className="flex items-center gap-3">
-                                <Activity className="w-8 h-8 text-rose-500" />
-                                <h2 className={`text-2xl font-black ${isDarkMode ? 'text-white' : 'text-slate-900'}`}>Loscam Rental Analysis</h2>
+                                <Activity className="w-8 h-8 text-rose-500" /><h2 className={`text-2xl font-black ${isDarkMode ? 'text-white' : 'text-slate-900'}`}>Loscam Rental Analysis</h2>
                             </div>
-                            <LoscamRentalChart
-                                data={loscamRentalData}
-                                title="📊 วิเคราะห์ค่าเช่าพาเลท Loscam (รายวัน/7 วันล่าสุด)"
-                                isDarkMode={isDarkMode}
-                            />
+                            <LoscamRentalChart data={loscamRentalData} title="📊 วิเคราะห์ค่าเช่าพาเลท Loscam (รายวัน/7 วันล่าสุด)" isDarkMode={isDarkMode} />
                         </div>
 
                         {/* Deep Insights */}
@@ -1044,110 +815,65 @@ export const AnalyticsDashboard: React.FC<AnalyticsDashboardProps> = ({
                                     <h2 className={`text-2xl font-black ${isDarkMode ? 'text-white' : 'text-slate-900'}`}>Operational Flow Insights</h2>
                                 </div>
                                 <SankeyDiagram data={sankeyData} isDarkMode={isDarkMode} title="🔄 การไหลของพาเลทระหว่างสาขา" />
-
                                 <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
                                     <GaugeChart value={kpis.utilizationRate} max={100} title="ประสิทธิภาพการหมุนเวียน" isDarkMode={isDarkMode} />
                                     <GaugeChart value={kpis.totalPalletsInStock} max={2000} title="ปริมาณสต็อกปัจจุบัน" color="#8b5cf6" isDarkMode={isDarkMode} />
                                     <ComparisonCard title="การเคลื่อนไหวประจำเดือน" currentValue={kpis.totalTransactions} previousValue={previousMonthTransactions} icon={<Activity />} color="#6366f1" isDarkMode={isDarkMode} />
                                 </div>
 
-                                {/* Statistical Forecast Section */}
+                                {/* Predictive Stock Alerts */}
+                                <div className="space-y-6">
+                                    <div className="flex items-center gap-2">
+                                        <div className="p-1.5 rounded-lg bg-indigo-500/10 text-indigo-500"><ShieldCheck className="w-4 h-4" /></div>
+                                        <h3 className={`text-lg font-bold ${isDarkMode ? 'text-white' : 'text-slate-900'}`}>Inventory Depletion Intelligence (AI พยากรณ์สต็อกขาด)</h3>
+                                    </div>
+                                    <PredictiveStockAlerts predictions={stockDepletionPredictions} isDarkMode={isDarkMode} />
+                                </div>
+
                                 <div className="space-y-4">
                                     <div className="flex items-center gap-3">
                                         <Brain className="w-8 h-8 text-purple-500" />
                                         <h2 className={`text-2xl font-black ${isDarkMode ? 'text-white' : 'text-slate-900'}`}>Statistical Forecast Intelligence</h2>
                                     </div>
-                                    <ForecastChart
-                                        historicalData={forecastHistoricalData}
-                                        title="🔮 พยากรณ์การหมุนเวียนพาเลท (Statistical)"
-                                        isDarkMode={isDarkMode}
-                                        forecastDays={7}
-                                    />
+                                    <ForecastChart historicalData={forecastHistoricalData} title="🔮 พยากรณ์การหมุนเวียนพาเลท (Statistical Flow)" isDarkMode={isDarkMode} forecastDays={7} />
                                 </div>
-
-                                {/* YoY & WoW Comparison Charts - Real Data Only */}
-                                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                                    {/* Year-over-Year - Shows if we have data from multiple years */}
-                                    {yoyData.length > 1 ? (
-                                        <YoYComparisonChart
-                                            data={yoyData}
-                                            title="📈 เปรียบเทียบการหมุนเวียนรายปี"
-                                            metric="รายการ"
-                                            isDarkMode={isDarkMode}
-                                        />
-                                    ) : (
-                                        <div className={`p-6 rounded-2xl border ${isDarkMode ? 'bg-slate-800/50 border-white/10' : 'bg-white border-gray-200'}`}>
-                                            <div className="flex items-center gap-3 mb-4">
-                                                <div className={`p-2 rounded-xl ${isDarkMode ? 'bg-indigo-500/20' : 'bg-indigo-100'}`}>
-                                                    <TrendingUp className="w-5 h-5 text-indigo-500" />
-                                                </div>
-                                                <h3 className={`text-lg font-bold ${isDarkMode ? 'text-white' : 'text-slate-900'}`}>
-                                                    📈 Year-over-Year (YoY)
-                                                </h3>
-                                            </div>
-                                            <div className="flex items-center justify-center py-8">
-                                                <p className={`text-sm text-center ${isDarkMode ? 'text-slate-400' : 'text-slate-500'}`}>
-                                                    📊 ข้อมูลปัจจุบันมีเฉพาะปี {new Date().getFullYear()}<br />
-                                                    จะแสดง YoY เมื่อมีข้อมูลมากกว่า 1 ปี
-                                                </p>
-                                            </div>
-                                        </div>
-                                    )}
-
-                                    {/* Week-over-Week - More immediately useful */}
-                                    <WoWComparisonChart
-                                        data={wowData}
-                                        title="📊 แนวโน้มการหมุนเวียน 8 สัปดาห์"
-                                        metric="รายการ"
-                                        isDarkMode={isDarkMode}
-                                    />
-                                </div>
-
-                                {/* Actionable AI Insights */}
-                                <ActionableInsights
-                                    kpis={kpis}
-                                    branchPerformance={branchPerformance}
-                                    palletAnalysis={palletAnalysis}
-                                    isDarkMode={isDarkMode}
-                                />
-
-                                <WaterfallChart data={waterfallData} title="การเปลี่ยนแปลงสต็อกพาเลท" isDarkMode={isDarkMode} />
-                                <HeatmapCalendar data={heatmapData} title="ความหนาแน่นการหมุนเวียน (รายปี)" isDarkMode={isDarkMode} />
                             </motion.div>
                         </div>
+
+                        {/* YoY & WoW */}
+                        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                            {yoyData.length > 1 ? (
+                                <YoYComparisonChart data={yoyData} title="📈 เปรียบเทียบการหมุนเวียนรายปี" metric="รายการ" isDarkMode={isDarkMode} />
+                            ) : (
+                                <div className={`p-6 rounded-2xl border ${isDarkMode ? 'bg-slate-800/50 border-white/10' : 'bg-white border-gray-200'}`}>
+                                    <div className="flex items-center gap-3 mb-4">
+                                        <div className={`p-2 rounded-xl ${isDarkMode ? 'bg-indigo-500/20' : 'bg-indigo-100'}`}><TrendingUp className="w-5 h-5 text-indigo-500" /></div>
+                                        <h3 className={`text-lg font-bold ${isDarkMode ? 'text-white' : 'text-slate-900'}`}>📈 Year-over-Year (YoY)</h3>
+                                    </div>
+                                    <div className="flex items-center justify-center py-8">
+                                        <p className={`text-sm text-center ${isDarkMode ? 'text-slate-400' : 'text-slate-500'}`}>📊 ข้อมูลปัจจุบันมีเฉพาะปี {new Date().getFullYear()}<br />จะแสดง YoY เมื่อมีข้อมูลมากกว่า 1 ปี</p>
+                                    </div>
+                                </div>
+                            )}
+                            <WoWComparisonChart data={wowData} title="📊 แนวโน้มการหมุนเวียน 8 สัปดาห์" metric="รายการ" isDarkMode={isDarkMode} />
+                        </div>
+
+                        <ActionableInsights kpis={kpis} branchPerformance={branchPerformance} palletAnalysis={palletAnalysis} isDarkMode={isDarkMode} />
+                        <WaterfallChart data={waterfallData} title="การเปลี่ยนแปลงสต็อกพาเลท" isDarkMode={isDarkMode} />
+                        <HeatmapCalendar data={heatmapData} title="ความหนาแน่นการหมุนเวียน (รายปี)" isDarkMode={isDarkMode} />
                     </motion.div>
                 )}
             </div>
 
-            <Slicers
-                isOpen={isSlicerOpen}
-                onClose={() => setIsSlicerOpen(false)}
-                filters={{ branches: filters.selectedBranches as BranchId[], palletTypes: filters.selectedPalletTypes as PalletId[], years: filters.selectedYears }}
-                onFilterChange={(type, value) => {
-                    if (type === 'branches') updateFilters({ selectedBranches: value });
-                    if (type === 'palletTypes') updateFilters({ selectedPalletTypes: value });
-                    if (type === 'years') updateFilters({ selectedYears: value });
-                }}
-                isDarkMode={isDarkMode}
-            />
+            <Slicers isOpen={isSlicerOpen} onClose={() => setIsSlicerOpen(false)} filters={{ branches: filters.selectedBranches as BranchId[], palletTypes: filters.selectedPalletTypes as PalletId[], years: filters.selectedYears }} onFilterChange={(type, value) => {
+                if (type === 'branches') updateFilters({ selectedBranches: value });
+                if (type === 'palletTypes') updateFilters({ selectedPalletTypes: value });
+                if (type === 'years') updateFilters({ selectedYears: value });
+            }} isDarkMode={isDarkMode} />
 
-            <ThemeEngine
-                isOpen={isThemeOpen}
-                onClose={() => setIsThemeOpen(false)}
-                currentTheme={themeColor}
-                isDarkMode={isDarkMode}
-                onThemeChange={setThemeColor}
-                onDarkModeToggle={toggleDarkMode}
-            />
+            <ThemeEngine isOpen={isThemeOpen} onClose={() => setIsThemeOpen(false)} currentTheme={themeColor} isDarkMode={isDarkMode} onThemeChange={setThemeColor} onDarkModeToggle={toggleDarkMode} />
 
-            <DrillThroughModal
-                isOpen={drillThroughOpen}
-                onClose={() => setDrillThroughOpen(false)}
-                title={drillThroughData.title}
-                subtitle={drillThroughData.subtitle}
-                transactions={drillThroughData.transactions}
-                isDarkMode={isDarkMode}
-            />
-        </div >
+            <DrillThroughModal isOpen={drillThroughOpen} onClose={() => setDrillThroughOpen(false)} title={drillThroughData.title} subtitle={drillThroughData.subtitle} transactions={drillThroughData.transactions} isDarkMode={isDarkMode} />
+        </div>
     );
 };

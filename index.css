@@ -273,7 +273,10 @@ select {
 /* Scrollbar Hide Utility */
 .scrollbar-hide {
   -ms-overflow-style: none;
-  scrollbar-width: none;
+
+  @supports (scrollbar-width: none) {
+    scrollbar-width: none;
+  }
 }
 
 .scrollbar-hide::-webkit-scrollbar {
@@ -478,26 +481,7 @@ select {
   }
 }
 
-/* Responsive Typography */
-@media (max-width: 640px) {
-  body {
-    font-size: 14px;
-  }
-}
-
-/* Accessibility */
-@media (prefers-reduced-motion: reduce) {
-
-  *,
-  *::before,
-  *::after {
-    animation-duration: 0.01ms !important;
-    animation-iteration-count: 1 !important;
-    transition-duration: 0.01ms !important;
-  }
-}
-
-/* Analytics Dynamic Utilities */
+/* Analytics Dynamic Utilities - Refined */
 :root {
   --theme-primary: #6366f1;
   --theme-secondary: #8b5cf6;
@@ -546,7 +530,7 @@ select {
 }
 
 .theme-shadow-secondary {
-  box-shadow: 0 4px 12px rgba(var(--theme-secondary-rgb, 99, 102, 241), 0.4);
+  box-shadow: 0 4px 12px rgba(99, 102, 241, 0.4);
 }
 
 .theme-shadow-accent {
@@ -569,35 +553,44 @@ select {
 }
 
 .theme-gradient-bg-soft {
-  background: linear-gradient(to right, rgba(var(--theme-primary-rgb), 0.1), rgba(var(--theme-secondary-rgb, 99, 102, 241), 0.1));
+  background: linear-gradient(to right, rgba(var(--theme-primary-rgb), 0.1), rgba(139, 92, 246, 0.1));
 }
 
 .theme-border-left-primary {
   border-left: 4px solid var(--theme-primary);
 }
 
-.theme-gradient-overlay-primary {
-  background: linear-gradient(135deg, var(--theme-primary) 0%, transparent 100%);
+/* Base Dynamic Utilities for JS interaction */
+.js-dynamic-bg {
+  background-color: var(--dynamic-bg);
 }
 
-.theme-gradient-overlay-secondary {
-  background: linear-gradient(135deg, var(--theme-secondary) 0%, transparent 100%);
+.js-dynamic-color {
+  color: var(--dynamic-color);
 }
 
-.theme-gradient-overlay-accent {
-  background: linear-gradient(135deg, var(--theme-accent) 0%, transparent 100%);
+.js-dynamic-border {
+  border-color: var(--dynamic-border);
 }
 
-.theme-bg-primary-soft-20 {
-  background-color: rgba(var(--theme-primary-rgb), 0.2);
+.js-dynamic-shadow {
+  box-shadow: var(--dynamic-shadow);
 }
 
-.theme-bg-secondary-soft-20 {
-  background-color: rgba(var(--theme-secondary-rgb, 99, 102, 241), 0.2);
+.js-dynamic-height {
+  height: var(--dynamic-height);
 }
 
-.theme-bg-accent-soft-20 {
-  background-color: rgba(236, 72, 153, 0.2);
+.js-dynamic-opacity {
+  opacity: var(--dynamic-opacity);
+}
+
+.js-dynamic-x {
+  --x: var(--pos-x);
+}
+
+.js-dynamic-y {
+  --y: var(--pos-y);
 }
 
 .bar-rect {
@@ -608,66 +601,6 @@ select {
 
 .bar-rect.active {
   transform: scaleY(1.02);
-}
-
-.dynamic-scale {
-  transform: scale(var(--dynamic-scale-value));
-}
-
-.dynamic-transform {
-  transform: var(--dynamic-transform-value);
-}
-
-.item-bg {
-  background-color: var(--item-color);
-}
-
-.item-text {
-  color: var(--item-color);
-}
-
-.item-border {
-  border-color: var(--item-color);
-}
-
-.item-shadow {
-  box-shadow: 0 0 15px var(--item-color);
-}
-
-.item-glow-bg {
-  background: radial-gradient(circle, var(--item-color) 0.2, transparent 0.7);
-}
-
-.dynamic-shadow {
-  box-shadow: var(--dynamic-shadow-value);
-}
-
-.dynamic-bg {
-  background: var(--dynamic-bg-value);
-}
-
-.dynamic-color {
-  color: var(--dynamic-color-value);
-}
-
-.dynamic-bg-color {
-  background-color: var(--dynamic-bg-color-value);
-}
-
-.dynamic-height {
-  height: var(--dynamic-height-value);
-}
-
-.dynamic-filter {
-  filter: var(--dynamic-filter-value);
-}
-
-.dynamic-stroke {
-  stroke: var(--dynamic-stroke-value);
-}
-
-.dynamic-fill {
-  fill: var(--dynamic-fill-value);
 }
 
 /* Toast Notifications Container */
@@ -716,6 +649,7 @@ select {
 .cyber-glass-card {
   -webkit-backdrop-filter: blur(20px);
   backdrop-filter: blur(20px);
+  background: rgba(var(--theme-primary-rgb), 0.05);
 }
 
 .text-glow {

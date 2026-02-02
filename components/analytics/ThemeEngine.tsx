@@ -166,15 +166,15 @@ const FloatingParticles: React.FC<{ color: string; count?: number }> = ({ color,
             {particles.map((p) => (
                 <motion.div
                     key={p.id}
-                    className="absolute rounded-full"
+                    className="absolute rounded-full bg-[var(--p-color)]"
                     style={{
                         left: `${p.x}%`,
                         top: `${p.y}%`,
                         width: p.size,
                         height: p.size,
-                        backgroundColor: color,
-                        boxShadow: `0 0 ${p.size * 2}px ${color}`,
-                    }}
+                        '--p-color': color,
+                        boxShadow: `0 0 ${p.size * 2}px var(--p-color)`,
+                    } as React.CSSProperties}
                     animate={{
                         y: [0, -30, 0],
                         x: [0, 10, -10, 0],
@@ -255,10 +255,7 @@ const ThemeCard: React.FC<{
 
             {/* Shine Effect */}
             <motion.div
-                className="absolute inset-0 opacity-0 group-hover:opacity-100"
-                style={{
-                    background: `linear-gradient(105deg, transparent 40%, rgba(255,255,255,0.3) 45%, transparent 50%)`,
-                }}
+                className="absolute inset-0 opacity-0 group-hover:opacity-100 bg-[linear-gradient(105deg,transparent_40%,rgba(255,255,255,0.3)_45%,transparent_50%)]"
                 animate={isHovered ? {
                     backgroundPosition: ['200% 0', '-200% 0'],
                 } : {}}
@@ -267,11 +264,12 @@ const ThemeCard: React.FC<{
 
             {/* Icon Container with Glow */}
             <motion.div
-                className="relative w-14 h-14 rounded-xl flex items-center justify-center text-white text-xl shadow-lg"
+                className="relative w-14 h-14 rounded-xl flex items-center justify-center text-white text-xl shadow-lg bg-[linear-gradient(135deg,var(--t-primary),var(--t-secondary))]"
                 style={{
-                    background: `linear-gradient(135deg, ${theme.primary}, ${theme.secondary})`,
+                    '--t-primary': theme.primary,
+                    '--t-secondary': theme.secondary,
                     boxShadow: isHovered || isSelected ? theme.glow : 'none',
-                }}
+                } as React.CSSProperties}
                 animate={isSelected ? {
                     scale: [1, 1.1, 1],
                 } : {}}
@@ -282,8 +280,7 @@ const ThemeCard: React.FC<{
                 {/* Pulse Ring */}
                 {isSelected && (
                     <motion.div
-                        className="absolute inset-0 rounded-xl border-2"
-                        style={{ borderColor: theme.primary }}
+                        className="absolute inset-0 rounded-xl border-2 border-[var(--t-primary)]"
                         animate={{
                             scale: [1, 1.5],
                             opacity: [0.8, 0],
@@ -495,19 +492,20 @@ export const ThemeEngine: React.FC<ThemeEngineProps> = ({
                             >
                                 {/* Gradient Overlay */}
                                 <div
-                                    className="absolute inset-0 opacity-30"
+                                    className="absolute inset-0 js-dynamic-vars"
                                     style={{
-                                        background: `linear-gradient(135deg, ${previewTheme.primary}50, ${previewTheme.secondary}30, transparent)`,
-                                    }}
+                                        opacity: 0.3,
+                                        '--dynamic-bg': `linear-gradient(135deg, ${previewTheme.primary}50, ${previewTheme.secondary}30, transparent)`,
+                                    } as React.CSSProperties}
                                 />
 
                                 <div className="relative flex items-center gap-4">
                                     <motion.div
-                                        className="w-16 h-16 rounded-2xl flex items-center justify-center text-3xl shadow-xl"
+                                        className="w-16 h-16 rounded-2xl flex items-center justify-center text-3xl shadow-xl js-dynamic-bg js-dynamic-shadow"
                                         style={{
-                                            background: `linear-gradient(135deg, ${previewTheme.primary}, ${previewTheme.secondary})`,
-                                            boxShadow: previewTheme.glow,
-                                        }}
+                                            '--dynamic-bg': `linear-gradient(135deg, ${previewTheme.primary}, ${previewTheme.secondary})`,
+                                            '--dynamic-shadow': previewTheme.glow,
+                                        } as React.CSSProperties}
                                         animate={{ scale: [1, 1.05, 1] }}
                                         transition={{ duration: 2, repeat: Infinity }}
                                     >
@@ -531,8 +529,8 @@ export const ThemeEngine: React.FC<ThemeEngineProps> = ({
                                     {[previewTheme.primary, previewTheme.secondary, previewTheme.accent].map((color, i) => (
                                         <motion.div
                                             key={i}
-                                            className="flex-1 h-8 rounded-lg"
-                                            style={{ backgroundColor: color, boxShadow: `0 4px 15px ${color}50` }}
+                                            className="flex-1 h-8 rounded-lg js-dynamic-vars"
+                                            style={{ backgroundColor: color, boxShadow: `0 4px 15px ${color}50` } as React.CSSProperties}
                                             whileHover={{ scale: 1.1, y: -2 }}
                                         />
                                     ))}

@@ -62,6 +62,8 @@ export const ComparisonCard: React.FC<ComparisonCardProps> = ({
     const insight = getInsight();
     const progressPercentage = Math.min((currentValue / (currentValue + previousValue)) * 100, 100);
 
+    const statusColor = getTrendColor();
+
     return (
         <TiltCard
             isDarkMode={isDarkMode}
@@ -73,6 +75,16 @@ export const ComparisonCard: React.FC<ComparisonCardProps> = ({
                 }
                 backdrop-blur-sm shadow-lg
             `}
+            style={{
+                '--accent': color,
+                '--accent-20': `${color}20`,
+                '--accent-30': `${color}30`,
+                '--accent-40': `${color}40`,
+                '--accent-60': `${color}60`,
+                '--status': statusColor,
+                '--status-20': `${statusColor}20`,
+                '--status-30': `${statusColor}30`
+            } as React.CSSProperties}
             glareColor={color}
         >
             <div
@@ -82,13 +94,12 @@ export const ComparisonCard: React.FC<ComparisonCardProps> = ({
             >
                 {/* Neon Border Effect on Hover */}
                 <motion.div
-                    className="absolute inset-0 rounded-xl pointer-events-none border"
+                    className="absolute inset-0 rounded-xl pointer-events-none border border-[var(--accent-60)]"
                     initial={{ opacity: 0 }}
                     animate={{ opacity: isHovering ? 1 : 0 }}
                     transition={{ duration: 0.3 }}
                     style={{
-                        boxShadow: `inset 0 0 20px ${color}20, 0 0 20px ${color}20`,
-                        borderColor: `${color}60`
+                        boxShadow: `inset 0 0 20px var(--accent-20), 0 0 20px var(--accent-20)`
                     }}
                 />
 
@@ -97,8 +108,8 @@ export const ComparisonCard: React.FC<ComparisonCardProps> = ({
                     className="absolute inset-0 opacity-5 pointer-events-none"
                     animate={{
                         background: isHovering
-                            ? `radial-gradient(circle at 80% 20%, ${color}, transparent 60%)`
-                            : `radial-gradient(circle at top right, ${color}, transparent)`
+                            ? `radial-gradient(circle at 80% 20%, var(--accent), transparent 60%)`
+                            : `radial-gradient(circle at top right, var(--accent), transparent)`
                     }}
                     transition={{ duration: 0.5 }}
                 />
@@ -112,7 +123,7 @@ export const ComparisonCard: React.FC<ComparisonCardProps> = ({
                             exit={{ opacity: 0, scale: 0 }}
                             className="absolute top-4 right-4"
                         >
-                            <Sparkles className="w-4 h-4" style={{ color }} />
+                            <Sparkles className="w-4 h-4 text-[var(--accent)]" />
                         </motion.div>
                     )}
                 </AnimatePresence>
@@ -130,11 +141,7 @@ export const ComparisonCard: React.FC<ComparisonCardProps> = ({
                                         initial={{ opacity: 0, scale: 0 }}
                                         animate={{ opacity: 1, scale: 1 }}
                                         exit={{ opacity: 0, scale: 0 }}
-                                        className="text-xs px-2 py-0.5 rounded-full"
-                                        style={{
-                                            backgroundColor: `${color}20`,
-                                            color
-                                        }}
+                                        className="text-xs px-2 py-0.5 rounded-full bg-[var(--accent-20)] text-[var(--accent)]"
                                     >
                                         Realtime
                                     </motion.span>
@@ -149,12 +156,11 @@ export const ComparisonCard: React.FC<ComparisonCardProps> = ({
                                 rotate: isHovering ? 5 : 0
                             }}
                             transition={{ duration: 0.3 }}
-                            className="p-2 rounded-lg transition-all duration-300"
+                            className="p-2 rounded-lg transition-all duration-300 bg-[var(--icon-bg)] text-[var(--accent)]"
                             style={{
-                                backgroundColor: `${color}${isHovering ? '30' : '20'}`,
-                                color,
-                                boxShadow: isHovering ? `0 0 20px ${color}40` : 'none'
-                            }}
+                                '--icon-bg': isHovering ? 'var(--accent-30)' : 'var(--accent-20)',
+                                boxShadow: isHovering ? '0 0 20px var(--accent-40)' : 'none'
+                            } as React.CSSProperties}
                         >
                             {icon}
                         </motion.div>
@@ -173,7 +179,7 @@ export const ComparisonCard: React.FC<ComparisonCardProps> = ({
                             className={`font-bold ${isDarkMode ? 'text-white' : 'text-gray-900'}`}
                             animate={{
                                 fontSize: isHovering ? '2.5rem' : '2.25rem',
-                                textShadow: isHovering ? `0 0 20px ${color}40` : 'none',
+                                textShadow: isHovering ? '0 0 20px var(--accent-40)' : 'none',
                                 scale: [1, 1.02, 1], // Heartbeat pulse
                             }}
                             transition={{
@@ -214,7 +220,7 @@ export const ComparisonCard: React.FC<ComparisonCardProps> = ({
                 <div className="relative space-y-3">
                     {/* Previous Value with hover highlight */}
                     <motion.div
-                        className={`flex items-center justify-between p-2 -mx-2 rounded-lg transition-all ${isHovering ? (isDarkMode ? 'bg-white/5' : 'bg-gray-50') : ''
+                        className={`flex items-center justify-between p-2 -mx-2 rounded-lg transition-all ${isHovering ? (isDarkMode ? 'bg-white/5' : 'bg-gray-100') : ''
                             }`}
                     >
                         <span className={`text-sm ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>
@@ -243,12 +249,10 @@ export const ComparisonCard: React.FC<ComparisonCardProps> = ({
                                 animate={{ scale: 1 }}
                                 whileHover={{ scale: 1.1 }}
                                 transition={{ delay: 0.4, type: 'spring' }}
-                                className="flex items-center gap-1 px-3 py-1.5 rounded-full text-xs font-semibold cursor-pointer"
+                                className="flex items-center gap-1 px-3 py-1.5 rounded-full text-xs font-semibold cursor-pointer bg-[var(--status-20)] text-[var(--status)]"
                                 style={{
-                                    backgroundColor: `${getTrendColor()}20`,
-                                    color: getTrendColor(),
-                                    boxShadow: isHovering ? `0 0 15px ${getTrendColor()}30` : 'none'
-                                }}
+                                    boxShadow: isHovering ? '0 0 15px var(--status-30)' : 'none'
+                                } as React.CSSProperties}
                             >
                                 <motion.span
                                     animate={{
@@ -271,8 +275,7 @@ export const ComparisonCard: React.FC<ComparisonCardProps> = ({
                             Percentage
                         </span>
                         <motion.span
-                            className="text-sm font-bold"
-                            style={{ color: getTrendColor() }}
+                            className="text-sm font-bold text-[var(--status)]"
                             animate={{
                                 scale: isHovering ? [1, 1.1, 1] : 1
                             }}
@@ -287,8 +290,7 @@ export const ComparisonCard: React.FC<ComparisonCardProps> = ({
                 <div className="relative mt-4">
                     <div className={`h-2 rounded-full overflow-visible ${isDarkMode ? 'bg-slate-700' : 'bg-gray-200'}`}>
                         <motion.div
-                            className="h-full rounded-full relative"
-                            style={{ backgroundColor: color }}
+                            className="h-full rounded-full relative bg-[var(--accent)]"
                             initial={{ width: 0 }}
                             animate={{ width: `${progressPercentage}%` }}
                             transition={{ delay: 0.5, duration: 1, ease: 'easeOut' }}
@@ -308,12 +310,11 @@ export const ComparisonCard: React.FC<ComparisonCardProps> = ({
                                 <div className="absolute right-0 top-1/2 -translate-y-1/2 transform translate-x-1/2 z-10">
                                     <span className="relative flex h-3 w-3">
                                         <span
-                                            className="animate-ping absolute inline-flex h-full w-full rounded-full opacity-75"
-                                            style={{ backgroundColor: color }}
+                                            className="animate-ping absolute inline-flex h-full w-full rounded-full opacity-75 bg-[var(--accent)]"
                                         ></span>
                                         <span
-                                            className="relative inline-flex rounded-full h-3 w-3 bg-white"
-                                            style={{ boxShadow: `0 0 10px ${color}` }}
+                                            className="relative inline-flex rounded-full h-3 w-3 bg-white js-dynamic-shadow"
+                                            style={{ '--dynamic-shadow': '0 0 10px var(--accent)' } as React.CSSProperties}
                                         ></span>
                                     </span>
                                 </div>
@@ -330,8 +331,7 @@ export const ComparisonCard: React.FC<ComparisonCardProps> = ({
                                     initial={{ opacity: 0 }}
                                     animate={{ opacity: 1 }}
                                     exit={{ opacity: 0 }}
-                                    style={{ color }}
-                                    className="font-bold"
+                                    className="font-bold text-[var(--accent)]"
                                 >
                                     {Math.round(progressPercentage)}% of total
                                 </motion.span>

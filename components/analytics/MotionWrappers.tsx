@@ -55,26 +55,22 @@ export const TiltCard = ({ children, className = "", glareColor = "#a855f7", sty
                 ...style,
                 rotateX,
                 rotateY,
-                transformStyle: "preserve-3d",
-                perspective: 1000
             }}
             onMouseMove={handleMouseMove}
             onMouseLeave={handleMouseLeave}
-            className={`relative transition-transform duration-200 ease-out will-change-transform ${className}`}
+            className={`relative transition-transform duration-200 ease-out will-change-transform preserve-3d perspective-[1000px] ${className}`}
         >
-            <div style={{ transform: "translateZ(20px)" }} className="relative z-10 h-full">
+            <div className="relative z-10 h-full translate-z-[20px]">
                 {children}
             </div>
             {/* Glare/Sheen */}
             <motion.div
                 style={{
                     opacity: glareOpacity,
-                    background: `linear-gradient(125deg, transparent 40%, ${glareColor}40 45%, ${glareColor}10 50%, transparent 55%)`,
+                    backgroundImage: `linear-gradient(125deg, transparent 40%, ${glareColor}40 45%, ${glareColor}10 50%, transparent 55%)`,
                     backgroundPosition: useMotionTemplate`${bgX} ${bgY}`,  // moving sheen
-                    backgroundSize: '200% 200%',
-                    position: 'absolute', inset: 0, pointerEvents: 'none', zIndex: 20,
-                    mixBlendMode: 'overlay'
                 }}
+                className="absolute inset-0 pointer-events-none z-20 mix-blend-overlay bg-[length:200%_200%]"
             />
         </motion.div>
     );
@@ -107,16 +103,18 @@ export const SpotlightCard = ({ children, className = "", spotlightColor = "rgba
             onMouseMove={handleMouseMove}
             onMouseEnter={handleFocus}
             onMouseLeave={handleBlur}
-            className={`relative overflow-hidden ${className}`}
+            className={`relative overflow-hidden js-dynamic-wrapper ${className}`}
             style={style}
         >
             {/* Spotlight Glow */}
             <div
-                className="pointer-events-none absolute -inset-px transition duration-300 z-0"
+                className="pointer-events-none absolute -inset-px transition duration-300 z-0 bg-[radial-gradient(600px_circle_at_var(--pos-x)_var(--pos-y),var(--spotlight-color),transparent_40%)] js-dynamic-opacity"
                 style={{
-                    opacity,
-                    background: `radial-gradient(600px circle at ${position.x}px ${position.y}px, ${spotlightColor}, transparent 40%)`,
-                }}
+                    '--dynamic-opacity': opacity,
+                    '--pos-x': `${position.x}px`,
+                    '--pos-y': `${position.y}px`,
+                    '--spotlight-color': spotlightColor
+                } as React.CSSProperties}
             />
             {/* Content */}
             <div className="relative z-10 h-full">{children}</div>

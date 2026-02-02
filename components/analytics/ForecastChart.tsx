@@ -11,7 +11,7 @@ import {
     ResponsiveContainer,
     ReferenceLine,
 } from 'recharts';
-import { TrendingUp, Brain, Sparkles } from 'lucide-react';
+import { TrendingUp, Brain, Sparkles, Zap } from 'lucide-react';
 import { useAnalyticsStore } from '../../stores/analyticsStore';
 import { THEMES } from './ThemeEngine';
 
@@ -582,44 +582,121 @@ export const ForecastChart: React.FC<ForecastChartProps> = ({
                 </ResponsiveContainer>
             </div>
 
-            {/* AI Insight Footer */}
+            {/* AI Insight Footer with Enhanced Actions */}
             {insights && (
-                <motion.div
-                    initial={{ opacity: 0, y: 10 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ delay: 0.5 }}
-                    className={`
-                        mt-4 p-4 rounded-xl flex items-start gap-3
-                        ${isDarkMode ? 'bg-purple-500/10 border border-purple-500/20' : 'bg-purple-50 border border-purple-100'}
-                    `}
-                >
-                    <Sparkles className="w-5 h-5 text-purple-500 mt-0.5" />
-                    <div>
-                        <p className={`text-sm font-medium ${isDarkMode ? 'text-purple-300' : 'text-purple-700'}`}>
-                            🧠 AI Insight
-                        </p>
-                        <p className={`text-xs mt-1 ${isDarkMode ? 'text-slate-400' : 'text-slate-600'}`}>
-                            {insights.trend === 'up' && (
-                                <>
-                                    📈 คาดการณ์การหมุนเวียนพาเลท <span className="font-bold text-green-500">เพิ่มขึ้น {insights.projectedChange.toFixed(1)}%</span> ใน {forecastDays} วันข้างหน้า
-                                    ค่าเฉลี่ยพยากรณ์อยู่ที่ <span className="font-bold">{insights.avgForecast.toLocaleString()}</span> รายการ/วัน ควรเตรียมพาเลทพร้อมใช้งาน
-                                </>
-                            )}
-                            {insights.trend === 'down' && (
-                                <>
-                                    📉 คาดการณ์การหมุนเวียนพาเลท <span className="font-bold text-red-500">ลดลง {Math.abs(insights.projectedChange).toFixed(1)}%</span> ใน {forecastDays} วันข้างหน้า
-                                    ควรวางแผนกระจายพาเลทระหว่างสาขาให้สมดุล
-                                </>
-                            )}
-                            {insights.trend === 'stable' && (
-                                <>
-                                    ➡️ คาดการณ์การหมุนเวียนพาเลทจะ <span className="font-bold">คงที่</span> ใน {forecastDays} วันข้างหน้า
-                                    ระบบการจัดการพาเลททำงานเสถียร สมดุลระหว่างสาขาดี
-                                </>
-                            )}
-                        </p>
+                <div className="mt-6 space-y-4">
+                    <motion.div
+                        initial={{ opacity: 0, scale: 0.95 }}
+                        animate={{ opacity: 1, scale: 1 }}
+                        transition={{ delay: 0.5 }}
+                        className={`
+                            p-5 rounded-3xl flex flex-col md:flex-row items-center gap-6 relative overflow-hidden
+                            ${isDarkMode ? 'bg-purple-500/10 border border-purple-500/20' : 'bg-purple-50 border border-purple-100 shadow-sm'}
+                        `}
+                    >
+                        <div className="absolute top-0 right-0 p-2 opacity-10">
+                            <Brain className="w-20 h-20 -mr-6 -mt-6" />
+                        </div>
+
+                        <div className="flex-shrink-0">
+                            <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-purple-600 to-indigo-600 flex items-center justify-center shadow-lg transform -rotate-3">
+                                <Sparkles className="w-8 h-8 text-white" />
+                            </div>
+                        </div>
+
+                        <div className="flex-1 space-y-4">
+                            <div>
+                                <h4 className={`text-sm font-black uppercase tracking-[0.2em] mb-1 ${isDarkMode ? 'text-purple-300' : 'text-purple-700'}`}>
+                                    Neo AI Analysis Summary
+                                </h4>
+                                <p className={`text-base font-bold leading-relaxed ${isDarkMode ? 'text-slate-300' : 'text-slate-700'}`}>
+                                    {insights.trend === 'up' && (
+                                        <>
+                                            ตรวจพบสัญญาณการหมุนเวียน <span className="text-green-500 underline decoration-2 underline-offset-4">ที่หนาแน่นขึ้นอย่างมีนัยสำคัญ ({insights.projectedChange.toFixed(1)}%)</span>
+                                            ภายใน {forecastDays} วันข้างหน้า อ้างอิงจากข้อมูลธุรกรรมสัปดาห์ล่าสุด
+                                        </>
+                                    )}
+                                    {insights.trend === 'down' && (
+                                        <>
+                                            คาดการณ์ว่าการใช้งานจะ <span className="text-rose-500 underline decoration-2 underline-offset-4">ชะลอตัวลงประมาณ {Math.abs(insights.projectedChange).toFixed(1)}%</span>
+                                            เหมาะสำหรับการระดมทำความสะอาดและซ่อมแซมสต็อกที่สะสมอยู่
+                                        </>
+                                    )}
+                                    {insights.trend === 'stable' && (
+                                        <>
+                                            ระบบวิเคราะห์ว่าสถานะการไหลเวียน <span className="text-purple-500 underline decoration-2 underline-offset-4">อยู่ในช่วงสมดุล (Stable)</span>
+                                            โดยมีความเชื่อมั่น {insights.confidence.toFixed(0)}% แนะนำให้เน้นการเช็ค Cycle Count ตามปกติ
+                                        </>
+                                    )}
+                                </p>
+                            </div>
+
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                                <div className={`p-3 rounded-2xl ${isDarkMode ? 'bg-black/20' : 'bg-white/60'} border border-white/10`}>
+                                    <p className="text-[10px] font-black text-slate-500 uppercase mb-1">Impact Probability</p>
+                                    <div className="flex items-center gap-2">
+                                        <div className="flex-1 h-1.5 bg-slate-200 rounded-full overflow-hidden">
+                                            <motion.div
+                                                initial={{ width: 0 }}
+                                                animate={{ width: `${insights.confidence}%` }}
+                                                className="h-full bg-gradient-to-r from-purple-500 to-indigo-500"
+                                            />
+                                        </div>
+                                        <span className="text-xs font-black text-purple-600">{insights.confidence.toFixed(0)}%</span>
+                                    </div>
+                                </div>
+                                <div className={`p-3 rounded-2xl ${isDarkMode ? 'bg-black/20' : 'bg-white/60'} border border-white/10`}>
+                                    <p className="text-[10px] font-black text-slate-500 uppercase mb-1">Recommended Response</p>
+                                    <span className="text-xs font-bold text-slate-700 flex items-center gap-1">
+                                        {insights.trend === 'up' ? 'Increase Stock Reserve' : insights.trend === 'down' ? 'Schedule Maintenance' : 'Maintain Efficiency'}
+                                    </span>
+                                </div>
+                            </div>
+                        </div>
+                    </motion.div>
+
+                    {/* Proactive Action Steps */}
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-3 pt-2">
+                        {[
+                            {
+                                icon: <Zap className="w-4 h-4" />,
+                                text: insights.trend === 'up' ? 'เตรียมพาเลทสำรองเพิ่มที่ Hub' : 'เคลียร์พาเลทเช่าคืน Supplier',
+                                label: 'Action 01'
+                            },
+                            {
+                                icon: <TrendingUp className="w-4 h-4" />,
+                                text: insights.trend === 'up' ? 'ตรวจสอบพนักงานเข้ากะกิตติ' : 'ตรวจสอบค่าเช่าค้างจ่าย Sino',
+                                label: 'Action 02'
+                            },
+                            {
+                                icon: <Sparkles className="w-4 h-4" />,
+                                text: 'Sync ข้อมูลกับแผนกจัดส่ง',
+                                label: 'Action 03'
+                            }
+                        ].map((action, i) => (
+                            <motion.div
+                                key={i}
+                                initial={{ opacity: 0, y: 10 }}
+                                animate={{ opacity: 1, y: 0 }}
+                                transition={{ delay: 0.7 + i * 0.1 }}
+                                whileHover={{ y: -4, backgroundColor: isDarkMode ? 'rgba(139, 92, 246, 0.2)' : 'rgba(238, 242, 255, 1)' }}
+                                className={`p-4 rounded-[1.5rem] border transition-all cursor-pointer ${isDarkMode ? 'bg-white/5 border-white/5' : 'bg-slate-50 border-slate-100 hover:border-indigo-200'}`}
+                            >
+                                <span className={`text-[9px] font-black uppercase tracking-widest ${isDarkMode ? 'text-slate-500' : 'text-slate-400'}`}>
+                                    {action.label}
+                                </span>
+                                <div className="flex items-center gap-3 mt-2">
+                                    <div className={`p-2 rounded-xl scale-90 ${isDarkMode ? 'bg-purple-500/20 text-purple-400' : 'bg-white text-indigo-600 shadow-sm'}`}>
+                                        {action.icon}
+                                    </div>
+                                    <p className={`text-xs font-bold leading-tight ${isDarkMode ? 'text-slate-300' : 'text-slate-700'}`}>
+                                        {action.text}
+                                    </p>
+                                </div>
+                            </motion.div>
+                        ))}
                     </div>
-                </motion.div>
+                </div>
             )}
         </motion.div>
     );

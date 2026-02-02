@@ -105,7 +105,7 @@ _พาเลทกำลังเดินทางไปยังสาขา�
 };
 
 /**
- * Format a General Movement Notification (IN/OUT)
+ * Format a Movement Notification (IN/OUT)
  */
 export const formatMovementNotification = (data: any, sourceName: string, destName: string) => {
     const isReceive = data.type === 'IN';
@@ -126,4 +126,25 @@ ${itemsText}
 ${transportPart}
 ----------------------------
 _ตรวจสอบรายการในระบบจัดการพาเลท_`;
+};
+
+/**
+ * Format a Stock Depletion Alert (AI Intelligence)
+ */
+export const formatStockDepletionAlert = (prediction: any) => {
+    const riskEmoji = prediction.probability > 0.8 ? '🛑' : (prediction.probability > 0.5 ? '⚠️' : 'ℹ️');
+    const riskLevel = prediction.probability > 0.8 ? 'ระดับสูงมาก' : (prediction.probability > 0.5 ? 'ระดับปานกลาง' : 'ระดับต่ำ');
+
+    return `🤖 *AI Intelligence: แจ้งเตือนสต็อกใกล้หมด!*
+${riskEmoji} *สาขา:* ${prediction.branchName}
+📦 *พาเลท:* ${prediction.palletName}
+----------------------------
+*สถานะปัจจุบัน:* ${prediction.currentStock} ชิ้น
+*อัตราการใช้:* ~${prediction.dailyConsumption.toFixed(1)} ชิ้น/วัน
+*คาดว่าจะหมดใน:* \`${prediction.daysToExhaustion.toFixed(1)} วัน\`
+*ความเสี่ยง:* ${riskLevel} (${(prediction.probability * 100).toFixed(0)}%)
+
+📍 *ข้อแนะนำ:* ควรโอนย้ายพาเลทเพิ่มจากสาขาอื่นทันที
+----------------------------
+_วิเคราะห์โดยระบบ Predictive Analytics_`;
 };

@@ -117,8 +117,12 @@ export const EnhancedKPICard: React.FC<EnhancedKPICardProps> = ({
                     ${variantStyle?.shadow || ''}
                 `}
                 style={{
-                    // @ts-ignore
-                    '--card-glow': `radial-gradient(circle at top right, ${color}, transparent 70%)`
+                    '--card-glow': `radial-gradient(circle at top right, ${color || '#6366f1'}, transparent 70%)`,
+                    '--icon-bg': `${color || '#6366f1'}20`,
+                    '--icon-color': color || '#6366f1',
+                    '--icon-shadow': `0 0 20px ${color || '#6366f1'}30`,
+                    '--trend-bg': `${trendColor}20`,
+                    '--trend-color': trendColor
                 } as React.CSSProperties}
                 glareColor={color || '#fff'}
             >
@@ -144,12 +148,6 @@ export const EnhancedKPICard: React.FC<EnhancedKPICardProps> = ({
                                 : 'bg-[var(--icon-bg)] text-[var(--icon-color)] shadow-[var(--icon-shadow)]'
                             }
                         `}
-                        style={!variantStyle ? {
-                            // @ts-ignore
-                            '--icon-bg': `${color}20`,
-                            '--icon-color': color,
-                            '--icon-shadow': `0 0 20px ${color}30`
-                        } as React.CSSProperties : undefined}
                     >
                         {icon}
                     </motion.div>
@@ -191,11 +189,6 @@ export const EnhancedKPICard: React.FC<EnhancedKPICardProps> = ({
                     >
                         <div
                             className="flex items-center gap-1 px-2 py-1 rounded-full text-xs font-semibold bg-[var(--trend-bg)] text-[var(--trend-color)]"
-                            style={{
-                                // @ts-ignore
-                                '--trend-bg': `${trendColor}20`,
-                                '--trend-color': trendColor
-                            } as React.CSSProperties}
                         >
                             <span>{getTrendIcon()}</span>
                             <span>{Math.abs(trendValue)}%</span>
