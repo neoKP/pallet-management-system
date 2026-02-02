@@ -178,7 +178,7 @@ export const GaugeChart: React.FC<GaugeChartProps> = ({
                                     x: { duration: 0.1, repeat: isOver ? Infinity : 0 },
                                     y: { duration: 0.1, repeat: isOver ? Infinity : 0 }
                                 }}
-                                transform-origin="100px 100px"
+                                style={{ transformOrigin: '100px 100px' }}
                             >
                                 <motion.line
                                     x1="100"

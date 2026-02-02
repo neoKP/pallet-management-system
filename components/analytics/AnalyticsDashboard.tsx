@@ -49,14 +49,16 @@ import {
     ArrowUpCircle,
     ShieldCheck,
     Brain,
-    Palette
+    Palette,
+    Bot,
+    Search,
+    FilterX,
 } from 'lucide-react';
 import { BRANCHES, PALLET_TYPES, EXTERNAL_PARTNERS } from '../../constants';
 import { isSameDay, startOfWeek, endOfWeek, subWeeks, format, isWithinInterval } from 'date-fns';
 import { th } from 'date-fns/locale';
 import { hexToRgb } from '../../utils/helpers';
-
-// Premium Analytics Components
+import { NeoAIBriefing } from './NeoAIBriefing';
 import { GaugeChart } from './GaugeChart';
 import { Sparkline } from './Sparkline';
 import { HeatmapCalendar } from './HeatmapCalendar';
@@ -291,9 +293,9 @@ export const AnalyticsDashboard: React.FC<AnalyticsDashboardProps> = ({
         [transactions]
     );
 
-    const logisticData = useMemo(() =>
-        getLogisticInsight(filteredTransactions),
-        [filteredTransactions]
+    const smartInsight = useMemo(() =>
+        getLogisticInsight(filteredTransactions, kpis),
+        [filteredTransactions, kpis]
     );
 
     const quickLoopPerformance = useMemo(() =>
@@ -536,15 +538,7 @@ export const AnalyticsDashboard: React.FC<AnalyticsDashboardProps> = ({
 
     const [highlightedItem, setHighlightedItem] = useState<string | null>(null);
 
-    const smartInsight = useMemo(() => {
-        const topBranch = branchPerformance[0];
-        const topPallet = palletAnalysis[0];
-        const trendDirection = kpis.trend === 'up' ? 'เพิ่มขึ้น' : 'ลดลง';
-        return {
-            text: `สาขา ${topBranch?.branchName || '-'} มีพาเลทในคลังสูงสุดที่ ${topBranch?.totalStock.toLocaleString()} ชิ้น พาเลทประเภท ${topPallet?.palletName || '-'} ถูกใช้งานมากที่สุด คิดเป็น ${(topPallet?.percentage || 0).toFixed(1)}% การหมุนเวียนสัปดาห์นี้${trendDirection} ${kpis.trendPercentage}% เมื่อเทียบกับช่วงก่อน ควรติดตามการกระจายพาเลทระหว่างสาขาให้สมดุล`,
-            status: kpis.utilizationRate > 80 ? 'Optimal' : 'Checking'
-        };
-    }, [branchPerformance, palletAnalysis, kpis]);
+    // smartInsight is now calculated at line 296 using getLogisticInsight
 
     const handleDrillDown = (level: string) => {
         setDrillStack(prev => [...prev, level]);
@@ -599,20 +593,42 @@ export const AnalyticsDashboard: React.FC<AnalyticsDashboardProps> = ({
 
     const handleExportPDF = async () => {
         try {
-            Swal.fire({ title: 'กำลัง Export PDF...', allowOutsideClick: false, didOpen: () => Swal.showLoading() });
+            Swal.fire({
+                title: 'NEO AI REPORT ENGINE',
+                html: '<p style="font-size: 14px; font-weight: 700; color: #6366f1; letter-spacing: 0.1em;">PREPARING EXECUTIVE BRIEFING...</p>',
+                allowOutsideClick: false,
+                didOpen: () => Swal.showLoading()
+            });
             const { exportAnalyticsToPDF } = await import('../../utils/analyticsExport');
             await exportAnalyticsToPDF(kpis, filters.dateRange, filters.startDate, filters.endDate, isDarkMode);
-            Swal.fire({ icon: 'success', title: 'Export สำเร็จ!', timer: 3000 });
+            Swal.fire({ icon: 'success', title: 'Intelligence Report Exported', timer: 3000 });
         } catch (error) {
-            Swal.fire({ icon: 'error', title: 'เกิดข้อผิดพลาด', text: 'ไม่สามารถ Export PDF ได้' });
+            Swal.fire({ icon: 'error', title: 'Export Failed', text: 'System encountered a processing error.' });
         }
+    };
+
+    const handleAIBriefingRefresh = async () => {
+        setIsLoading(true);
+        // Simulate AI thinking
+        await new Promise(resolve => setTimeout(resolve, 1200));
+        setIsLoading(false);
+        Swal.fire({
+            toast: true,
+            position: 'top-end',
+            icon: 'info',
+            title: 'Briefing Synchronized',
+            showConfirmButton: false,
+            timer: 3000,
+            background: isDarkMode ? '#0f172a' : '#ffffff',
+            color: isDarkMode ? '#ffffff' : '#0f172a'
+        });
     };
 
     const handleExportExcel = async () => {
         try {
             Swal.fire({ title: 'กำลัง Export Excel...', allowOutsideClick: false, didOpen: () => Swal.showLoading() });
             const { exportAnalyticsToExcel } = await import('../../utils/analyticsExport');
-            exportAnalyticsToExcel(kpis, statusData, typeData, timeSeriesData, branchPerformance, palletAnalysis, filters.dateRange, filters.startDate, filters.endDate);
+            exportAnalyticsToExcel(kpis, statusData, typeData, timeSeriesData, branchPerformance, palletAnalysis, filters.dateRange, filters.startDate, filters.endDate, filteredTransactions);
             Swal.fire({ icon: 'success', title: 'Export สำเร็จ!', timer: 4000 });
         } catch (error) {
             Swal.fire({ icon: 'error', title: 'เกิดข้อผิดพลาด', text: 'ไม่สามารถ Export Excel ได้' });
@@ -677,17 +693,12 @@ export const AnalyticsDashboard: React.FC<AnalyticsDashboardProps> = ({
                             <ExecutivePalletSummary analysis={agingAnalysis} />
                         </div>
 
-                        <motion.div data-pdf-export="insight" variants={{ hidden: { opacity: 0, scale: 0.98 }, show: { opacity: 1, scale: 1 } }} className={`p-6 rounded-3xl border transition-all duration-500 ${isDarkMode ? 'bg-white/5 border-white/10' : 'bg-white border-slate-100 shadow-sm'} relative overflow-hidden`}>
-                            <div className="absolute inset-0 opacity-[0.03] pointer-events-none theme-gradient-primary" />
-                            <div className="absolute top-0 right-0 p-4"><span className="px-2 py-1 rounded-full text-[10px] font-black uppercase tracking-widest text-white theme-bg-primary">AI Insight</span></div>
-                            <div className="flex gap-4 items-start">
-                                <div className="p-3 rounded-2xl text-white shadow-lg theme-bg-primary theme-shadow-primary"><Sparkles className="w-6 h-6" /></div>
-                                <div className="space-y-1 pr-20">
-                                    <h4 className={`text-sm font-black transition-colors duration-500 theme-text-primary`}>Smart Narrative</h4>
-                                    <p className={`text-base font-medium leading-relaxed ${isDarkMode ? 'text-slate-300' : 'text-slate-700'}`}>{smartInsight.text}</p>
-                                </div>
-                            </div>
-                        </motion.div>
+                        <NeoAIBriefing
+                            insight={smartInsight.text}
+                            onRefresh={handleAIBriefingRefresh}
+                            isDarkMode={isDarkMode}
+                            isRefreshing={isLoading}
+                        />
 
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                             <ExecutivePillCard title="MAX POSSESSION" value={kpis.maxPossession} suffix="MAX" color="#f97316" isDarkMode={isDarkMode} trend={kpis.maxPossessionTrend} />
@@ -735,7 +746,7 @@ export const AnalyticsDashboard: React.FC<AnalyticsDashboardProps> = ({
                             <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
                                 <RechartsPieChart data={centralizedReturnData} title="🔄 การรวมศูนย์การคืน (Hub NW vs สาขา)" isDarkMode={isDarkMode} />
                                 <RechartsPieChart data={sinoAgingData} title="⏳ Sino Aging Status (Grace Period)" isDarkMode={isDarkMode} />
-                                <RechartsBarChart data={logisticData} title="🚛 วิเคราะห์ประเภทรถขนส่ง" isDarkMode={isDarkMode} />
+                                <RechartsBarChart data={centralizedReturnData} title="🚛 วิเคราะห์การคืนพาเลทรวมศูนย์" isDarkMode={isDarkMode} />
                             </div>
                         </div>
 

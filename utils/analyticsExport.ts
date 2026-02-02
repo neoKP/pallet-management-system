@@ -168,28 +168,99 @@ export const exportAnalyticsToPDF = async (
 };
 
 /**
- * Basic Excel Export
+ * Professional Excel Export for Analytics Data
+ * Following xlsx-skill standards for enterprise reporting
  */
-export const exportAnalyticsToExcel = (kpis: any, statusData: any, typeData: any, timeSeriesData: any, branchPerformance: any, palletAnalysis: any, dateRange: string, startDate: Date, endDate: Date) => {
+export const exportAnalyticsToExcel = (
+    kpis: any,
+    statusData: any[],
+    typeData: any[],
+    timeSeriesData: any[],
+    branchPerformance: any[],
+    palletAnalysis: any[],
+    dateRange: string,
+    startDate: Date,
+    endDate: Date,
+    transactions: any[]
+): void => {
     try {
         const XLSX = (window as any).XLSX;
-        if (!XLSX) return;
+        if (!XLSX) {
+            console.error('XLSX library not found');
+            return;
+        }
+
         const wb = XLSX.utils.book_new();
-        const data = [
-            ['Neo Siam Logistics - Analytics Data'],
-            [`Period: ${startDate.toLocaleDateString()} - ${endDate.toLocaleDateString()}`],
-            [],
-            ['KPI Name', 'Value'],
-            ['Total Activity', kpis.totalTransactions],
-            ['Current Stock', kpis.totalPalletsInStock],
-            ['In Transit', kpis.totalPalletsInTransit],
-            ['Utilization (%)', kpis.utilizationRate],
-            ['Maintenance (%)', kpis.maintenanceRate]
+        const timestamp = new Date().toLocaleString('th-TH');
+
+        // 1. EXECUTIVE SUMMARY SHEET
+        const summaryRows = [
+            ['NEO SIAM LOGISTICS - EXECUTIVE ANALYTICS SUMMARY'],
+            [`Generated on: ${timestamp}`],
+            [`Report Period: ${startDate.toLocaleDateString('th-TH')} - ${endDate.toLocaleDateString('th-TH')}`],
+            [''],
+            ['KEY PERFORMANCE INDICATORS (KPIs)', 'VALUE', 'UNIT'],
+            ['Total Activity (Volumes)', kpis.totalTransactions, 'Units'],
+            ['In-Transit Stock', kpis.totalPalletsInTransit, 'Units'],
+            ['Current Inventory', kpis.totalPalletsInStock, 'Units'],
+            ['Utilization Rate', kpis.utilizationRate, '%'],
+            ['Maintenance Rate', kpis.maintenanceRate, '%'],
+            [''],
+            ['STATUS DISTRIBUTION', 'COUNT', 'SHARE (%)'],
+            ...statusData.map(item => [item.name, item.value, `${item.percentage}%`])
         ];
-        const ws = XLSX.utils.aoa_to_sheet(data);
-        XLSX.utils.book_append_sheet(wb, ws, 'Executive Summary');
-        XLSX.writeFile(wb, `NSL_Data_Export_${new Date().toISOString().split('T')[0]}.xlsx`);
-    } catch (e) {
-        console.error('Excel Export Failed', e);
+
+        const wsSummary = XLSX.utils.aoa_to_sheet(summaryRows);
+        wsSummary['!cols'] = [{ wch: 40 }, { wch: 15 }, { wch: 15 }];
+        XLSX.utils.book_append_sheet(wb, wsSummary, 'Executive Summary');
+
+        // 2. BRANCH PERFORMANCE SHEET
+        const branchHeaders = ['BRANCH NAME', 'TOTAL STOCK', 'INBOUND', 'OUTBOUND', 'UTILIZATION (%)'];
+        const branchRows = branchPerformance.map(b => [
+            b.branchName,
+            b.totalStock,
+            b.inTransactions,
+            b.outTransactions,
+            b.utilizationRate
+        ]);
+        const wsBranch = XLSX.utils.aoa_to_sheet([branchHeaders, ...branchRows]);
+        wsBranch['!cols'] = [{ wch: 30 }, { wch: 15 }, { wch: 15 }, { wch: 15 }, { wch: 15 }];
+        XLSX.utils.book_append_sheet(wb, wsBranch, 'Branch Analysis');
+
+        // 3. PALLET TYPE ANALYSIS
+        const palletHeaders = ['PALLET TYPE', 'TOTAL STOCK', 'IN COUNT', 'OUT COUNT', 'MAINTENANCE', 'TURNOVER (%)'];
+        const palletRows = palletAnalysis.map(p => [
+            p.palletName,
+            p.totalStock,
+            p.inCount,
+            p.outCount,
+            p.maintenanceCount,
+            p.turnoverRate
+        ]);
+        const wsPallet = XLSX.utils.aoa_to_sheet([palletHeaders, ...palletRows]);
+        wsPallet['!cols'] = [{ wch: 35 }, { wch: 15 }, { wch: 15 }, { wch: 15 }, { wch: 15 }, { wch: 15 }];
+        XLSX.utils.book_append_sheet(wb, wsPallet, 'Pallet Analysis');
+
+        // 4. TRANSACTION LOG (CLEAN DATA)
+        const logHeaders = ['DATE', 'DOC NO', 'SOURCE', 'DESTINATION', 'TYPE', 'PALLET', 'QTY', 'STATUS'];
+        const logRows = transactions.slice(0, 5000).map(t => [
+            new Date(t.date).toLocaleDateString('th-TH'),
+            t.docNo,
+            t.source,
+            t.destination,
+            t.type,
+            t.palletId,
+            t.qty,
+            t.status
+        ]);
+        const wsLog = XLSX.utils.aoa_to_sheet([logHeaders, ...logRows]);
+        XLSX.utils.book_append_sheet(wb, wsLog, 'Transaction Log');
+
+        // Save file
+        const fileName = `NSL_Premium_Data_Pack_${new Date().toISOString().split('T')[0]}.xlsx`;
+        XLSX.writeFile(wb, fileName);
+
+    } catch (error) {
+        console.error('Premium Excel Export Error:', error);
     }
 };
