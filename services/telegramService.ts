@@ -2,9 +2,18 @@
 const BOT_TOKEN = '8339371070:AAHw1ri9hn5QAd7DM2RvOnv5ybCabPkrxqM';
 
 /**
+ * Helper to escape special characters for Telegram MarkdownV2
+ */
+export const escapeMarkdown = (text: string) => {
+    if (!text) return '';
+    // Characters that need escaping in MarkdownV2
+    return text.toString().replace(/([_*\[\]()~`>#+\-=|{}.!])/g, '\\$1');
+};
+
+/**
  * Send a message to a Telegram chat
  * @param chatId The chat ID to send the message to
- * @param text The message text (Markdown supported)
+ * @param text The message text (MarkdownV2 supported)
  */
 export const sendMessage = async (chatId: string, text: string) => {
     if (!chatId || !text) return;
@@ -20,13 +29,21 @@ export const sendMessage = async (chatId: string, text: string) => {
             body: JSON.stringify({
                 chat_id: chatId,
                 text: text,
-                parse_mode: 'Markdown',
+                parse_mode: 'MarkdownV2',
             }),
         });
 
         const data = await response.json();
         if (!data.ok) {
             console.error('Telegram API Error:', data.description);
+            // Fallback to simple text if MarkdownV2 fails due to escaping issues
+            if (data.description.includes('can\'t parse')) {
+                await fetch(url, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ chat_id: chatId, text: text.replace(/[\\]/g, ''), parse_mode: 'HTML' })
+                });
+            }
         }
         return data;
     } catch (error) {
@@ -56,11 +73,11 @@ const getVehicleName = (vehicleId: string) => {
 const formatTransportInfo = (data: any) => {
     if (!data.carRegistration && !data.driverName && !data.vehicleType) return '';
 
-    return `\n*ข้อมูลการขนส่ง:*
-🚛 ประเภท: ${getVehicleName(data.vehicleType || '-')}
-🔢 ทะเบียน: ${data.carRegistration || '-'}
-👤 คนขับ: ${data.driverName || '-'}
-🏢 บริษัท: ${data.transportCompany || '-'}`;
+    return `\n*🚛 ข้อมูลการขนส่ง:*
+• ประเภท: ${escapeMarkdown(getVehicleName(data.vehicleType || '-'))}
+• ทะเบียน: \`${escapeMarkdown(data.carRegistration || '-')}\`
+• คนขับ: ${escapeMarkdown(data.driverName || '-')}
+• บริษัท: ${escapeMarkdown(data.transportCompany || '-')}`;
 };
 
 /**
@@ -109,23 +126,52 @@ _พาเลทกำลังเดินทางไปยังสาขา�
  */
 export const formatMovementNotification = (data: any, sourceName: string, destName: string) => {
     const isReceive = data.type === 'IN';
-    const title = isReceive ? '📥 *แจ้งรับเข้าพาเลท!*' : '📤 *แจ้งจ่ายออกพาเลท!*';
+    const title = isReceive ? '📥 *แจ้งรับเข้าพาเลท\\!*' : '📤 *แจ้งจ่ายออกพาเลท\\!*';
     const icon = isReceive ? '✅' : '📦';
-    const itemsText = data.items.map((item: any) => `  • ${getPalletName(item.palletId)}: ${item.qty} ชิ้น`).join('\n');
+    const itemsText = data.items.map((item: any) => `    • ${escapeMarkdown(getPalletName(item.palletId))}: *${item.qty}* ชิ้น`).join('\n');
     const transportPart = formatTransportInfo(data);
 
     return `${title}
-----------------------------
-*เลขที่เอกสาร:* \`${data.docNo}\`
-*จาก:* ${sourceName}
-*เข้าที่:* ${destName}
+▬▬▬▬▬▬▬▬▬▬▬▬
+*เลขที่เอกสาร:* \`${escapeMarkdown(data.docNo)}\`
+*จาก:* ${escapeMarkdown(sourceName)}
+*เข้าที่:* ${escapeMarkdown(destName)}
 *รายการ:*
 ${itemsText}
-*อ้างอิง:* ${data.referenceDocNo || '-'}
+*อ้างอิง:* ${escapeMarkdown(data.referenceDocNo || '-')}
 *สถานะ:* ${icon} บันทึกสำเร็จ
 ${transportPart}
-----------------------------
+▬▬▬▬▬▬▬▬▬▬▬▬
 _ตรวจสอบรายการในระบบจัดการพาเลท_`;
+};
+
+/**
+ * Format a Maintenance Notification
+ */
+export const formatMaintenanceNotification = (data: any, scrappedQty: number, branchName: string) => {
+    return `🛠️ *สรุปงานซ่อมบำรุงพาเลท\\!*
+▬▬▬▬▬▬▬▬▬▬▬▬
+*เลขที่เอกสาร:* \`${escapeMarkdown(data.docNo)}\`
+*สาขา:* ${escapeMarkdown(branchName)}
+*รายละเอียด:*
+    • ซ่อมเสร็จ: *${data.qty}* ตัว \\(เป็น ${escapeMarkdown(getPalletName(data.palletId))}\\)
+    • เสีย/ทิ้ง: *${scrappedQty}* ตัว
+*สถานะ:* ✅ บันทึกผลสำเร็จ
+▬▬▬▬▬▬▬▬▬▬▬▬
+_มียอดพาเลทเสียไหลเข้าสต๊อกรอขายซาก_`;
+};
+
+/**
+ * Format a Scrap Sale Notification
+ */
+export const formatScrapSaleNotification = (tx: any, amount: number) => {
+    return `💰 *แจ้งการขายซากพาเลท\\!*
+▬▬▬▬▬▬▬▬▬▬▬▬
+*เลขที่เอกสาร:* \`${escapeMarkdown(tx.docNo)}\`
+*รายการ:* ${escapeMarkdown(getPalletName(tx.originalPalletId || 'general'))}
+*ราคาที่ขายได้:* ฿*${amount.toLocaleString()}*
+▬▬▬▬▬▬▬▬▬▬▬▬
+*สถานะ:* ✅ บันทึกรายได้เข้าระบบเรียบร้อย`;
 };
 
 /**
@@ -135,16 +181,16 @@ export const formatStockDepletionAlert = (prediction: any) => {
     const riskEmoji = prediction.probability > 0.8 ? '🛑' : (prediction.probability > 0.5 ? '⚠️' : 'ℹ️');
     const riskLevel = prediction.probability > 0.8 ? 'ระดับสูงมาก' : (prediction.probability > 0.5 ? 'ระดับปานกลาง' : 'ระดับต่ำ');
 
-    return `🤖 *AI Intelligence: แจ้งเตือนสต็อกใกล้หมด!*
-${riskEmoji} *สาขา:* ${prediction.branchName}
-📦 *พาเลท:* ${prediction.palletName}
-----------------------------
+    return `🤖 *AI Intelligence: แจ้งเตือนสต็อกใกล้หมด\\!*
+${riskEmoji} *สาขา:* ${escapeMarkdown(prediction.branchName)}
+📦 *พาเลท:* ${escapeMarkdown(prediction.palletName)}
+▬▬▬▬▬▬▬▬▬▬▬▬
 *สถานะปัจจุบัน:* ${prediction.currentStock} ชิ้น
 *อัตราการใช้:* ~${prediction.dailyConsumption.toFixed(1)} ชิ้น/วัน
 *คาดว่าจะหมดใน:* \`${prediction.daysToExhaustion.toFixed(1)} วัน\`
-*ความเสี่ยง:* ${riskLevel} (${(prediction.probability * 100).toFixed(0)}%)
+*ความเสี่ยง:* ${riskLevel} \\(${(prediction.probability * 100).toFixed(0)}%\\)
 
 📍 *ข้อแนะนำ:* ควรโอนย้ายพาเลทเพิ่มจากสาขาอื่นทันที
-----------------------------
+▬▬▬▬▬▬▬▬▬▬▬▬
 _วิเคราะห์โดยระบบ Predictive Analytics_`;
 };

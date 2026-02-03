@@ -277,7 +277,17 @@ export const StockProvider: React.FC<StockProviderProps> = ({ children }) => {
             nextStock[data.branchId as BranchId] = s;
         }
         await firebaseService.addMovementBatch([newTx], nextStock);
-    }, [stock, generateDocNo]);
+
+        if (config.telegramChatId) {
+            try {
+                const branchName = BRANCHES.find(b => b.id === data.branchId)?.name || data.branchId;
+                const message = telegramService.formatMaintenanceNotification(newTx, data.scrappedQty, branchName);
+                await telegramService.sendMessage(config.telegramChatId, message);
+            } catch (err) {
+                console.error('Failed to send Telegram maintenance notification:', err);
+            }
+        }
+    }, [stock, generateDocNo, config.telegramChatId]);
 
     const createPalletRequest = useCallback(async (req: any) => {
         const dateStr = new Date().toISOString().split('T')[0];
@@ -327,7 +337,16 @@ export const StockProvider: React.FC<StockProviderProps> = ({ children }) => {
 
     const updateTransaction = useCallback(async (tx: Transaction) => {
         await firebaseService.addMovementBatch([tx], stock);
-    }, [stock]);
+
+        if (config.telegramChatId && tx.scrapRevenue) {
+            try {
+                const message = telegramService.formatScrapSaleNotification(tx, tx.scrapRevenue);
+                await telegramService.sendMessage(config.telegramChatId, message);
+            } catch (err) {
+                console.error('Failed to send Telegram scrap sale notification:', err);
+            }
+        }
+    }, [stock, config.telegramChatId]);
 
     return (
         <StockContext.Provider
