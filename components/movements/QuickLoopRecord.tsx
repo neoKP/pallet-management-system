@@ -46,10 +46,11 @@ export const QuickLoopRecord: React.FC<QuickLoopRecordProps> = ({ selectedBranch
     // Target partners for branch-specific loop
     const loopPartners = useMemo(() => {
         if (selectedBranch === 'hub_nw') {
-            const ids = ['sino', 'loscam_wangnoi'];
+            const ids = ['sino', 'loscam_wangnoi', 'neo_corp'];
             return EXTERNAL_PARTNERS.filter(p => ids.includes(p.id));
         }
-        const ids = ['lamsoon', 'ufc', 'loxley', 'kopee', 'hiq_th'];
+        // All branches can receive from Neo Corp & Sino (User request 03/02/2026)
+        const ids = ['lamsoon', 'ufc', 'loxley', 'kopee', 'hiq_th', 'neo_corp', 'sino'];
         return EXTERNAL_PARTNERS.filter(p => ids.includes(p.id));
     }, [selectedBranch]);
 
@@ -78,13 +79,32 @@ export const QuickLoopRecord: React.FC<QuickLoopRecordProps> = ({ selectedBranch
             return;
         }
 
-        const numericQty = parseInt(qty);
-        if (isNaN(numericQty) || numericQty <= 0) {
-            Swal.fire({ icon: 'warning', title: 'จำนวนไม่ถูกต้อง', text: 'กรุณาระบุจำนวนพาเลท' });
-            return;
-        }
-
         try {
+            // Enforcement of Business Rules (03/02/2026)
+            if (activePartner === 'neo_corp' && type === 'OUT') {
+                Swal.fire({
+                    icon: 'error',
+                    title: 'ไม่สามารถทำรายการได้',
+                    text: 'บ. นีโอ คอร์ปอเรท อนุญาตให้ทำการ "รับเข้า" เท่านั้น'
+                });
+                return;
+            }
+
+            if (activePartner === 'loscam_wangnoi' && type === 'OUT' && selectedBranch !== 'hub_nw') {
+                Swal.fire({
+                    icon: 'error',
+                    title: 'ข้อจำกัดพื้นที่',
+                    text: 'การคืนพาเลทให้ Loscam วังน้อย สามารถทำได้ที่สาขานครสวรรค์ (Hub NW) เท่านั้น'
+                });
+                return;
+            }
+
+            const numericQty = parseInt(qty);
+            if (isNaN(numericQty) || numericQty <= 0) {
+                Swal.fire({ icon: 'warning', title: 'จำนวนไม่ถูกต้อง', text: 'กรุณาระบุจำนวนพาเลท' });
+                return;
+            }
+
             setIsSubmitting(true);
 
             let effectivePartnerId = activePartner;

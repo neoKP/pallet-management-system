@@ -125,38 +125,48 @@ const MovementForm: React.FC<MovementFormProps> = ({
                             </option>
                         ))}
                         {selectedBranch !== 'maintenance_stock' && EXTERNAL_PARTNERS.filter(p => {
-                            // Version 2.4.0: Simplified Partner Access Control
+                            // Version 2.5.0: Enhanced Partner Branch Restrictions
 
                             // Rule 0: Global 'No OUT to Neo Corp'
                             if (transactionType === 'OUT' && p.id === 'neo_corp') return false;
 
-                            // Rule 1: Lamsoon (IN: Sai3 only, OUT: Sai3 & Hub NW)
-                            if (p.id === 'lamsoon') {
-                                if (transactionType === 'IN' && selectedBranch !== 'sai3') return false;
-                                if (transactionType === 'OUT' && !['sai3', 'hub_nw'].includes(selectedBranch)) return false;
+                            // Rule 1 & 2: Lamsoon, UFC, Loxley, Kopee (Strictly Sai 3 for IN/OUT)
+                            // User Request 03/02/2026: ล่ำสูง ufc โคฟี่ รับเข้าแค่ สาย3 จ่ายออกแค่ สาย3
+                            if (['lamsoon', 'ufc', 'loxley', 'kopee'].includes(p.id)) {
+                                if (selectedBranch === 'sai3') return true;
+                                if (selectedBranch === 'hub_nw' && transactionType === 'OUT' && p.id === 'lamsoon') return true;
+                                return false;
                             }
 
-                            // Rule 2: UFC, Loxley, Kopee (Strictly Sai3 Only for both IN/OUT)
-                            if (['ufc', 'loxley', 'kopee'].includes(p.id)) {
-                                if (selectedBranch !== 'sai3') return false;
-                            }
-
-                            // Rule 3: HI-Q only shows when selecting hiq pallets OR when no items selected yet
+                            // Rule 3: HI-Q logic (User Request 03/02/2026: สาย 3 รับเข้า จ่าย ออก ส่วนสาขา จะโอน กันภายใน)
                             if (p.id === 'hiq_th') {
+                                if (selectedBranch !== 'sai3') return false; // External HI-Q only at Sai 3
                                 const hasHiq = items.some(item => item.palletId === 'hiq');
                                 const hasNonHiq = items.some(item => item.palletId !== '' && item.palletId !== 'hiq');
                                 if (hasNonHiq && !hasHiq) return false;
+                                return true;
                             }
 
-                            // Rule 4: Loscam provider (neo_corp, loscam_wangnoi) only at Hub NW
-                            if (['neo_corp', 'loscam_wangnoi'].includes(p.id)) {
-                                if (selectedBranch !== 'hub_nw') return false;
+                            // Rule 4: Loscam provider logic
+                            if (p.id === 'neo_corp') {
+                                if (transactionType === 'OUT') return false;
+                                return true; // IN allowed at all branches
+                            }
+                            if (p.id === 'loscam_wangnoi') {
+                                if (selectedBranch !== 'hub_nw') return false; // Returns only via Hub NW
+                                return true;
                             }
 
-                            // Rule 5: Sino allowed at Hub NW, Chiang Mai, EKP, KPP, PLK, and MS
+                            // Rule 5: Sino-Pacific logic (User request 03/02/2026)
                             if (p.id === 'sino') {
+                                if (transactionType === 'IN') return true; // IN allowed at all branches
                                 if (!['hub_nw', 'cm', 'ekp', 'kpp', 'plk', 'ms'].includes(selectedBranch)) return false;
+                                return true;
                             }
+
+                            // Rule 6: General & Plastic Pallet restriction (User Request 03/02/2026: โอนภายในเท่านั้น)
+                            const hasInternalOnlyPallets = items.some(item => ['general', 'plastic_circular'].includes(item.palletId as string));
+                            if (hasInternalOnlyPallets) return false; // These pallets cannot be sent/received from external partners
 
                             return true;
                         }).map(partner => (

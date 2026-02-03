@@ -119,10 +119,13 @@ export const StockProvider: React.FC<StockProviderProps> = ({ children }) => {
         const timestamp = now.toISOString();
         if (!txData.type || !txData.source || !txData.dest) return;
 
+        // User allows negative stock for borrowing (03/02/2026)
+        /*
         if (txData.type === 'OUT' && BRANCHES.some(b => b.id === txData.source)) {
             const available = stock[txData.source as BranchId]?.[txData.palletId as PalletId] || 0;
             if ((txData.qty || 0) > available) throw new Error('พาเลทไม่เพียงพอ');
         }
+        */
 
         const docNo = generateDocNo(txData.type, txData.source, txData.dest, dateStr);
         const status = (BRANCHES.some(b => b.id === txData.source) && BRANCHES.some(b => b.id === txData.dest)) ? 'PENDING' : 'COMPLETED';

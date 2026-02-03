@@ -102,6 +102,17 @@ export function useMaintenanceLogic(
             }
         }
 
+        // User Rule (03/02/2026): Plastic pallets can ONLY be scrapped in maintenance
+        const plasticInBatch = batchItems.filter(item => item.palletId === 'plastic_circular').reduce((sum, item) => sum + item.qty, 0);
+        if (plasticInBatch > 0 && fixedQty > (totalProcessed - plasticInBatch)) {
+            Swal.fire({
+                icon: 'error',
+                title: 'ข้อจำกัดประเภทพาเลท',
+                text: 'พาเลทพลาสติกไม่สามารถซ่อมเพื่อนำกลับมาใช้ใหม่ได้ ต้องบันทึกเป็น "เสีย/ทิ้ง" เท่านั้น'
+            });
+            return;
+        }
+
         if (fixedQty + scrappedQty !== totalProcessed) {
             Swal.fire({
                 icon: 'warning',
