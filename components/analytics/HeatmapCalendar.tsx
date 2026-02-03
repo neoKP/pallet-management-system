@@ -230,8 +230,8 @@ export const HeatmapCalendar: React.FC<HeatmapCalendarProps> = ({
                                     initial={{ height: 6 }}
                                     animate={{ height: [6, 12, 6] }}
                                     transition={{ duration: 1.5, repeat: Infinity, delay: i * 0.2, ease: "easeInOut" }}
-                                    className="w-1 rounded-full heatmap-legend-bar"
-                                    style={{ opacity }}
+                                    className="w-1 rounded-full heatmap-legend-bar js-dynamic-opacity"
+                                    style={{ '--dynamic-opacity': opacity } as React.CSSProperties}
                                 />
                             ))}
                         </div>

@@ -37,7 +37,7 @@ export const ChartSkeleton: React.FC<{ title: string; isDarkMode: boolean; heigh
             <h3 className={`text-lg font-bold ${isDarkMode ? 'text-white' : 'text-slate-900'}`}>{title}</h3>
             <SkeletonBase className="h-4 w-16" isDarkMode={isDarkMode} />
         </div>
-        <div style={{ height } as React.CSSProperties} className="flex items-end gap-2 px-2">
+        <div style={{ '--dynamic-height': `${height}px` } as React.CSSProperties} className="flex items-end gap-2 px-2 js-dynamic-height">
             {[...Array(12)].map((_, i) => (
                 <SkeletonBase
                     key={i}

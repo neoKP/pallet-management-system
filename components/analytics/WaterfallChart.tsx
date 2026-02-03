@@ -271,8 +271,8 @@ export const WaterfallChart: React.FC<WaterfallChartProps> = ({
                         whileHover={{ scale: 1.1, boxShadow: `0 0 15px ${l.color}`, borderColor: l.color }}
                     >
                         <div
-                            className="w-2 h-2 rounded-full js-dynamic-shadow js-dynamic-vars"
-                            style={{ backgroundColor: l.color, color: l.color, '--dynamic-shadow': `0 0 10px ${l.color}` } as React.CSSProperties}
+                            className="w-2 h-2 rounded-full js-dynamic-shadow js-dynamic-bg"
+                            style={{ '--dynamic-bg': l.color, '--dynamic-shadow': `0 0 10px ${l.color}` } as React.CSSProperties}
                         />
                         <span className={`text-xs font-medium ${isDarkMode ? 'text-gray-300' : 'text-gray-600'}`}>
                             {l.label}

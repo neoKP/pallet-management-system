@@ -172,8 +172,8 @@ const FloatingParticles: React.FC<{ color: string; count?: number }> = ({ color,
                         top: `${p.y}%`,
                         width: p.size,
                         height: p.size,
-                        '--p-color': color,
-                        boxShadow: `0 0 ${p.size * 2}px var(--p-color)`,
+                        '--dynamic-color': color,
+                        '--dynamic-shadow': `0 0 ${p.size * 2}px var(--dynamic-color)`,
                     } as React.CSSProperties}
                     animate={{
                         y: [0, -30, 0],
@@ -492,9 +492,9 @@ export const ThemeEngine: React.FC<ThemeEngineProps> = ({
                             >
                                 {/* Gradient Overlay */}
                                 <div
-                                    className="absolute inset-0 js-dynamic-vars"
+                                    className="absolute inset-0 js-dynamic-vars js-dynamic-opacity js-dynamic-bg"
                                     style={{
-                                        opacity: 0.3,
+                                        '--dynamic-opacity': 0.3,
                                         '--dynamic-bg': `linear-gradient(135deg, ${previewTheme.primary}50, ${previewTheme.secondary}30, transparent)`,
                                     } as React.CSSProperties}
                                 />
