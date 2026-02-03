@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useState, useCallback, ReactNode, useEffect } from 'react';
-import { Stock, Transaction, BranchId, PalletId, TransactionType, PalletRequest, PalletRequestType } from '../types';
+import { Stock, Transaction, BranchId, PalletId, TransactionType, PalletRequest, PalletRequestType, Branch, Partner } from '../types';
 import { INITIAL_STOCK, INITIAL_TRANSACTIONS, BRANCHES, EXTERNAL_PARTNERS, PALLET_TYPES } from '../constants';
 import * as firebaseService from '../services/firebase';
 import * as telegramService from '../services/telegramService';
@@ -33,6 +33,7 @@ interface StockContextType {
         branchId: BranchId;
         targetBranchId?: BranchId;
         targetPalletId?: PalletId;
+        scrapRevenue?: number;
     }) => void;
     getStockForBranch: (branchId: BranchId) => Record<PalletId, number>;
     palletRequests: PalletRequest[];
@@ -51,6 +52,7 @@ interface StockContextType {
     }) => Promise<void>;
     thresholds: any;
     updateThresholds: (data: any) => Promise<void>;
+    updateTransaction: (tx: Transaction) => void;
 }
 
 const StockContext = createContext<StockContextType | undefined>(undefined);
@@ -78,26 +80,26 @@ export const StockProvider: React.FC<StockProviderProps> = ({ children }) => {
         firebaseService.initializeData().then(() => {
             console.log('Firebase data initialized/checked.');
         });
-        firebaseService.subscribeToStock((data) => {
+        firebaseService.subscribeToStock((data: Stock) => {
             if (data) setStock(data);
         });
-        firebaseService.subscribeToTransactions((data) => {
+        firebaseService.subscribeToTransactions((data: Transaction[]) => {
             if (data) setTransactions(data);
         });
-        firebaseService.subscribeToPalletRequests((data) => {
+        firebaseService.subscribeToPalletRequests((data: any[]) => {
             if (data) setPalletRequests(data as PalletRequest[]);
         });
-        firebaseService.subscribeToConfig((data) => {
+        firebaseService.subscribeToConfig((data: any) => {
             if (data) setConfig(data);
         });
-        firebaseService.subscribeToThresholds((data) => {
+        firebaseService.subscribeToThresholds((data: any) => {
             if (data) setThresholds(data);
         });
     }, []);
 
     const generateDocNo = useCallback((type: TransactionType, source: string, dest: string, dateStr: string) => {
-        const isSourceBranch = BRANCHES.some(b => b.id === source);
-        const isDestBranch = BRANCHES.some(b => b.id === dest);
+        const isSourceBranch = BRANCHES.some((b: Branch) => b.id === source);
+        const isDestBranch = BRANCHES.some((b: Branch) => b.id === dest);
         let prefix = type === 'ADJUST' ? 'ADJ' : (isSourceBranch && isDestBranch ? 'INT' : (!isSourceBranch && isDestBranch ? 'EXT-IN' : 'EXT-OUT'));
         const datePart = dateStr.replace(/-/g, '');
         const existingDocNos = Array.from(new Set(transactions.filter(t => t.docNo && t.docNo.startsWith(`${prefix}-${datePart}`)).map(t => t.docNo)));
@@ -119,19 +121,11 @@ export const StockProvider: React.FC<StockProviderProps> = ({ children }) => {
         const timestamp = now.toISOString();
         if (!txData.type || !txData.source || !txData.dest) return;
 
-        // User allows negative stock for borrowing (03/02/2026)
-        /*
-        if (txData.type === 'OUT' && BRANCHES.some(b => b.id === txData.source)) {
-            const available = stock[txData.source as BranchId]?.[txData.palletId as PalletId] || 0;
-            if ((txData.qty || 0) > available) throw new Error('พาเลทไม่เพียงพอ');
-        }
-        */
-
-        const docNo = generateDocNo(txData.type, txData.source, txData.dest, dateStr);
-        const status = (BRANCHES.some(b => b.id === txData.source) && BRANCHES.some(b => b.id === txData.dest)) ? 'PENDING' : 'COMPLETED';
+        const docNo = generateDocNo(txData.type as TransactionType, txData.source, txData.dest, dateStr);
+        const status = (BRANCHES.some((b: Branch) => b.id === txData.source) && BRANCHES.some((b: Branch) => b.id === txData.dest)) ? 'PENDING' : 'COMPLETED';
 
         const newTx: Transaction = {
-            id: Date.now() + Math.floor(Math.random() * 1000), date: timestamp, docNo, type: txData.type,
+            id: Date.now() + Math.floor(Math.random() * 1000), date: timestamp, docNo, type: txData.type as TransactionType,
             status, source: txData.source, dest: txData.dest, palletId: txData.palletId as PalletId, qty: txData.qty || 0,
             note: txData.note, carRegistration: txData.carRegistration, vehicleType: txData.vehicleType,
             driverName: txData.driverName, transportCompany: txData.transportCompany, referenceDocNo: txData.referenceDocNo,
@@ -157,7 +151,7 @@ export const StockProvider: React.FC<StockProviderProps> = ({ children }) => {
         const timestamp = now.toISOString();
 
         const docNo = data.docNo || generateDocNo(data.type, data.source, data.dest, dateStr);
-        const status = (BRANCHES.some(b => b.id === data.source) && BRANCHES.some(b => b.id === data.dest)) ? 'PENDING' : 'COMPLETED';
+        const status = (BRANCHES.some((b: Branch) => b.id === data.source) && BRANCHES.some((b: Branch) => b.id === data.dest)) ? 'PENDING' : 'COMPLETED';
 
         const batchTxs = data.items.map((item: any) => ({
             id: Date.now() + Math.floor(Math.random() * 1000000), date: timestamp, docNo, type: data.type, status,
@@ -181,13 +175,12 @@ export const StockProvider: React.FC<StockProviderProps> = ({ children }) => {
         });
         await firebaseService.addMovementBatch(batchTxs, nextStock);
 
-        // Send Telegram notification for ALL movements
         if (config.telegramChatId) {
             try {
-                const sourceName = BRANCHES.find(b => b.id === data.source)?.name ||
-                    EXTERNAL_PARTNERS.find(p => p.id === data.source)?.name || data.source;
-                const destName = BRANCHES.find(b => b.id === data.dest)?.name ||
-                    EXTERNAL_PARTNERS.find(p => p.id === data.dest)?.name || data.dest;
+                const sourceName = BRANCHES.find((b: Branch) => b.id === data.source)?.name ||
+                    EXTERNAL_PARTNERS.find((p: Partner) => p.id === data.source)?.name || data.source;
+                const destName = BRANCHES.find((b: Branch) => b.id === data.dest)?.name ||
+                    EXTERNAL_PARTNERS.find((p: Partner) => p.id === data.dest)?.name || data.dest;
 
                 const message = telegramService.formatMovementNotification({
                     type: data.type,
@@ -201,7 +194,6 @@ export const StockProvider: React.FC<StockProviderProps> = ({ children }) => {
                 }, sourceName, destName);
 
                 await telegramService.sendMessage(config.telegramChatId, message);
-                console.log('📱 Telegram notification sent for movement');
             } catch (err) {
                 console.error('Failed to send Telegram notification:', err);
             }
@@ -221,7 +213,7 @@ export const StockProvider: React.FC<StockProviderProps> = ({ children }) => {
             }
         });
         await firebaseService.addMovementBatch(finalTxs, nextStock);
-    }, [stock, transactions]);
+    }, [stock]);
 
     const confirmTransaction = useCallback(async (txId: number) => {
         const tx = transactions.find(t => t.id === txId);
@@ -262,13 +254,15 @@ export const StockProvider: React.FC<StockProviderProps> = ({ children }) => {
         branchId: BranchId;
         targetBranchId?: BranchId;
         targetPalletId?: PalletId;
+        scrapRevenue?: number;
     }) => {
         const now = new Date();
         const docNo = generateDocNo('MAINTENANCE', data.branchId, data.branchId, now.toISOString().split('T')[0]);
         const newTx: Transaction = {
             id: Date.now(), date: now.toISOString(), docNo, type: 'MAINTENANCE', status: 'COMPLETED',
             source: data.branchId, dest: data.branchId, palletId: data.targetPalletId || 'general',
-            qty: data.fixedQty, note: data.note, noteExtended: `SCRAP: ${data.scrappedQty}`
+            qty: data.fixedQty, note: data.note, noteExtended: `SCRAP: ${data.scrappedQty}`,
+            scrapRevenue: data.scrapRevenue
         } as Transaction;
 
         const nextStock = { ...stock };
@@ -310,7 +304,7 @@ export const StockProvider: React.FC<StockProviderProps> = ({ children }) => {
     }) => {
         const now = new Date();
         const ts = data.customDate ? new Date(data.customDate).toISOString() : now.toISOString();
-        const isBranch = BRANCHES.some(b => b.id === data.targetId);
+        const isBranch = BRANCHES.some((b: Branch) => b.id === data.targetId);
         const currentQty = isBranch ? (stock[data.targetId as BranchId]?.[data.palletId as PalletId] || 0) : calculatePartnerBalance(transactions, data.targetId, data.palletId);
         const delta = data.newQty - currentQty;
         if (delta === 0) return;
@@ -331,14 +325,19 @@ export const StockProvider: React.FC<StockProviderProps> = ({ children }) => {
         await firebaseService.addMovementBatch([adjTx], nextStock);
     }, [stock, transactions]);
 
+    const updateTransaction = useCallback(async (tx: Transaction) => {
+        await firebaseService.addMovementBatch([tx], stock);
+    }, [stock]);
+
     return (
         <StockContext.Provider
             value={{
                 stock, transactions, addTransaction, addMovementBatch, confirmTransaction,
                 confirmTransactionsBatch, deleteTransaction, processBatchMaintenance,
-                getStockForBranch: (id) => stock[id] || {}, palletRequests, createPalletRequest,
+                getStockForBranch: (id: BranchId) => stock[id] || {}, palletRequests, createPalletRequest,
                 updatePalletRequest, config, updateSystemConfig, adjustStock,
-                thresholds, updateThresholds: firebaseService.updateThresholds
+                thresholds, updateThresholds: firebaseService.updateThresholds,
+                updateTransaction
             }}
         >
             {children}

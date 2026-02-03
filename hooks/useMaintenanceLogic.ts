@@ -27,6 +27,7 @@ export function useMaintenanceLogic(
     const [scrappedQty, setScrappedQty] = useState(0);
     const [targetPalletId, setTargetPalletId] = useState<PalletId>('general');
     const [targetBranchId, setTargetBranchId] = useState<BranchId>(selectedBranch);
+    const [scrapRevenue, setScrapRevenue] = useState(0);
     const [note, setNote] = useState('');
 
     const pendingStock = stock['maintenance_stock'] || {};
@@ -38,6 +39,16 @@ export function useMaintenanceLogic(
 
         const qty = parseInt(inboundForm.qty);
         if (qty <= 0) return;
+
+        // User Rule (03/02/2026): Only Hub NW can send to repair
+        if (inboundForm.sourceBranchId !== 'hub_nw') {
+            Swal.fire({
+                icon: 'error',
+                title: 'สิทธิ์ไม่เพียงพอ',
+                text: 'เฉพาะสาขา นครสวรรค์ (Hub NW) เท่านั้นที่สามารถทำรายการส่งซ่อมได้'
+            });
+            return;
+        }
 
         try {
             setIsProcessing(true);
@@ -130,6 +141,7 @@ export function useMaintenanceLogic(
                 scrappedQty,
                 targetPalletId,
                 targetBranchId,
+                scrapRevenue,
                 note,
                 branchId: 'maintenance_stock'
             }) as any);
@@ -137,6 +149,7 @@ export function useMaintenanceLogic(
             setBatchItems([]);
             setFixedQty(0);
             setScrappedQty(0);
+            setScrapRevenue(0);
             setTargetPalletId('general');
             setTargetBranchId(selectedBranch);
             setNote('');
@@ -170,6 +183,7 @@ export function useMaintenanceLogic(
         scrappedQty, setScrappedQty,
         targetPalletId, setTargetPalletId,
         targetBranchId, setTargetBranchId,
+        scrapRevenue, setScrapRevenue,
         note, setNote,
         pendingStock, totalProcessed,
         handleInboundSubmit, handleSubmit

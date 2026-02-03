@@ -18,6 +18,8 @@ interface RepairProcessFormProps {
     targetBranchId: BranchId;
     setTargetBranchId: (val: BranchId) => void;
     totalProcessed: number;
+    scrapRevenue: number;
+    setScrapRevenue: (val: number) => void;
     onSubmit: (e: React.FormEvent) => void;
     isProcessing?: boolean;
 }
@@ -37,6 +39,8 @@ const RepairProcessForm: React.FC<RepairProcessFormProps> = ({
     targetBranchId,
     setTargetBranchId,
     totalProcessed,
+    scrapRevenue,
+    setScrapRevenue,
     onSubmit,
     isProcessing
 }) => {
@@ -193,6 +197,22 @@ const RepairProcessForm: React.FC<RepairProcessFormProps> = ({
                             placeholder="0"
                         />
                     </div>
+
+                    {scrappedQty > 0 && (
+                        <div className="bg-amber-50 p-4 rounded-2xl border border-amber-100 animate-in fade-in slide-in-from-top-2 duration-300">
+                            <label className="block text-xs font-black text-amber-700 mb-2 uppercase tracking-wider">
+                                รายได้จากการขายซาก (บาท)
+                            </label>
+                            <input
+                                type="number"
+                                value={scrapRevenue}
+                                onChange={(e) => setScrapRevenue(parseInt(e.target.value) || 0)}
+                                className="w-full px-4 py-3 rounded-xl bg-white border border-amber-200 text-amber-700 font-black text-lg focus:ring-4 focus:ring-amber-500/10 focus:border-amber-500 outline-none transition-all font-mono"
+                                placeholder="0.00"
+                            />
+                            <p className="text-[10px] text-amber-600 mt-2 font-bold italic">* บันทึกยอดเงินรวมจากการขายไม้/พลาสติกที่ทิ้งรอบนี้</p>
+                        </div>
+                    )}
                 </div>
 
                 <div className="p-5 bg-slate-900 text-white rounded-[2rem] shadow-xl">

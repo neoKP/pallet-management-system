@@ -100,6 +100,7 @@ export interface Transaction {
   targetPallet?: PalletId;
   noteExtended?: string;
   qtyRepaired?: number;
+  scrapRevenue?: number;
   carRegistration?: string;
   vehicleType?: string;
   driverName?: string;
@@ -170,6 +171,7 @@ export interface BatchMaintenanceData {
   scrappedQty: number;
   note: string;
   targetPalletId?: PalletId;
+  scrapRevenue?: number;
 }
 
 /**

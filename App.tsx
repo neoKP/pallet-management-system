@@ -8,6 +8,7 @@ import HomePage from './components/home/HomePage';
 import Dashboard from './components/dashboard/Dashboard';
 import MovementTab from './components/movements/MovementTab';
 import MaintenanceTab from './components/maintenance/MaintenanceTab';
+import ScrapSalesTab from './components/maintenance/ScrapSalesTab.tsx';
 import { AnalyticsDashboard } from './components/analytics/AnalyticsDashboard';
 import Sidebar from './components/layout/Sidebar';
 import Header from './components/layout/Header';
@@ -25,7 +26,7 @@ export default function App() {
   const { currentUser, login, logout } = useAuth();
   const { stock, transactions, addTransaction, processBatchMaintenance, confirmTransactionsBatch } = useStock();
 
-  const [activeTab, setActiveTab] = useState<'home' | 'dashboard' | 'record' | 'maintenance' | 'settings' | 'analytics' | 'history'>('home');
+  const [activeTab, setActiveTab] = useState<'home' | 'dashboard' | 'record' | 'maintenance' | 'settings' | 'analytics' | 'history' | 'scrapsales'>('home');
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
   const [isLoginModalOpen, setIsLoginModalOpen] = useState(false);
 
@@ -203,6 +204,12 @@ export default function App() {
               transactions={transactions}
               onBatchMaintenance={processBatchMaintenance}
               onAddTransaction={addTransaction}
+            />
+          )}
+
+          {activeTab === 'scrapsales' && (currentUser?.role === 'ADMIN' || currentUser?.branchId === 'maintenance_stock') && (
+            <ScrapSalesTab
+              transactions={transactions}
             />
           )}
 

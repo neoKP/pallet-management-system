@@ -60,14 +60,12 @@ const MaintenanceTab: React.FC<MaintenanceTabProps> = ({ stock, selectedBranch, 
                     targetBranchId={logic.targetBranchId}
                     setTargetBranchId={logic.setTargetBranchId}
                     totalProcessed={logic.totalProcessed}
+                    scrapRevenue={logic.scrapRevenue}
+                    setScrapRevenue={logic.setScrapRevenue}
                     onSubmit={logic.handleSubmit}
                     isProcessing={logic.isProcessing}
                 />
             )}
-
-            <div className="pt-8 mt-8 border-t-2 border-slate-100">
-                <ScrappedReportTable transactions={transactions} />
-            </div>
         </div>
     );
 };

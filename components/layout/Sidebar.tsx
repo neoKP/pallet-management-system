@@ -1,10 +1,10 @@
 import React from 'react';
-import { LayoutDashboard, ArrowRightLeft, Wrench, Menu, Settings, ChevronLeft, ChevronRight, BarChart3, List, Home } from 'lucide-react';
+import { LayoutDashboard, ArrowRightLeft, Wrench, Menu, Settings, ChevronLeft, ChevronRight, BarChart3, List, Home, Trash2 } from 'lucide-react';
 import { BranchId, User } from '../../types';
 
 interface SidebarProps {
-    activeTab: 'home' | 'dashboard' | 'record' | 'maintenance' | 'settings' | 'analytics' | 'history';
-    setActiveTab: (tab: 'home' | 'dashboard' | 'record' | 'maintenance' | 'settings' | 'analytics' | 'history') => void;
+    activeTab: 'home' | 'dashboard' | 'record' | 'maintenance' | 'settings' | 'analytics' | 'history' | 'scrapsales';
+    setActiveTab: (tab: 'home' | 'dashboard' | 'record' | 'maintenance' | 'settings' | 'analytics' | 'history' | 'scrapsales') => void;
     currentUser: User | null;
     selectedBranch: BranchId | 'ALL';
     isCollapsed: boolean;
@@ -128,6 +128,21 @@ const Sidebar: React.FC<SidebarProps> = ({
                     </button>
                 )}
 
+                {/* Scrap Sales Menu */}
+                {(currentUser?.role === 'ADMIN' || currentUser?.branchId === 'maintenance_stock') && (
+                    <button
+                        onClick={() => setActiveTab('scrapsales')}
+                        title={isCollapsed ? 'ขายซาก' : ''}
+                        className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-300 font-bold group cursor-pointer ${activeTab === 'scrapsales'
+                            ? 'bg-emerald-600 text-white shadow-lg shadow-emerald-200'
+                            : 'text-slate-500 hover:bg-slate-50 hover:text-emerald-600'
+                            } ${isCollapsed ? 'justify-center px-0' : ''}`}
+                    >
+                        <Trash2 size={20} className={activeTab === 'scrapsales' ? 'text-white' : 'text-slate-400 group-hover:text-emerald-600 transition-colors'} />
+                        {!isCollapsed && <span className="whitespace-nowrap animate-in fade-in slide-in-from-left-4 duration-300">ขายซาก (Scrap)</span>}
+                    </button>
+                )}
+
                 {/* Settings Menu */}
                 {currentUser?.role === 'ADMIN' && (
                     <button
@@ -155,6 +170,4 @@ const Sidebar: React.FC<SidebarProps> = ({
     );
 };
 
-
 export default Sidebar;
-
