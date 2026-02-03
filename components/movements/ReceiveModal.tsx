@@ -66,8 +66,14 @@ const ReceiveModal: React.FC<ReceiveModalProps> = ({ isOpen, onClose, group, onC
 
         // Validation
         if (totalQtyReceived === 0) {
-            setError('กรุณาระบุจำนวนสินค้าที่ได้รับ');
-            return;
+            // Check if there are items to confirm, if so, ask for zero confirmation
+            if (adjustedItems.length > 0) {
+                const confirmed = window.confirm('คุณกำลังยืนยันการรับสินค้า 0 รายการ (ยอดว่าง) ใช่หรือไม่?');
+                if (!confirmed) return;
+            } else {
+                setError('ไม่พบรายการสินค้า');
+                return;
+            }
         }
 
         for (const item of adjustedItems) {
