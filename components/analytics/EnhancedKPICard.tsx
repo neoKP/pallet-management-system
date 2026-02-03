@@ -96,9 +96,9 @@ export const EnhancedKPICard: React.FC<EnhancedKPICardProps> = ({
     };
 
     const getTrendColor = () => {
-        if (trend === 'up') return isDarkMode ? '#10b981' : '#059669';
-        if (trend === 'down') return isDarkMode ? '#ef4444' : '#dc2626';
-        return isDarkMode ? '#64748b' : '#94a3b8';
+        if (trend === 'up') return isDarkMode ? '#34d399' : '#059669'; // Brighter emerald
+        if (trend === 'down') return isDarkMode ? '#f87171' : '#dc2626'; // Brighter red
+        return isDarkMode ? '#94a3b8' : '#94a3b8';
     };
 
     const trendColor = getTrendColor();
@@ -134,7 +134,7 @@ export const EnhancedKPICard: React.FC<EnhancedKPICardProps> = ({
                 {/* Header */}
                 <div className="relative flex items-start justify-between mb-4 z-10">
                     <div className="flex-1">
-                        <h3 className={`text-sm font-medium ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>
+                        <h3 className={`text-sm font-bold tracking-tight ${isDarkMode ? 'text-slate-300' : 'text-gray-600'}`}>
                             {title}
                         </h3>
                     </div>
@@ -156,11 +156,11 @@ export const EnhancedKPICard: React.FC<EnhancedKPICardProps> = ({
                 {/* Value */}
                 <div className="relative mb-3 z-10">
                     <div className="flex items-baseline gap-2">
-                        <motion.span className={`text-3xl font-bold ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>
+                        <motion.span className={`text-3xl font-black tracking-tight ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>
                             {typeof value === 'number' ? displayValue : value}
                         </motion.span>
                         {suffix && (
-                            <span className={`text-lg ${isDarkMode ? 'text-gray-500' : 'text-gray-600'}`}>
+                            <span className={`text-xs font-black uppercase tracking-wider ${isDarkMode ? 'text-slate-400' : 'text-gray-600'}`}>
                                 {suffix}
                             </span>
                         )}
@@ -188,12 +188,12 @@ export const EnhancedKPICard: React.FC<EnhancedKPICardProps> = ({
                         className="relative flex items-center gap-2 z-10"
                     >
                         <div
-                            className="flex items-center gap-1 px-2 py-1 rounded-full text-xs font-semibold bg-[var(--trend-bg)] text-[var(--trend-color)]"
+                            className="flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-black bg-[var(--trend-bg)] text-[var(--trend-color)] border border-[var(--trend-color)]/20 shadow-sm"
                         >
                             <span>{getTrendIcon()}</span>
                             <span>{Math.abs(trendValue)}%</span>
                         </div>
-                        <span className={`text-xs ${isDarkMode ? 'text-gray-500' : 'text-gray-600'}`}>
+                        <span className={`text-[10px] font-bold uppercase tracking-widest ${isDarkMode ? 'text-slate-500' : 'text-gray-600'}`}>
                             vs last period
                         </span>
                     </motion.div>

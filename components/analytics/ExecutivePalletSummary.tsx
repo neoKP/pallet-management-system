@@ -2,14 +2,14 @@ import React, { useMemo } from 'react';
 import { motion } from 'framer-motion';
 import { TrendingDown, TrendingUp, AlertTriangle, CheckCircle, Info, ArrowRight } from 'lucide-react';
 import { AgingRentalSummary } from '../../services/analyticsService';
-
 import { EXTERNAL_PARTNERS } from '../../constants';
 
 interface ExecutivePalletSummaryProps {
     analysis: AgingRentalSummary;
+    isDarkMode: boolean;
 }
 
-export const ExecutivePalletSummary: React.FC<ExecutivePalletSummaryProps> = ({ analysis }) => {
+export const ExecutivePalletSummary: React.FC<ExecutivePalletSummaryProps> = ({ analysis, isDarkMode }) => {
     const summaries = useMemo(() => {
         const partners: Record<string, any> = {};
 
@@ -56,69 +56,88 @@ export const ExecutivePalletSummary: React.FC<ExecutivePalletSummaryProps> = ({ 
     return (
         <div className="space-y-4">
             <div className="flex items-center justify-between mb-2">
-                <h3 className="text-lg font-black text-slate-900 flex items-center gap-2">
+                <h3 className={`text-lg font-black flex items-center gap-2 ${isDarkMode ? 'text-white' : 'text-slate-900'}`}>
                     <TrendingDown className="text-emerald-500" />
                     Pallet Executive Summary (สรุปผู้บริหาร)
                 </h3>
             </div>
 
-            <div className="grid grid-cols-1 gap-4">
+            <div className="grid grid-cols-1 xl:grid-cols-2 gap-4">
                 {summaries.map((p) => (
                     <motion.div
                         initial={{ opacity: 0, x: -10 }}
                         animate={{ opacity: 1, x: 0 }}
                         key={p.id}
-                        className="glass bg-white p-5 rounded-3xl border border-slate-100 shadow-sm hover:shadow-md transition-all"
+                        className={`p-5 sm:p-6 rounded-[2.5rem] border transition-all overflow-hidden relative ${isDarkMode
+                            ? 'bg-slate-900/40 border-white/5 shadow-2xl'
+                            : 'bg-white border-slate-100 shadow-sm hover:shadow-md'
+                            }`}
                     >
-                        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-                            <div className="flex items-center gap-4">
-                                <div className={`w-12 h-12 rounded-2xl flex items-center justify-center font-black text-xl shadow-inner ${p.totalRent > 0 ? 'bg-red-50 text-red-600' : 'bg-slate-50 text-slate-500'
+                        <div className="flex flex-col gap-6">
+                            {/* Top Section: Identity & Pallet Tags */}
+                            <div className="flex items-center gap-5 w-full">
+                                <div className={`w-14 h-14 flex-shrink-0 rounded-2xl flex items-center justify-center font-black text-2xl shadow-inner ${p.totalRent > 0
+                                    ? (isDarkMode ? 'bg-red-500/20 text-red-400' : 'bg-red-50 text-red-600')
+                                    : (isDarkMode ? 'bg-slate-800 text-slate-400' : 'bg-slate-50 text-slate-500')
                                     }`}>
                                     {p.name.substring(0, 1)}
                                 </div>
-                                <div>
-                                    <h4 className="font-black text-slate-900">{p.name}</h4>
-                                    <div className="flex gap-2 mt-1">
+                                <div className="min-w-0 flex-1">
+                                    <h4 className={`text-xl font-black truncate ${isDarkMode ? 'text-white' : 'text-slate-900'}`}>{p.name}</h4>
+                                    <div className="flex flex-wrap gap-2 mt-2">
                                         {p.pallets.map((pl: any) => (
-                                            <span key={pl.palletId} className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-slate-100 text-slate-500 uppercase">
-                                                {pl.palletId.replace('loscam_', '')}: {pl.openQty}
+                                            <span key={pl.palletId} className={`text-[10px] font-black px-2.5 py-1 rounded-lg uppercase tracking-tight ${isDarkMode ? 'bg-white/5 text-slate-400' : 'bg-slate-100 text-slate-500'}`}>
+                                                {pl.palletId.replace('loscam_', '')}: <span className={isDarkMode ? 'text-white' : 'text-slate-900'}>{pl.openQty}</span>
                                             </span>
                                         ))}
                                     </div>
                                 </div>
                             </div>
 
-                            <div className="grid grid-cols-2 md:grid-cols-3 gap-6 md:gap-12 bg-slate-50/50 p-4 rounded-2xl border border-slate-50">
-                                <div>
-                                    <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">ยอดค้างคืนรวม</p>
-                                    <p className="text-xl font-black text-slate-900">{p.totalQty.toLocaleString()} <span className="text-xs font-bold text-slate-400">ใบ</span></p>
+                            {/* Bottom Section: Stat Bar - Robust Grid */}
+                            <div className={`grid grid-cols-1 sm:grid-cols-3 gap-y-3 gap-x-2 p-4 rounded-3xl border w-full ${isDarkMode ? 'bg-white/5 border-white/10' : 'bg-slate-50 border-slate-200'}`}>
+                                <div className="min-w-0">
+                                    <p className={`text-[10px] font-black uppercase tracking-widest leading-none mb-2 ${isDarkMode ? 'text-slate-500' : 'text-slate-400'}`}>ยอดค้างคืนรวม</p>
+                                    <div className="flex items-baseline gap-1.5 min-w-0">
+                                        <span className={`text-base sm:text-lg font-black truncate ${isDarkMode ? 'text-white' : 'text-slate-900'}`}>{p.totalQty.toLocaleString()}</span>
+                                        <span className="text-xs font-bold opacity-40 uppercase">ใบ</span>
+                                    </div>
                                 </div>
-                                <div>
-                                    <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">สถานะ/อัตรา</p>
-                                    <div className="flex items-center gap-1">
+
+                                <div className="min-w-0 border-t sm:border-t-0 sm:border-l pt-3 sm:pt-0 sm:pl-4 border-black/5 dark:border-white/10">
+                                    <p className={`text-[10px] font-black uppercase tracking-widest leading-none mb-2 ${isDarkMode ? 'text-slate-500' : 'text-slate-400'}`}>สถานะ/อัตรา</p>
+                                    <div className="flex items-center min-h-[1.75rem] min-w-0">
                                         {p.currentRate > 0 ? (
-                                            <span className="text-sm font-black text-blue-600">฿{p.currentRate.toFixed(2)}</span>
+                                            <div className="flex items-baseline gap-1 min-w-0">
+                                                <span className={`text-sm sm:text-base font-black truncate ${isDarkMode ? 'text-blue-400' : 'text-blue-600'}`}>{p.currentRate.toFixed(2)}</span>
+                                                <span className="text-[8px] font-bold opacity-40 flex-shrink-0 whitespace-nowrap">฿/วัน</span>
+                                            </div>
                                         ) : p.gracePeriod > 0 ? (
-                                            <span className="text-xs font-bold text-emerald-500 flex items-center gap-1">
-                                                <CheckCircle size={12} /> ฟรี ({p.gracePeriod} วัน)
+                                            <span className={`text-xs font-black flex items-center gap-1.5 py-1 px-3 rounded-lg truncate ${isDarkMode ? 'bg-emerald-500/10 text-emerald-400' : 'bg-emerald-50 text-emerald-600'}`}>
+                                                <CheckCircle size={14} className="flex-shrink-0" /> ฟรี ({p.gracePeriod} วัน)
                                             </span>
                                         ) : (
-                                            <span className="text-[10px] font-black text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-lg border border-emerald-100">
+                                            <span className={`text-[10px] font-black px-3 py-1.5 rounded-lg border leading-none ${isDarkMode ? 'text-emerald-400 bg-emerald-500/10 border-emerald-500/20' : 'text-emerald-600 bg-emerald-50 border-emerald-100'}`}>
                                                 ไม่มีค่าเช่า
                                             </span>
                                         )}
                                     </div>
                                 </div>
-                                <div className="col-span-2 md:col-span-1 border-t md:border-t-0 md:border-l border-slate-200 pt-2 md:pt-0 md:pl-6">
-                                    <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">ค่าเช่าสะสม</p>
-                                    <p className={`text-xl font-black ${p.totalRent > 0 ? 'text-red-600' : 'text-slate-900'}`}>
-                                        ฿{p.totalRent.toLocaleString(undefined, { minimumFractionDigits: 2 })}
-                                    </p>
+
+                                <div className="min-w-0 border-t sm:border-t-0 sm:border-l pt-4 sm:pt-0 sm:pl-6 border-black/5 dark:border-white/10">
+                                    <p className={`text-[10px] font-black uppercase tracking-widest leading-none mb-2 ${isDarkMode ? 'text-slate-500' : 'text-slate-400'}`}>ค่าเช่าสะสม</p>
+                                    <div className="flex items-baseline gap-1 min-w-0">
+                                        <span className={`text-base sm:text-lg font-black truncate ${p.totalRent > 0 ? (isDarkMode ? 'text-red-400' : 'text-red-600') : (isDarkMode ? 'text-white' : 'text-slate-900')}`}>
+                                            ฿{p.totalRent.toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                                        </span>
+                                    </div>
                                 </div>
                             </div>
                         </div>
 
-                        <div className={`mt-4 p-3 rounded-xl flex items-start gap-3 border ${p.dangerQty > 0 ? 'bg-orange-50 border-orange-100 text-orange-700' : 'bg-blue-50/50 border-blue-100 text-blue-700'
+                        <div className={`mt-4 p-3 rounded-xl flex items-start gap-3 border ${p.dangerQty > 0
+                            ? (isDarkMode ? 'bg-orange-500/10 border-orange-500/20 text-orange-400' : 'bg-orange-50 border-orange-100 text-orange-700')
+                            : (isDarkMode ? 'bg-blue-500/10 border-blue-500/20 text-blue-400' : 'bg-blue-50/50 border-blue-100 text-blue-700')
                             }`}>
                             <div className="mt-0.5">
                                 {p.dangerQty > 0 ? <AlertTriangle size={16} /> : <Info size={16} />}
@@ -129,7 +148,7 @@ export const ExecutivePalletSummary: React.FC<ExecutivePalletSummaryProps> = ({ 
                             </div>
                             <button
                                 title="View Details"
-                                className="self-center p-2 rounded-full bg-white text-slate-400 hover:text-blue-600 transition-all border border-slate-100 shadow-sm"
+                                className={`self-center p-2 rounded-full transition-all border shadow-sm ${isDarkMode ? 'bg-slate-800 border-white/10 text-slate-400 hover:text-white' : 'bg-white border-slate-100 text-slate-400 hover:text-blue-600'}`}
                             >
                                 <ArrowRight size={16} />
                             </button>

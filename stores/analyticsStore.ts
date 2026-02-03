@@ -22,7 +22,13 @@ interface AnalyticsState {
     filters: AnalyticsFilters;
     isDarkMode: boolean;
     themeColor: ThemeColor;
+    activeTab: string;
+    drillStack: string[];
     updateFilters: (updates: Partial<AnalyticsFilters>) => void;
+    setActiveTab: (tab: string) => void;
+    pushDrill: (level: string) => void;
+    popDrill: () => void;
+    resetDrill: () => void;
     resetFilters: () => void;
     toggleDarkMode: () => void;
     setDarkMode: (isDark: boolean) => void;
@@ -60,6 +66,16 @@ export const useAnalyticsStore = create<AnalyticsState>()(
             },
             isDarkMode: true, // Default: Dark Mode
             themeColor: 'indigo' as ThemeColor, // Default theme
+            activeTab: 'overview',
+            drillStack: [],
+
+            setActiveTab: (tab) => set({ activeTab: tab }),
+
+            pushDrill: (level) => set((state) => ({ drillStack: [...state.drillStack, level] })),
+
+            popDrill: () => set((state) => ({ drillStack: state.drillStack.slice(0, -1) })),
+
+            resetDrill: () => set({ drillStack: [] }),
 
             updateFilters: (updates) =>
                 set((state) => ({

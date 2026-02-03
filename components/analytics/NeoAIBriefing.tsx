@@ -55,7 +55,7 @@ export const NeoAIBriefing: React.FC<NeoAIBriefingProps> = ({
                     <div className="flex flex-col gap-2">
                         <div className="flex items-center justify-center lg:justify-start gap-2">
                             <Sparkles className="w-4 h-4 text-orange-400" />
-                            <span className={`text-[11px] font-black uppercase tracking-[0.25em] ${isDarkMode ? 'text-slate-500' : 'text-slate-400'}`}>
+                            <span className={`text-[11px] font-black uppercase tracking-[0.25em] ${isDarkMode ? 'text-slate-300' : 'text-slate-400'}`}>
                                 DAILY BRIEFING • INTELLIGENCE REPORT
                             </span>
                         </div>
@@ -83,7 +83,7 @@ export const NeoAIBriefing: React.FC<NeoAIBriefingProps> = ({
 
                         <div className={`
                             flex items-center gap-2 px-5 py-3 rounded-2xl border backdrop-blur-md
-                            ${isDarkMode ? 'bg-white/5 border-white/5 text-slate-400' : 'bg-slate-50 border-slate-100 text-slate-500'}
+                            ${isDarkMode ? 'bg-white/5 border-white/5 text-slate-300' : 'bg-slate-50 border-slate-100 text-slate-500'}
                         `}>
                             <Activity className="w-4 h-4 text-emerald-400" />
                             <span className="text-[10px] font-black uppercase tracking-[0.1em]">ANALYSIS: 98.4% CONFIDENCE</span>
@@ -98,7 +98,7 @@ export const NeoAIBriefing: React.FC<NeoAIBriefingProps> = ({
                         ${isDarkMode ? 'bg-white/5 border-white/5' : 'bg-white border-slate-100 shadow-sm'}
                     `}>
                         <div className="flex items-center justify-between mb-2">
-                            <span className={`text-[10px] font-black uppercase tracking-widest ${isDarkMode ? 'text-slate-500' : 'text-slate-400'}`}>STATUS</span>
+                            <span className={`text-[10px] font-black uppercase tracking-widest ${isDarkMode ? 'text-slate-400' : 'text-slate-400'}`}>STATUS</span>
                         </div>
                         <div className="flex items-center gap-2">
                             <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
@@ -111,7 +111,7 @@ export const NeoAIBriefing: React.FC<NeoAIBriefingProps> = ({
                         ${isDarkMode ? 'bg-white/5 border-white/5' : 'bg-white border-slate-100 shadow-sm'}
                     `}>
                         <div className="flex items-center justify-between mb-2">
-                            <span className={`text-[10px] font-black uppercase tracking-widest ${isDarkMode ? 'text-slate-500' : 'text-slate-400'}`}>NEXT ACTION</span>
+                            <span className={`text-[10px] font-black uppercase tracking-widest ${isDarkMode ? 'text-slate-400' : 'text-slate-400'}`}>NEXT ACTION</span>
                         </div>
                         <div className="flex items-center justify-between group/action cursor-pointer">
                             <span className="text-sm font-black text-indigo-500 group-hover:text-indigo-400">Check Hub Returns</span>

@@ -163,7 +163,7 @@ export default function App() {
           onScanSuccess={handleScanSuccess}
         />
 
-        <main className="flex-1 p-4 md:p-8 overflow-y-auto w-full max-w-[1600px] mx-auto pb-24 md:pb-8">
+        <main className={`flex-1 overflow-y-auto w-full mx-auto pb-24 md:pb-8 ${activeTab === 'analytics' ? 'max-w-none p-0' : 'p-4 md:p-8 max-w-[1600px]'}`}>
           {activeTab === 'dashboard' && (
             <Dashboard
               stock={stock}

@@ -21,6 +21,14 @@ import {
     Sector,
     ComposedChart,
     ReferenceDot,
+    RadarChart,
+    Radar,
+    PolarGrid,
+    PolarAngleAxis,
+    PolarRadiusAxis,
+    ScatterChart,
+    Scatter,
+    ZAxis,
 } from 'recharts';
 import { ChartDataPoint, TimeSeriesData, PartnerBalanceData, LoscamRentalData } from '../../services/analyticsService';
 import { useAnalyticsStore } from '../../stores/analyticsStore';
@@ -77,7 +85,7 @@ export const RechartsBarChart: React.FC<RechartsBarChartProps> = ({
                     </div>
                     <div className="space-y-2">
                         <div className="flex items-center justify-between">
-                            <span className={`text-xs ${isDarkMode ? 'text-slate-400' : 'text-slate-500'}`}>
+                            <span className={`text-xs ${isDarkMode ? 'text-slate-300 font-bold' : 'text-slate-500'}`}>
                                 📊 จำนวน
                             </span>
                             <span className={`text-lg font-black ${isDarkMode ? 'text-white' : 'text-slate-900'}`}>
@@ -85,7 +93,7 @@ export const RechartsBarChart: React.FC<RechartsBarChartProps> = ({
                             </span>
                         </div>
                         <div className="flex items-center justify-between">
-                            <span className={`text-xs ${isDarkMode ? 'text-slate-400' : 'text-slate-500'}`}>
+                            <span className={`text-xs ${isDarkMode ? 'text-slate-300 font-bold' : 'text-slate-500'}`}>
                                 📈 สัดส่วน
                             </span>
                             <span className="text-sm font-black px-2 py-0.5 rounded-full theme-bg-soft item-text">
@@ -101,7 +109,7 @@ export const RechartsBarChart: React.FC<RechartsBarChartProps> = ({
                             className="h-full rounded-full item-bg"
                         />
                     </div>
-                </motion.div>
+                </motion.div >
             );
         }
         return null;
@@ -221,19 +229,19 @@ export const RechartsBarChart: React.FC<RechartsBarChartProps> = ({
                             </feMerge>
                         </filter>
                     </defs>
-                    <CartesianGrid vertical={false} strokeDasharray="3 3" stroke={isDarkMode ? '#ffffff08' : '#00000008'} />
+                    <CartesianGrid vertical={false} strokeDasharray="3 3" stroke={isDarkMode ? '#ffffff15' : '#00000008'} />
                     <XAxis
                         dataKey="name"
                         axisLine={false}
                         tickLine={false}
-                        stroke={isDarkMode ? '#64748b' : '#94a3b8'}
-                        tick={{ fill: isDarkMode ? '#64748b' : '#64748b', fontSize: 11, fontWeight: isHovering ? '600' : '500' }}
+                        stroke={isDarkMode ? '#94a3b8' : '#94a3b8'}
+                        tick={{ fill: isDarkMode ? '#94a3b8' : '#64748b', fontSize: 11, fontWeight: isHovering ? '700' : '600' }}
                     />
                     <YAxis
                         axisLine={false}
                         tickLine={false}
-                        stroke={isDarkMode ? '#64748b' : '#94a3b8'}
-                        tick={{ fill: isDarkMode ? '#64748b' : '#64748b', fontSize: 11, fontWeight: '500' }}
+                        stroke={isDarkMode ? '#94a3b8' : '#94a3b8'}
+                        tick={{ fill: isDarkMode ? '#94a3b8' : '#64748b', fontSize: 11, fontWeight: '600' }}
                     />
                     <Tooltip
                         content={<CustomTooltip />}
@@ -531,7 +539,7 @@ export const RechartsPieChart: React.FC<RechartsPieChartProps> = ({
                                     style={{ '--item-color': entry.color } as React.CSSProperties}
                                 >
                                     <div className="w-2.5 h-2.5 rounded-full item-bg item-shadow" />
-                                    <span className={`text-xs font-medium ${isDarkMode ? 'text-slate-400' : 'text-slate-600'}`}>
+                                    <span className={`text-xs font-bold ${isDarkMode ? 'text-slate-200' : 'text-slate-600'}`}>
                                         {entry.name}
                                     </span>
                                     <span className="text-xs font-black item-text">
@@ -619,7 +627,7 @@ export const RechartsLineChart: React.FC<RechartsLineChartProps> = ({
                                 <div key={index} className="flex items-center justify-between gap-4">
                                     <div className="flex items-center gap-2">
                                         <div className="w-2 h-2 rounded-full" {...({ style: { backgroundColor: entry.color } as React.CSSProperties })} />
-                                        <span className={`text-xs font-medium ${isDarkMode ? 'text-slate-400' : 'text-slate-600'}`}>
+                                        <span className={`text-xs font-bold ${isDarkMode ? 'text-slate-200' : 'text-slate-600'}`}>
                                             {labels[entry.dataKey] || entry.name}
                                         </span>
                                     </div>
@@ -694,18 +702,18 @@ export const RechartsLineChart: React.FC<RechartsLineChartProps> = ({
                             <stop offset="95%" stopColor="#f59e0b" stopOpacity={0} />
                         </linearGradient>
                     </defs>
-                    <CartesianGrid vertical={false} strokeDasharray="3 3" stroke={isDarkMode ? '#ffffff08' : '#00000008'} />
+                    <CartesianGrid vertical={false} strokeDasharray="3 3" stroke={isDarkMode ? '#ffffff15' : '#00000008'} />
                     <XAxis
                         dataKey="date"
                         axisLine={false}
                         tickLine={false}
-                        tick={{ fill: isDarkMode ? '#64748b' : '#94a3b8', fontSize: 11 }}
+                        tick={{ fill: isDarkMode ? '#94a3b8' : '#94a3b8', fontSize: 11, fontWeight: '600' }}
                         tickFormatter={(value) => {
                             const date = new Date(value);
                             return isNaN(date.getTime()) ? value : date.toLocaleDateString('th-TH', { month: 'short', day: 'numeric' });
                         }}
                     />
-                    <YAxis axisLine={false} tickLine={false} tick={{ fill: isDarkMode ? '#64748b' : '#94a3b8', fontSize: 11 }} />
+                    <YAxis axisLine={false} tickLine={false} tick={{ fill: isDarkMode ? '#94a3b8' : '#94a3b8', fontSize: 11, fontWeight: '600' }} />
                     <Tooltip cursor={<CustomCursor />} content={<CustomTooltip />} />
                     <Area
                         type="monotone"
@@ -769,7 +777,7 @@ export const PartnerBalanceChart: React.FC<PartnerBalanceChartProps> = ({
                 >
                     <div className="absolute top-0 right-0 w-24 h-24 bg-amber-500/10 blur-3xl rounded-full -mr-12 -mt-12" />
 
-                    <p className={`text-[10px] font-black uppercase tracking-widest mb-4 ${isDarkMode ? 'text-slate-500' : 'text-slate-400'}`}>
+                    <p className={`text-[10px] font-black uppercase tracking-widest mb-4 ${isDarkMode ? 'text-slate-300' : 'text-slate-400'}`}>
                         📅 {new Date(label).toLocaleDateString('th-TH', { dateStyle: 'long' })}
                     </p>
 
@@ -1248,6 +1256,146 @@ export const WasteDamageAnalysis: React.FC<WasteDamageAnalysisProps> = ({
                     </ResponsiveContainer>
                 </div>
             </div>
+        </motion.div>
+    );
+};
+
+// --- NEW HYBRID COMPONENTS ---
+
+interface RiskMatrixScatterChartProps {
+    data: any[];
+    title: string;
+    isDarkMode: boolean;
+}
+
+export const RiskMatrixScatterChart: React.FC<RiskMatrixScatterChartProps> = ({ data, title, isDarkMode }) => {
+    return (
+        <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            className={`
+                p-8 rounded-[3rem] border relative overflow-hidden h-[500px] flex flex-col
+                ${isDarkMode ? 'bg-slate-950 border-white/10 shadow-2xl' : 'bg-white border-slate-200 shadow-xl'}
+            `}
+        >
+            <div className="flex justify-between items-center mb-6 relative z-10">
+                <h3 className={`text-2xl font-black tracking-tighter ${isDarkMode ? 'text-white' : 'text-slate-900'}`}>
+                    {title}
+                </h3>
+                <div className={`px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest ${isDarkMode ? 'bg-white/5 text-slate-500' : 'bg-slate-100 text-slate-400'}`}>
+                    Volume vs Risk Index
+                </div>
+            </div>
+
+            <ResponsiveContainer width="100%" height="100%">
+                <ScatterChart margin={{ top: 20, right: 20, bottom: 20, left: 20 }}>
+                    <CartesianGrid strokeDasharray="3 3" stroke={isDarkMode ? '#ffffff08' : '#00000008'} />
+                    <XAxis
+                        type="number"
+                        dataKey="x"
+                        name="Volume"
+                        unit=" pcs"
+                        axisLine={false}
+                        tickLine={false}
+                        tick={{ fontSize: 10, fill: '#94a3b8' }}
+                    />
+                    <YAxis
+                        type="number"
+                        dataKey="y"
+                        name="Risk"
+                        unit="%"
+                        axisLine={false}
+                        tickLine={false}
+                        tick={{ fontSize: 10, fill: '#94a3b8' }}
+                    />
+                    <ZAxis type="number" dataKey="z" range={[100, 1000]} />
+                    <Tooltip
+                        cursor={{ strokeDasharray: '3 3' }}
+                        content={({ active, payload }) => {
+                            if (active && payload && payload.length) {
+                                const payloadData = payload[0].payload;
+                                return (
+                                    <div className={`p-4 rounded-2xl border backdrop-blur-xl shadow-2xl ${isDarkMode ? 'bg-slate-900/95 border-white/20' : 'bg-white/95 border-slate-200'} min-w-[150px]`}>
+                                        <p className="text-sm font-black mb-2">{payloadData.name}</p>
+                                        <div className="space-y-1">
+                                            <div className="flex justify-between text-[10px]">
+                                                <span className="text-slate-500 font-bold uppercase tracking-widest">Volume:</span>
+                                                <span className="font-black">{payloadData.x.toLocaleString()} pcs</span>
+                                            </div>
+                                            <div className="flex justify-between text-[10px]">
+                                                <span className="text-slate-500 font-bold uppercase tracking-widest">Risk Level:</span>
+                                                <span className={`font-black ${payloadData.y > 60 ? 'text-rose-500' : 'text-emerald-500'}`}>{payloadData.y}%</span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                );
+                            }
+                            return null;
+                        }}
+                    />
+                    <Scatter name="Partners" data={data} fill="#8b5cf6">
+                        {data.map((entry, index) => (
+                            <Cell key={`cell-${index}`} fill={entry.y > 70 ? '#f43f5e' : entry.y > 40 ? '#f59e0b' : '#10b981'} />
+                        ))}
+                    </Scatter>
+                </ScatterChart>
+            </ResponsiveContainer>
+        </motion.div>
+    );
+};
+
+interface BranchHealthRadarChartProps {
+    data: any[];
+    title: string;
+    isDarkMode: boolean;
+}
+
+export const BranchHealthRadarChart: React.FC<BranchHealthRadarChartProps> = ({ data, title, isDarkMode }) => {
+    return (
+        <motion.div
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
+            className={`
+                p-8 rounded-[3rem] border relative overflow-hidden h-[500px] flex flex-col
+                ${isDarkMode ? 'bg-slate-950 border-white/10 shadow-2xl' : 'bg-white border-slate-200 shadow-xl'}
+            `}
+        >
+            <div className="flex justify-between items-center mb-6 relative z-10">
+                <h3 className={`text-2xl font-black tracking-tighter ${isDarkMode ? 'text-white' : 'text-slate-900'}`}>
+                    {title}
+                </h3>
+            </div>
+
+            <ResponsiveContainer width="100%" height="100%">
+                <RadarChart cx="50%" cy="50%" outerRadius="80%" data={data}>
+                    <PolarGrid stroke={isDarkMode ? '#ffffff10' : '#00000010'} />
+                    <PolarAngleAxis
+                        dataKey="subject"
+                        tick={{ fill: '#94a3b8', fontSize: 10, fontWeight: 900 }}
+                    />
+                    <PolarRadiusAxis angle={30} domain={[0, 100]} tick={false} axisLine={false} />
+                    <Radar
+                        name="Performance"
+                        dataKey="A"
+                        stroke="#8b5cf6"
+                        fill="#8b5cf6"
+                        fillOpacity={0.4}
+                    />
+                    <Tooltip
+                        content={({ active, payload }) => {
+                            if (active && payload && payload.length) {
+                                return (
+                                    <div className={`p-4 rounded-xl border backdrop-blur-md ${isDarkMode ? 'bg-slate-900/90 border-white/20' : 'bg-white/90 border-slate-200 shadow-lg'}`}>
+                                        <p className="text-[10px] font-black uppercase tracking-widest text-slate-500 mb-1">{payload[0].payload.subject}</p>
+                                        <p className="text-lg font-black theme-text-primary">{payload[0].value}%</p>
+                                    </div>
+                                );
+                            }
+                            return null;
+                        }}
+                    />
+                </RadarChart>
+            </ResponsiveContainer>
         </motion.div>
     );
 };
