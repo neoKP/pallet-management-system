@@ -113,14 +113,14 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ onLogin, onClose, isModal, is
                                     className={`
                                         w-full px-6 py-5 rounded-2xl font-bold transition-all cursor-pointer appearance-none border
                                         ${isDarkMode
-                                            ? 'bg-white/5 border-white/5 text-white focus:border-blue-500/50 focus:bg-white/10'
+                                            ? 'bg-white/5 border-white/5 text-slate-100 focus:border-blue-500/50 focus:bg-white/10'
                                             : 'bg-slate-50 border-slate-200 text-slate-900 focus:border-blue-500'}
                                     `}
                                     required
                                 >
-                                    <option value="" disabled>Select User Role</option>
+                                    <option className="text-slate-900" value="" disabled>Select User Role</option>
                                     {AUTHORIZED_USERS.map(user => (
-                                        <option key={user.username} value={user.username}>
+                                        <option className="text-slate-900" key={user.username} value={user.username}>
                                             {user.name}
                                         </option>
                                     ))}

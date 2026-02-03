@@ -86,8 +86,8 @@ const PendingTransfers: React.FC<PendingTransfersProps> = ({
                                         <button
                                             onClick={() => onViewTimeline(mainTx)}
                                             className={`p-2 rounded-xl transition-all border flex items-center gap-2 group ${isDarkMode
-                                                    ? 'bg-white/5 border-white/10 hover:bg-white/10 text-slate-400 hover:text-white'
-                                                    : 'bg-slate-50 border-slate-100 hover:bg-white text-slate-500 hover:text-indigo-600 hover:border-indigo-100'
+                                                ? 'bg-white/5 border-white/10 hover:bg-white/10 text-slate-400 hover:text-white'
+                                                : 'bg-slate-50 border-slate-100 hover:bg-white text-slate-500 hover:text-indigo-600 hover:border-indigo-100'
                                                 }`}
                                         >
                                             <Clock size={16} className="group-hover:rotate-12 transition-transform" />
@@ -105,10 +105,10 @@ const PendingTransfers: React.FC<PendingTransfersProps> = ({
                                         </div>
 
                                         {(mainTx.carRegistration || mainTx.transportCompany) && (
-                                            <div className={`p-3 rounded-2xl border ${isDarkMode ? 'bg-black/20 border-white/5' : 'bg-slate-50 border-slate-100'} space-y-2`}>
-                                                {mainTx.transportCompany && <div className="flex items-center gap-2 text-xs font-medium"><Building size={14} className="opacity-50" /> {mainTx.transportCompany}</div>}
-                                                {mainTx.carRegistration && <div className="flex items-center gap-2 text-xs font-medium"><Car size={14} className="opacity-50" /> {mainTx.carRegistration} {(mainTx.vehicleType) ? `(${VEHICLE_TYPES.find(v => v.id === mainTx.vehicleType)?.name || mainTx.vehicleType})` : ''}</div>}
-                                                {mainTx.driverName && <div className="flex items-center gap-2 text-xs font-medium"><UserIcon size={14} className="opacity-50" /> {mainTx.driverName}</div>}
+                                            <div className={`p-3 rounded-2xl border ${isDarkMode ? 'bg-black/20 border-white/5 text-white' : 'bg-slate-50 border-slate-100 text-slate-600'} space-y-2`}>
+                                                {mainTx.transportCompany && <div className="flex items-center gap-2 text-xs font-bold leading-tight"><Building size={14} className="opacity-70 text-indigo-400" /> {mainTx.transportCompany}</div>}
+                                                {mainTx.carRegistration && <div className="flex items-center gap-2 text-xs font-bold leading-tight"><Car size={14} className="opacity-70 text-indigo-400" /> {mainTx.carRegistration} {(mainTx.vehicleType) ? `(${VEHICLE_TYPES.find(v => v.id === mainTx.vehicleType)?.name || mainTx.vehicleType})` : ''}</div>}
+                                                {mainTx.driverName && <div className="flex items-center gap-2 text-xs font-bold leading-tight"><UserIcon size={14} className="opacity-70 text-indigo-400" /> {mainTx.driverName}</div>}
                                             </div>
                                         )}
 
