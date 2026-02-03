@@ -1,5 +1,6 @@
-
 const BOT_TOKEN = '8339371070:AAHw1ri9hn5QAd7DM2RvOnv5ybCabPkrxqM';
+import { PALLET_TYPES, VEHICLE_TYPES, EXTERNAL_PARTNERS } from '../constants';
+import { Partner } from '../types';
 
 /**
  * Helper to escape special characters for Telegram MarkdownV2
@@ -51,8 +52,6 @@ export const sendMessage = async (chatId: string, text: string) => {
     }
 };
 
-import { PALLET_TYPES, VEHICLE_TYPES } from '../constants';
-
 /**
  * Helper to get pallet name
  */
@@ -85,18 +84,18 @@ const formatTransportInfo = (data: any) => {
  */
 export const formatPalletRequest = (req: any, branchName: string, targetName?: string) => {
     const priorityEmoji = req.priority === 'URGENT' ? '🔴' : '⚪';
-    const itemsText = req.items.map((item: any) => `  • ${getPalletName(item.palletId)}: ${item.qty} ชิ้น`).join('\n');
+    const itemsText = req.items.map((item: any) => `    • ${escapeMarkdown(getPalletName(item.palletId))}: *${item.qty}* ชิ้น`).join('\n');
 
-    return `🔔 *มีคำขอรับพาเลทใหม่!*
-----------------------------
-*เลขที่คำขอ:* \`${req.requestNo}\`
-*จากสาขา:* ${branchName}
-*ต้องการให้ส่งที่:* ${targetName || 'ไม่ระบุ'}
+    return `🔔 *มีคำขอรับพาเลทใหม่\\!*
+▬▬▬▬▬▬▬▬▬▬▬▬
+*เลขที่คำขอ:* \`${escapeMarkdown(req.requestNo)}\`
+*จากสาขา:* ${escapeMarkdown(branchName)}
+*ต้องการให้ส่งที่:* ${escapeMarkdown(targetName || 'ไม่ระบุ')}
 *รายการ:*
 ${itemsText}
-*วัตถุประสงค์:* ${req.purpose}
-*ความสำคัญ:* ${priorityEmoji} ${req.priority}
-----------------------------
+*วัตถุประสงค์:* ${escapeMarkdown(req.purpose)}
+*ความสำคัญ:* ${priorityEmoji} ${escapeMarkdown(req.priority)}
+▬▬▬▬▬▬▬▬▬▬▬▬
 _กรุณาตรวจสอบและอนุมัติในระบบ_`;
 };
 
@@ -104,20 +103,20 @@ _กรุณาตรวจสอบและอนุมัติในระ�
  * Format a Processing Notification (Shipped/Dispatch)
  */
 export const formatShipmentNotification = (req: any, docNo: string, sourceName: string, destName: string, transportData?: any) => {
-    const itemsText = req.items?.map((item: any) => `  • ${getPalletName(item.palletId)}: ${item.qty} ชิ้น`).join('\n') || '';
+    const itemsText = req.items?.map((item: any) => `    • ${escapeMarkdown(getPalletName(item.palletId))}: *${item.qty}* ชิ้น`).join('\n') || '';
     const transportPart = transportData ? formatTransportInfo(transportData) : '';
 
-    return `🚚 *แจ้งส่งมอบพาเลท!*
-----------------------------
-*อ้างอิงคำขอ:* \`${req.requestNo}\`
-*เลขที่เอกสาร:* \`${docNo}\`
-*ต้นทาง:* ${sourceName}
-*ปลายทาง:* ${destName}
+    return `🚚 *แจ้งส่งมอบพาเลท\\!*
+▬▬▬▬▬▬▬▬▬▬▬▬
+*อ้างอิงคำขอ:* \`${escapeMarkdown(req.requestNo)}\`
+*เลขที่เอกสาร:* \`${escapeMarkdown(docNo)}\`
+*ต้นทาง:* ${escapeMarkdown(sourceName)}
+*ปลายทาง:* ${escapeMarkdown(destName)}
 *รายการ:*
 ${itemsText}
 *สถานะ:* ✅ จัดส่งเรียบร้อยแล้ว
 ${transportPart}
-----------------------------
+▬▬▬▬▬▬▬▬▬▬▬▬
 _พาเลทกำลังเดินทางไปยังสาขาปลายทาง_`;
 };
 
@@ -126,8 +125,31 @@ _พาเลทกำลังเดินทางไปยังสาขา�
  */
 export const formatMovementNotification = (data: any, sourceName: string, destName: string) => {
     const isReceive = data.type === 'IN';
-    const title = isReceive ? '📥 *แจ้งรับเข้าพาเลท\\!*' : '📤 *แจ้งจ่ายออกพาเลท\\!*';
-    const icon = isReceive ? '✅' : '📦';
+
+    // Detect if source or dest is an external partner
+    const isSourcePartner = EXTERNAL_PARTNERS.some((p: Partner) => p.name === sourceName || p.id === data.source);
+    const isDestPartner = EXTERNAL_PARTNERS.some((p: Partner) => p.name === destName || p.id === data.dest);
+    const partner = EXTERNAL_PARTNERS.find((p: Partner) => p.name === destName || p.id === data.dest || p.name === sourceName || p.id === data.source);
+
+    let title = isReceive ? '📥 *แจ้งรับเข้าพาเลท\\!*' : '📤 *แจ้งจ่ายออกพาเลท\\!*';
+    let icon = isReceive ? '✅' : '📦';
+
+    if (!isReceive && isDestPartner) {
+        if (partner?.type === 'provider') {
+            title = '🔄 *แจ้งส่งคืนพาเลทให้คู่ค้า\\!*';
+            icon = '⏪';
+        } else {
+            title = '🚛 *แจ้งส่งมอบพาเลทให้ลูกค้า\\!*';
+            icon = '🚚';
+        }
+    } else if (isReceive && isSourcePartner) {
+        title = '📥 *แจ้งรับเข้าพาเลทจากคู่ค้า\\!*';
+        icon = '📥';
+    } else if (!isSourcePartner && !isDestPartner) {
+        // Internal transfer
+        title = isReceive ? '📥 *แจ้งรับเข้าพาเลท \\(ภายใน\\)\\!*' : '📤 *แจ้งโอนย้ายพาเลท \\(ภายใน\\)\\!*';
+    }
+
     const itemsText = data.items.map((item: any) => `    • ${escapeMarkdown(getPalletName(item.palletId))}: *${item.qty}* ชิ้น`).join('\n');
     const transportPart = formatTransportInfo(data);
 
