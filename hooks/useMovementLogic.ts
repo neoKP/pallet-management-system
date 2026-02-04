@@ -5,8 +5,11 @@ import { useStock } from '../contexts/StockContext';
 import Swal from 'sweetalert2';
 import { AUTOMATION_RULES, EXTERNAL_PARTNERS, BRANCHES } from '../constants';
 
+// Double-Deduction Alert: เวลาที่ตรวจสอบการทำรายการซ้ำ (1 นาที = 60000ms)
+const DUPLICATE_CHECK_WINDOW_MS = 60000;
+
 export function useMovementLogic(selectedBranch: BranchId, transactions: Transaction[]) {
-    const { addMovementBatch, confirmTransactionsBatch, deleteTransaction } = useStock();
+    const { addMovementBatch, confirmTransactionsBatch, deleteTransaction, isDataLoaded } = useStock();
 
     const [subTab, setSubTab] = useState<'movement' | 'requests'>('movement');
     const [mode, setMode] = useState<'standard' | 'quick'>('standard');
@@ -121,8 +124,20 @@ export function useMovementLogic(selectedBranch: BranchId, transactions: Transac
         setIsPreviewOpen(true);
     };
 
-    const handleSubmit = (e: React.FormEvent) => {
+    const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
+
+        // 🔒 Loading Guard: ป้องกันบันทึกก่อนข้อมูลโหลดเสร็จ
+        if (!isDataLoaded) {
+            Swal.fire({
+                icon: 'warning',
+                title: 'ระบบกำลังโหลดข้อมูล',
+                text: 'ระบบกำลังโหลดข้อมูลประวัติ กรุณารอสักครู่แล้วลองใหม่',
+                confirmButtonText: 'เข้าใจแล้ว',
+                confirmButtonColor: '#3085d6',
+            });
+            return;
+        }
 
         if (!target) {
             Swal.fire({
@@ -245,6 +260,42 @@ export function useMovementLogic(selectedBranch: BranchId, transactions: Transac
 
     const saveTransaction = async (data: any) => {
         if (isProcessing) return;
+
+        // ⚠️ Double-Deduction Alert: ตรวจสอบการทำรายการซ้ำภายใน 1 นาที
+        const now = new Date().getTime();
+        const recentDuplicates = transactions.filter(tx => {
+            const txTime = new Date(tx.date).getTime();
+            const isRecent = (now - txTime) < DUPLICATE_CHECK_WINDOW_MS;
+            const isSameDocNo = data.referenceDocNo && tx.referenceDocNo === data.referenceDocNo;
+            const isSameSourceDest = tx.source === data.source && tx.dest === data.dest;
+            const isSameType = tx.type === data.type;
+            return isRecent && (isSameDocNo || (isSameSourceDest && isSameType));
+        });
+
+        if (recentDuplicates.length > 0) {
+            const lastTx = recentDuplicates[0];
+            const result = await Swal.fire({
+                icon: 'warning',
+                title: '⚠️ คำเตือน: พบรายการที่อาจซ้ำ',
+                html: `
+                    <p>ระบบพบว่ามีการตัดสต็อกสำหรับรายการนี้เมื่อสักครู่นี้</p>
+                    <p><strong>เลขที่เอกสาร:</strong> ${lastTx.docNo}</p>
+                    <p><strong>เวลา:</strong> ${new Date(lastTx.date).toLocaleString('th-TH')}</p>
+                    <hr/>
+                    <p>คุณแน่ใจหรือไม่ว่าต้องการบันทึกซ้ำ?</p>
+                `,
+                showCancelButton: true,
+                confirmButtonText: 'ยืนยันบันทึก',
+                cancelButtonText: 'ยกเลิก',
+                confirmButtonColor: '#d33',
+                cancelButtonColor: '#3085d6',
+            });
+
+            if (!result.isConfirmed) {
+                return;
+            }
+        }
+
         try {
             setIsProcessing(true);
             await addMovementBatch(data);

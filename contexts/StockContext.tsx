@@ -53,6 +53,7 @@ interface StockContextType {
     thresholds: any;
     updateThresholds: (data: any) => Promise<void>;
     updateTransaction: (tx: Transaction) => void;
+    isDataLoaded: boolean; // Loading Guard: ข้อมูลโหลดเสร็จหรือยัง
 }
 
 const StockContext = createContext<StockContextType | undefined>(undefined);
@@ -75,16 +76,35 @@ export const StockProvider: React.FC<StockProviderProps> = ({ children }) => {
     const [palletRequests, setPalletRequests] = useState<PalletRequest[]>([]);
     const [config, setConfig] = useState<{ telegramChatId: string }>({ telegramChatId: '' });
     const [thresholds, setThresholds] = useState<any>(null);
+    const [isDataLoaded, setIsDataLoaded] = useState(false); // Loading Guard
 
     useEffect(() => {
+        let stockLoaded = false;
+        let transactionsLoaded = false;
+
+        const checkAllLoaded = () => {
+            if (stockLoaded && transactionsLoaded) {
+                setIsDataLoaded(true);
+                console.log('✅ All data loaded from Firebase');
+            }
+        };
+
         firebaseService.initializeData().then(() => {
             console.log('Firebase data initialized/checked.');
         });
         firebaseService.subscribeToStock((data: Stock) => {
-            if (data) setStock(data);
+            if (data) {
+                setStock(data);
+                stockLoaded = true;
+                checkAllLoaded();
+            }
         });
         firebaseService.subscribeToTransactions((data: Transaction[]) => {
-            if (data) setTransactions(data);
+            if (data) {
+                setTransactions(data);
+                transactionsLoaded = true;
+                checkAllLoaded();
+            }
         });
         firebaseService.subscribeToPalletRequests((data: any[]) => {
             if (data) setPalletRequests(data as PalletRequest[]);
@@ -356,7 +376,7 @@ export const StockProvider: React.FC<StockProviderProps> = ({ children }) => {
                 getStockForBranch: (id: BranchId) => stock[id] || {}, palletRequests, createPalletRequest,
                 updatePalletRequest, config, updateSystemConfig, adjustStock,
                 thresholds, updateThresholds: firebaseService.updateThresholds,
-                updateTransaction
+                updateTransaction, isDataLoaded
             }}
         >
             {children}
