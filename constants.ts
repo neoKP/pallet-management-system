@@ -21,14 +21,14 @@ export const BRANCHES: Branch[] = [
 ];
 
 export const EXTERNAL_PARTNERS: Partner[] = [
-  { id: 'neo_corp', name: 'บ. นีโอ คอร์ปอเรท', type: 'customer', allowedPallets: ['loscam_red'], rentalFee: 0, gracePeriod: 0 },
-  { id: 'sino', name: 'บ. ซีโน-แปซิฟิค', type: 'customer', allowedPallets: ['loscam_red', 'loscam_blue'], rentalFee: 1.0, gracePeriod: 10 },
-  { id: 'lamsoon', name: 'บ. ล่ำสูง', type: 'customer', allowedPallets: ['loscam_red'] },
-  { id: 'ufc', name: 'บ. UFC', type: 'customer', allowedPallets: ['loscam_red', 'loscam_blue'] },
-  { id: 'loxley', name: 'บ. Loxley', type: 'customer', allowedPallets: ['loscam_red', 'loscam_blue', 'loscam_yellow'] },
-  { id: 'kopee', name: 'บ. โคพี่', type: 'customer', allowedPallets: ['loscam_red'] },
-  { id: 'loscam_wangnoi', name: 'Loscam วังน้อย', type: 'provider', allowedPallets: ['loscam_red'], rentalFee: 1.4, gracePeriod: 0, mappingName: 'บ. นีโอ คอร์ปอเรท' },
-  { id: 'hiq_th', name: 'HI-Q', type: 'provider', allowedPallets: ['hiq'] },
+  { id: 'neo_corp', name: 'บ. นีโอ คอร์ปอเรท', type: 'customer', allowedPallets: ['loscam_red'], rentalFee: 0, gracePeriod: 0, branchRestriction: { in: 'all', out: 'none' } },
+  { id: 'sino', name: 'บ. ซีโน-แปซิฟิค', type: 'provider', allowedPallets: ['loscam_red', 'loscam_blue'], rentalFee: 1.0, gracePeriod: 10, branchRestriction: { in: 'all', out: 'all' } },
+  { id: 'lamsoon', name: 'บ. ล่ำสูง', type: 'customer', allowedPallets: ['loscam_red'], branchRestriction: { in: ['sai3'], out: ['sai3'] } },
+  { id: 'ufc', name: 'บ. UFC', type: 'customer', allowedPallets: ['loscam_red', 'loscam_blue'], branchRestriction: { in: ['sai3'], out: ['sai3'] } },
+  { id: 'loxley', name: 'บ. Loxley', type: 'customer', allowedPallets: ['loscam_red', 'loscam_blue', 'loscam_yellow'], branchRestriction: { in: ['sai3'], out: ['sai3'] } },
+  { id: 'kopee', name: 'บ. โคพี่', type: 'customer', allowedPallets: ['loscam_red'], branchRestriction: { in: ['sai3'], out: ['sai3'] } },
+  { id: 'loscam_wangnoi', name: 'Loscam วังน้อย', type: 'provider', allowedPallets: ['loscam_red'], rentalFee: 1.4, gracePeriod: 0, mappingName: 'บ. นีโอ คอร์ปอเรท', branchRestriction: { in: 'none', out: ['hub_nw'] } },
+  { id: 'hiq_th', name: 'HI-Q', type: 'provider', allowedPallets: ['hiq'], branchRestriction: { in: ['sai3'], out: ['sai3'] } },
 ];
 
 export const INITIAL_STOCK: Stock = {
@@ -51,12 +51,11 @@ export const AUTOMATION_RULES = {
     partnersWithAutoFlow: ['lamsoon', 'ufc', 'loxley', 'kopee', 'hiq_th'],
     action: 'AUTO_FLOW', // Auto Receive & Dispatch at Sai 3 only
   },
+  allBranches: {
+    partnersWithAutoFlow: ['sino'], // Sino auto-confirm OUT at all branches
+  },
   hub_nw: { // Nakhon Sawan Hub
-    loscam: {
-      provider: 'loscam_wangnoi',
-      autoReceiveAt: 'hub_nw',
-      autoDispatchAs: 'neo_corp' // Dispatch out as Neo Corp
-    },
+    // Loscam Main (neo_corp/loscam_wangnoi) - NO auto-transaction, manual process only
     sino: {
       provider: 'sino',
       autoReceiveAt: 'hub_nw',

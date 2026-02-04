@@ -147,40 +147,37 @@ export function useMovementLogic(selectedBranch: BranchId, transactions: Transac
             return;
         }
 
-        // Rule for Sino: OUT only at hub_nw
-        if (transactionType === 'OUT' && target === 'sino' && selectedBranch !== 'hub_nw') {
-            Swal.fire({
-                icon: 'error',
-                title: 'ไม่สามารถทำรายการได้',
-                text: 'การคืนพาเลทให้ Sino สามารถทำได้ที่สาขานครสวรรค์ (Hub NW) เท่านั้น',
-                confirmButtonText: 'รับทราบ',
-                confirmButtonColor: '#d33',
-            });
-            return;
-        }
+        // Dynamic Branch Restriction Check using Partner's branchRestriction config
+        const targetPartner = EXTERNAL_PARTNERS.find(p => p.id === target);
+        if (targetPartner?.branchRestriction) {
+            const restriction = transactionType === 'IN' 
+                ? targetPartner.branchRestriction.in 
+                : targetPartner.branchRestriction.out;
+            
+            let isAllowed = false;
+            if (restriction === 'all') {
+                isAllowed = true;
+            } else if (restriction === 'none') {
+                isAllowed = false;
+            } else if (Array.isArray(restriction)) {
+                isAllowed = restriction.includes(selectedBranch);
+            }
 
-        // Rule for Lascam (Loscam Wangnoi): OUT only at hub_nw
-        if (transactionType === 'OUT' && target === 'loscam_wangnoi' && selectedBranch !== 'hub_nw') {
-            Swal.fire({
-                icon: 'error',
-                title: 'ไม่สามารถทำรายการได้',
-                text: 'การจ่ายออกในนาม Loscam วังน้อย สามารถทำได้ที่สาขานครสวรรค์ (Hub NW) เท่านั้น',
-                confirmButtonText: 'รับทราบ',
-                confirmButtonColor: '#d33',
-            });
-            return;
-        }
-
-        // Rule for Neo Corp: IN only (returns must go to Wangnoi)
-        if (transactionType === 'OUT' && target === 'neo_corp') {
-            Swal.fire({
-                icon: 'error',
-                title: 'ไม่สามารถทำรายการได้',
-                text: 'การจ่ายออกในนาม Neo Corp ไม่อนุญาตในระบบ (กรุณาใช้ "Loscam วังน้อย" สำหรับการคืนของ)',
-                confirmButtonText: 'รับทราบ',
-                confirmButtonColor: '#d33',
-            });
-            return;
+            if (!isAllowed) {
+                const actionText = transactionType === 'IN' ? 'รับเข้าจาก' : 'จ่ายออกไป';
+                const allowedBranches = Array.isArray(restriction) 
+                    ? restriction.map(b => BRANCHES.find(br => br.id === b)?.name || b).join(', ')
+                    : 'ไม่มีสาขาที่อนุญาต';
+                
+                Swal.fire({
+                    icon: 'error',
+                    title: 'ไม่สามารถทำรายการได้',
+                    text: `การ${actionText} ${targetPartner.name} สามารถทำได้ที่: ${allowedBranches}`,
+                    confirmButtonText: 'รับทราบ',
+                    confirmButtonColor: '#d33',
+                });
+                return;
+            }
         }
 
         const datePart = transactionDate.replace(/-/g, '');
@@ -191,12 +188,23 @@ export function useMovementLogic(selectedBranch: BranchId, transactions: Transac
         const prefix = 'INT';
         const docNo = `${prefix}-${datePart}-${running}`;
 
-        // Version 2.0.0 Automation Logic
+        // Version 2.0.0 Automation Logic - Auto-Confirm OUT only (IN always requires manual confirm)
         let status: 'PENDING' | 'COMPLETED' = 'PENDING';
 
-        // Sai 3 Auto Confirm (Incoming/Outgoing)
-        if (selectedBranch === 'sai3' && AUTOMATION_RULES.sai3.partnersWithAutoFlow.includes(target)) {
-            status = 'COMPLETED';
+        // Only OUT transactions can be auto-confirmed
+        if (transactionType === 'OUT') {
+            // Sai 3 Auto Confirm (ล่ำสูง, UFC, Loxley, โคพี่, HI-Q)
+            if (selectedBranch === 'sai3' && AUTOMATION_RULES.sai3.partnersWithAutoFlow.includes(target)) {
+                status = 'COMPLETED';
+            }
+            // All Branches Auto Confirm (Sino)
+            if (AUTOMATION_RULES.allBranches?.partnersWithAutoFlow?.includes(target)) {
+                status = 'COMPLETED';
+            }
+            // Loscam Main: Auto-Confirm OUT only (to loscam_wangnoi at hub_nw)
+            if (target === 'loscam_wangnoi' && selectedBranch === 'hub_nw') {
+                status = 'COMPLETED';
+            }
         }
 
         const srcPartner = EXTERNAL_PARTNERS.find(p => p.id === (transactionType === 'IN' ? target : selectedBranch));
@@ -241,14 +249,13 @@ export function useMovementLogic(selectedBranch: BranchId, transactions: Transac
             setIsProcessing(true);
             await addMovementBatch(data);
 
-            // Handle Secondary Auto-Transaction (NW Case)
+            // Handle Secondary Auto-Transaction (NW Case) - Sino only
             if (selectedBranch === 'hub_nw' && data.type === 'IN') {
                 const nwRules = AUTOMATION_RULES.hub_nw;
                 let autoOutDest = '';
 
-                if (data.source === nwRules.loscam.provider) {
-                    autoOutDest = nwRules.loscam.autoDispatchAs;
-                } else if (data.source === nwRules.sino.provider) {
+                // Only Sino has auto-transaction, Loscam Main does NOT
+                if (data.source === nwRules.sino.provider) {
                     autoOutDest = nwRules.sino.autoDispatchAs;
                 }
 

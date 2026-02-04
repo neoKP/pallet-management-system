@@ -26,8 +26,8 @@ export const getPartnerBalanceContribution = (t: Transaction, partnerId: string,
     }
 
     // 3. Special Case: Sino Logic (We borrow from them)
-    // Sino provides both Red and Blue pallets to us.
-    if (partnerId === 'sino' && (palletId === 'loscam_red' || palletId === 'loscam_blue')) {
+    // Sino provides pallets to us - handle ALL pallet types (Red, Blue, Yellow, etc.)
+    if (partnerId === 'sino') {
         if (t.source === 'sino') return t.qty; // Receiving from Sino = Debt/Borrowing increases
         if (t.dest === 'sino') return -t.qty;  // Returning to Sino = Debt/Borrowing decreases
         return 0;

@@ -80,6 +80,10 @@ export interface Partner {
   rentalFee?: number; // Daily rate after free period
   gracePeriod?: number; // Free days before billing starts
   mappingName?: string; // Display mapping (e.g., Lascam -> Neo Corporate)
+  branchRestriction?: {
+    in: 'all' | 'none' | string[];  // Branches allowed for IN transactions
+    out: 'all' | 'none' | string[]; // Branches allowed for OUT transactions
+  };
 }
 
 /**
