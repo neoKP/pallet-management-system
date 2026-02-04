@@ -1,7 +1,9 @@
-import React, { useMemo, useState } from 'react';
+import React, { useMemo, useState, useCallback } from 'react';
 import {
     Clock,
-    Truck
+    Truck,
+    FileSpreadsheet,
+    FileText
 } from 'lucide-react';
 import { Transaction, BranchId, User, PalletId } from '../../types';
 import { useStock } from '../../contexts/StockContext';
@@ -10,6 +12,7 @@ import InTransitTable from '../dashboard/InTransitTable';
 import TransactionTimelineModal from '../movements/TransactionTimelineModal';
 import DocumentPreviewModal from '../movements/DocumentPreviewModal';
 import { handleExportToExcel } from '../../utils/excelExport';
+import { exportTransactionDocToPDF } from '../../utils/exportUtils';
 import StockAdjustmentModal from '../dashboard/StockAdjustmentModal';
 // @ts-ignore
 import Swal from 'sweetalert2';
@@ -46,7 +49,7 @@ const HistoryTab: React.FC<HistoryTabProps> = ({ transactions, selectedBranch, c
         setTimelineTxs(group.length > 0 ? group : [tx]);
     };
 
-    const handlePrintDoc = (mainTx: Transaction) => {
+    const handlePrintDoc = useCallback((mainTx: Transaction) => {
         const group = transactions.filter(t => t.docNo === mainTx.docNo);
         const data = {
             source: mainTx.source,
@@ -62,7 +65,12 @@ const HistoryTab: React.FC<HistoryTabProps> = ({ transactions, selectedBranch, c
         };
         setPrintData(data);
         setIsPrintOpen(true);
-    };
+    }, [transactions]);
+
+    // Export to Excel handler with useCallback for stable reference
+    const handleExport = useCallback(() => {
+        handleExportToExcel(displayTransactions, selectedBranch);
+    }, [displayTransactions, selectedBranch]);
 
     const handleDelete = (txId: number) => {
         if (Swal) {
@@ -163,7 +171,7 @@ const HistoryTab: React.FC<HistoryTabProps> = ({ transactions, selectedBranch, c
                 onViewTimeline={handleViewTimeline}
                 onPrintDoc={handlePrintDoc}
                 onDelete={handleDelete}
-                onExport={() => handleExportToExcel(displayTransactions, selectedBranch)}
+                onExport={handleExport}
                 onOpenAdjModal={() => setIsAdjModalOpen(true)}
             />
 

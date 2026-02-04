@@ -1,9 +1,10 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { Settings, MapPin, Package, Plus, Trash2, Save, Building2, Truck, X, Send, Wrench, ShieldCheck } from 'lucide-react';
+import { Settings, MapPin, Package, Plus, Trash2, Save, Building2, Truck, X, Send, Wrench, ShieldCheck, Search } from 'lucide-react';
 import * as firebaseService from '../../services/firebase';
 import { PalletType, Branch, Partner, BranchId, User } from '../../types';
 import { useStock } from '../../contexts/StockContext';
 import { AdminStockControl } from './AdminStockControl';
+import StockAnalyzer from '../debug/StockAnalyzer';
 import * as telegramService from '../../services/telegramService';
 import Swal from 'sweetalert2';
 
@@ -22,7 +23,7 @@ const SettingsTab: React.FC = () => {
     const [pallets, setPallets] = useState<PalletType[]>([]);
     const [branches, setBranches] = useState<Branch[]>([]);
     const [partners, setPartners] = useState<Partner[]>([]);
-    const { config, updateSystemConfig, stock } = useStock();
+    const { config, updateSystemConfig, stock, transactions } = useStock();
     const [telegramChatId, setTelegramChatId] = useState(config.telegramChatId);
 
     useEffect(() => {
@@ -503,7 +504,7 @@ const SettingsTab: React.FC = () => {
                                 </div>
                             </div>
                         ) : (
-                            <div className="p-8 max-w-2xl space-y-8">
+                            <div className="p-8 space-y-8">
                                 <div className="bg-red-50 rounded-2xl p-6 border border-red-100 flex items-start gap-4">
                                     <div className="p-3 bg-white rounded-xl shadow-sm">
                                         <Wrench className="text-red-600" />
@@ -549,6 +550,9 @@ const SettingsTab: React.FC = () => {
                                         </div>
                                     </div>
                                 </div>
+
+                                {/* Stock Analyzer Tool */}
+                                <StockAnalyzer transactions={transactions} stock={stock} />
                             </div>
                         )}
                     </div>

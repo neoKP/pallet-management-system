@@ -1,4 +1,4 @@
-import React, { useMemo } from 'react';
+import React, { useMemo, useCallback, lazy, Suspense } from 'react';
 import {
     AlertCircle,
     Package,
@@ -6,7 +6,9 @@ import {
     Box,
     Layers,
     ShieldCheck,
-    Recycle
+    Recycle,
+    FileSpreadsheet,
+    FileText
 } from 'lucide-react';
 import { Stock, BranchId, Transaction, User, PalletId } from '../../types';
 import StatsCard from './StatsCard';
@@ -15,6 +17,8 @@ import { BRANCHES, EXTERNAL_PARTNERS, PALLET_TYPES } from '../../constants';
 import { getAgingRentalAnalysis } from '../../services/analyticsService';
 import { useStock } from '../../contexts/StockContext';
 import { NeoAIBriefing } from './NeoAIBriefing';
+import ExportDropdown, { createStockExportOptions } from '../common/ExportDropdown';
+import { exportStockToExcel, exportStockToPDF } from '../../utils/exportUtils';
 import {
     AreaChart,
     Area,
@@ -269,40 +273,20 @@ const Dashboard: React.FC<DashboardProps> = ({ stock, selectedBranch, transactio
         return activeAlerts;
     }, [thresholds, selectedBranch, stats]);
 
-    const handleExportPDF = async () => {
-        try {
-            // @ts-ignore
-            const Swal = (await import('sweetalert2')).default;
-            Swal.fire({ title: 'กำลัง Export PDF...', allowOutsideClick: false, didOpen: () => Swal.showLoading() });
+    // Export handlers using useCallback for stable references (vercel-react-best-practices: rerender-functional-setstate)
+    const handleExportExcel = useCallback(async () => {
+        await exportStockToExcel(stock, transactions, selectedBranch);
+    }, [stock, transactions, selectedBranch]);
 
-            const kpis = {
-                totalTransactions: transactions.length,
-                totalPalletsInStock: stats.totalStock,
-                totalPalletsInTransit: stats.totalPending,
-                totalMovements: transactions.reduce((sum, t) => sum + t.qty, 0),
-                utilizationRate: 85, // Dummy for main dashboard
-                maintenanceRate: 2.4, // Dummy
-                trend: 'stable' as const,
-                trendPercentage: 0
-            };
+    const handleExportPDF = useCallback(() => {
+        exportStockToPDF(stock, selectedBranch);
+    }, [stock, selectedBranch]);
 
-            const { exportAnalyticsToPDF } = await import('../../utils/analyticsExport');
-            await exportAnalyticsToPDF(
-                // @ts-ignore
-                kpis,
-                'current',
-                new Date(),
-                new Date(),
-                false // light mode for export
-            );
-            Swal.fire({ icon: 'success', title: 'Export สำเร็จ!', timer: 3000 });
-        } catch (error) {
-            console.error(error);
-            // @ts-ignore
-            const Swal = (await import('sweetalert2')).default;
-            Swal.fire({ icon: 'error', title: 'เกิดข้อผิดพลาด', text: 'ไม่สามารถ Export PDF ได้' });
-        }
-    };
+    // Memoized export options (vercel-react-best-practices: rerender-memo)
+    const exportOptions = useMemo(() => createStockExportOptions(
+        handleExportExcel,
+        handleExportPDF
+    ), [handleExportExcel, handleExportPDF]);
 
     return (
         <div className="space-y-6">
@@ -314,12 +298,12 @@ const Dashboard: React.FC<DashboardProps> = ({ stock, selectedBranch, transactio
                     <p className="text-sm font-medium text-slate-500">Real-time Pallet Network Monitor & Control</p>
                 </div>
                 <div className="flex items-center gap-2">
-                    <button
-                        onClick={handleExportPDF}
-                        className="px-4 py-2 bg-white border border-slate-200 rounded-xl text-xs font-black uppercase tracking-wider text-slate-600 shadow-sm hover:shadow-md transition-all flex items-center gap-2"
-                    >
-                        <AlertCircle className="w-3 h-3" /> นำออก (Export PDF)
-                    </button>
+                    <ExportDropdown 
+                        options={exportOptions}
+                        buttonLabel="Export"
+                        size="md"
+                        variant="secondary"
+                    />
                 </div>
             </div>
 
