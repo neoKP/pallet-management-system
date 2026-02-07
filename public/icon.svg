@@ -1,0 +1,62 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <defs>
+    <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#1e3a8a"/>
+      <stop offset="50%" style="stop-color:#1e40af"/>
+      <stop offset="100%" style="stop-color:#3b82f6"/>
+    </linearGradient>
+    <linearGradient id="pallet" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" style="stop-color:#fbbf24"/>
+      <stop offset="100%" style="stop-color:#d97706"/>
+    </linearGradient>
+    <linearGradient id="palletDark" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" style="stop-color:#b45309"/>
+      <stop offset="100%" style="stop-color:#92400e"/>
+    </linearGradient>
+    <filter id="shadow" x="-10%" y="-10%" width="120%" height="130%">
+      <feDropShadow dx="0" dy="4" stdDeviation="6" flood-color="#000" flood-opacity="0.25"/>
+    </filter>
+  </defs>
+
+  <!-- พื้นหลังสี่เหลี่ยมมุมมน -->
+  <rect width="512" height="512" rx="96" fill="url(#bg)"/>
+
+  <!-- ลวดลายพื้นหลัง (grid pattern) -->
+  <g opacity="0.06" stroke="white" stroke-width="1" fill="none">
+    <line x1="0" y1="128" x2="512" y2="128"/>
+    <line x1="0" y1="256" x2="512" y2="256"/>
+    <line x1="0" y1="384" x2="512" y2="384"/>
+    <line x1="128" y1="0" x2="128" y2="512"/>
+    <line x1="256" y1="0" x2="256" y2="512"/>
+    <line x1="384" y1="0" x2="384" y2="512"/>
+  </g>
+
+  <!-- พาเลทไม้ (ตรงกลาง-ล่าง) -->
+  <g transform="translate(256,295)" filter="url(#shadow)">
+    <!-- แผ่นไม้ด้านบน 3 แผ่น -->
+    <rect x="-130" y="-105" width="260" height="28" rx="5" fill="url(#pallet)"/>
+    <rect x="-130" y="-70" width="260" height="28" rx="5" fill="url(#pallet)"/>
+    <rect x="-130" y="-35" width="260" height="28" rx="5" fill="url(#pallet)"/>
+    <!-- ขาตั้ง 3 ขา -->
+    <rect x="-110" y="-2" width="28" height="45" rx="4" fill="url(#palletDark)"/>
+    <rect x="-14" y="-2" width="28" height="45" rx="4" fill="url(#palletDark)"/>
+    <rect x="82" y="-2" width="28" height="45" rx="4" fill="url(#palletDark)"/>
+    <!-- แผ่นไม้ด้านล่าง 2 แผ่น -->
+    <rect x="-130" y="48" width="260" height="24" rx="5" fill="url(#pallet)" opacity="0.9"/>
+    <rect x="-130" y="78" width="260" height="24" rx="5" fill="url(#pallet)" opacity="0.9"/>
+  </g>
+
+  <!-- ลูกศรขนส่ง (ซ้าย-ขวา) -->
+  <g fill="white" opacity="0.92">
+    <!-- ลูกศรขวา -->
+    <path d="M345,120 L395,120 L395,102 L430,128 L395,154 L395,136 L345,136 Z"/>
+    <!-- ลูกศรซ้าย -->
+    <path d="M167,136 L117,136 L117,154 L82,128 L117,102 L117,120 L167,120 Z"/>
+  </g>
+
+  <!-- ตัวอักษร NS (Neo Siam) -->
+  <text x="256" y="145" text-anchor="middle" font-family="Arial,Helvetica,sans-serif" font-weight="900" font-size="76" fill="white" letter-spacing="-3" opacity="0.95">NS</text>
+
+  <!-- ข้อความด้านล่าง -->
+  <text x="256" y="460" text-anchor="middle" font-family="Arial,Helvetica,sans-serif" font-weight="700" font-size="28" fill="white" opacity="0.7" letter-spacing="4">PALLET</text>
+</svg>
