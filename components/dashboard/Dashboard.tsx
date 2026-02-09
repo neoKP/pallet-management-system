@@ -18,6 +18,7 @@ import { getAgingRentalAnalysis } from '../../services/analyticsService';
 import { useStock } from '../../contexts/StockContext';
 import { NeoAIBriefing } from './NeoAIBriefing';
 import ExportDropdown, { createStockExportOptions } from '../common/ExportDropdown';
+import StockThresholdChart from './StockThresholdChart';
 import { exportStockToExcel, exportStockToPDF } from '../../utils/exportUtils';
 import {
     AreaChart,
@@ -405,6 +406,8 @@ const Dashboard: React.FC<DashboardProps> = ({ stock, selectedBranch, transactio
             </div>
 
             <DashboardTrendChart transactions={transactions} selectedBranch={selectedBranch} />
+
+            <StockThresholdChart stock={stock} thresholds={thresholds} selectedBranch={selectedBranch} />
 
             <div className="bg-white p-6 rounded-[2.5rem] shadow-sm border border-slate-100 overflow-hidden animate-in fade-in slide-in-from-top-4">
                 <div className="flex items-center justify-between mb-6">
