@@ -23,7 +23,7 @@ interface StockContextType {
         note?: string;
     }) => void;
     confirmTransaction: (txId: number) => void;
-    confirmTransactionsBatch: (results: Transaction[]) => void;
+    confirmTransactionsBatch: (results: Transaction[], originalTxs?: Transaction[]) => void;
     deleteTransaction: (txId: number) => void;
     processBatchMaintenance: (data: {
         items: { palletId: PalletId; qty: number }[];
@@ -233,12 +233,33 @@ export const StockProvider: React.FC<StockProviderProps> = ({ children }) => {
         }
     }, [stock, generateDocNo, config.telegramChatId]);
 
-    const confirmTransactionsBatch = useCallback(async (results: Transaction[]) => {
+    const confirmTransactionsBatch = useCallback(async (results: Transaction[], originalTxs?: Transaction[]) => {
         const nextStock = { ...stock };
         const finalTxs: Transaction[] = [];
+
+        // Step 1: คืน stock source ตามยอดเดิมที่หักไปตอน PENDING
+        if (originalTxs && originalTxs.length > 0) {
+            originalTxs.forEach(origTx => {
+                if (nextStock[origTx.source as BranchId]) {
+                    const s = { ...nextStock[origTx.source as BranchId] } as any;
+                    s[origTx.palletId] += origTx.qty;
+                    nextStock[origTx.source as BranchId] = s;
+                }
+            });
+        }
+
         results.forEach(item => {
             const utx = { ...item, status: 'COMPLETED' as const, receivedAt: new Date().toISOString() };
             finalTxs.push(utx);
+
+            // Step 2: หัก source ตามยอดรับจริง (เฉพาะเมื่อมี originalTxs = มีการ adjust)
+            if (originalTxs && nextStock[utx.source as BranchId]) {
+                const s = { ...nextStock[utx.source as BranchId] } as any;
+                s[utx.palletId] -= utx.qty;
+                nextStock[utx.source as BranchId] = s;
+            }
+
+            // Step 3: เพิ่ม dest ตามยอดรับจริง
             if (nextStock[utx.dest as BranchId]) {
                 const d = { ...nextStock[utx.dest as BranchId] } as any;
                 d[utx.palletId] += utx.qty;

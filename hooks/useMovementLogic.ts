@@ -378,7 +378,7 @@ export function useMovementLogic(selectedBranch: BranchId, transactions: Transac
         if (isProcessing) return;
         try {
             setIsProcessing(true);
-            await confirmTransactionsBatch(txs);
+            await confirmTransactionsBatch(txs, verifyingGroup || undefined);
             Swal.fire({
                 icon: 'success',
                 title: 'เรียบร้อย!',
