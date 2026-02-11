@@ -249,7 +249,17 @@ export const StockProvider: React.FC<StockProviderProps> = ({ children }) => {
         }
 
         results.forEach(item => {
-            const utx = { ...item, status: 'COMPLETED' as const, receivedAt: new Date().toISOString() };
+            const utx = { ...item, status: 'COMPLETED' as const, receivedAt: new Date().toISOString() } as Transaction;
+
+            // บันทึก originalPalletId/originalQty เมื่อมีการเปลี่ยนแปลงจากยอดเดิม
+            if (originalTxs) {
+                const origTx = originalTxs.find(o => o.id === item.id);
+                if (origTx && (origTx.palletId !== item.palletId || origTx.qty !== item.qty)) {
+                    utx.originalPalletId = origTx.palletId;
+                    utx.originalQty = origTx.qty;
+                }
+            }
+
             finalTxs.push(utx);
 
             // Step 2: หัก source ตามยอดรับจริง (เฉพาะเมื่อมี originalTxs = มีการ adjust)

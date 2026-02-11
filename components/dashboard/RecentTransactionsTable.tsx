@@ -293,7 +293,9 @@ const RecentTransactionsTable: React.FC<RecentTransactionsTableProps> = ({
                                                                 {tx.qty} x {PALLET_TYPES.find(p => p.id === tx.palletId)?.name || tx.palletId}
                                                             </span>
                                                             {(!!tx.originalPalletId || (tx.originalQty !== undefined && tx.originalQty !== tx.qty)) && (
-                                                                <span className="px-1.5 py-0.5 bg-amber-100 text-amber-700 text-[9px] font-black rounded uppercase">แก้ไขแล้ว</span>
+                                                                <span className="px-1.5 py-0.5 bg-amber-100 text-amber-700 text-[9px] font-black rounded uppercase" title={`เดิม: ${tx.originalQty ?? tx.qty} x ${PALLET_TYPES.find(p => p.id === (tx.originalPalletId || tx.palletId))?.name || tx.originalPalletId}`}>
+                                                                    แก้ไข (เดิม: {tx.originalQty ?? tx.qty} x {PALLET_TYPES.find(p => p.id === (tx.originalPalletId || tx.palletId))?.name || tx.originalPalletId || tx.palletId})
+                                                                </span>
                                                             )}
                                                             {tx.note?.includes('[รายการแยก]') && (
                                                                 <span className="px-1.5 py-0.5 bg-blue-100 text-blue-700 text-[9px] font-black rounded uppercase">รายการแยก</span>

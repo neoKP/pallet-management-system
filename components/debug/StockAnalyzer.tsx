@@ -26,6 +26,7 @@ interface TransactionDetail {
   qty: number;
   effect: string;
   runningTotal: number;
+  originalInfo?: string;
 }
 
 interface AnalysisResult {
@@ -151,6 +152,12 @@ const StockAnalyzer: React.FC<StockAnalyzerProps> = ({ transactions, stock }) =>
 
       runningTotal += qtyChange;
 
+      let originalInfo = '';
+      if (tx.originalPalletId || (tx.originalQty !== undefined && tx.originalQty !== tx.qty)) {
+        const origPalletName = PALLET_TYPES.find(p => p.id === (tx.originalPalletId || tx.palletId))?.name || tx.originalPalletId || tx.palletId;
+        originalInfo = `เดิม: ${tx.originalQty ?? tx.qty} x ${origPalletName}`;
+      }
+
       return {
         date: new Date(tx.date).toLocaleDateString('th-TH', { day: '2-digit', month: 'short', year: '2-digit' }),
         docNo: tx.docNo || '-',
@@ -160,7 +167,8 @@ const StockAnalyzer: React.FC<StockAnalyzerProps> = ({ transactions, stock }) =>
         dest: branchNames[tx.dest] || tx.dest,
         qty: tx.qty,
         effect,
-        runningTotal
+        runningTotal,
+        originalInfo
       };
     });
 
@@ -635,6 +643,9 @@ const StockAnalyzer: React.FC<StockAnalyzerProps> = ({ transactions, stock }) =>
                     }`}>
                       {tx.effect}
                     </span>
+                    {tx.originalInfo && (
+                      <div className="text-[10px] text-amber-600 font-bold mt-0.5">📝 {tx.originalInfo}</div>
+                    )}
                   </td>
                   <td className="p-2 text-right font-black text-slate-900">{tx.runningTotal}</td>
                 </tr>
