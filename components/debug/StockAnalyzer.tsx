@@ -79,23 +79,17 @@ const StockAnalyzer: React.FC<StockAnalyzerProps> = ({ transactions, stock }) =>
         (tx.source === selectedBranch || tx.dest === selectedBranch) &&
         tx.status !== 'CANCELLED'
       );
-      let totalIn = 0, totalOut = 0, pendingIn = 0, totalAdjust = 0;
+      let totalIn = 0, totalOut = 0, pendingIn = 0;
       relatedTxs.forEach(tx => {
-        const isAdjust = tx.type === 'ADJUST' || tx.isInitial;
-        if (isAdjust) {
-          if (tx.dest === selectedBranch) totalAdjust += tx.qty;
-          if (tx.source === selectedBranch) totalAdjust -= tx.qty;
-          return;
-        }
         if (tx.dest === selectedBranch) {
           if (tx.status === 'COMPLETED') totalIn += tx.qty;
           else if (tx.status === 'PENDING') pendingIn += tx.qty;
         }
-        if (tx.source === selectedBranch) totalOut += tx.qty;
+        if (tx.source === selectedBranch && tx.status === 'COMPLETED') totalOut += tx.qty;
       });
-      const calculated = totalIn - totalOut + totalAdjust;
+      const calculated = totalIn - totalOut;
       const discrepancy = currentStock - calculated;
-      return { palletId, palletName, currentStock, calculated, totalIn, totalOut, totalAdjust, pendingIn, discrepancy, txCount: relatedTxs.length };
+      return { palletId, palletName, currentStock, calculated, totalIn, totalOut, pendingIn, discrepancy, txCount: relatedTxs.length };
     });
   }, [transactions, stock, selectedBranch]);
 
@@ -120,41 +114,35 @@ const StockAnalyzer: React.FC<StockAnalyzerProps> = ({ transactions, stock }) =>
     let runningTotal = 0;
     const issues: string[] = [];
 
-    let totalAdjust = 0;
     const txDetails: TransactionDetail[] = relatedTxs.map(tx => {
       let effect = '';
       let qtyChange = 0;
-      const isAdjust = tx.type === 'ADJUST' || tx.isInitial;
 
-      if (isAdjust) {
-        if (tx.dest === selectedBranch) {
-          totalAdjust += tx.qty;
-          qtyChange = tx.qty;
-          effect = `+${tx.qty} (ปรับปรุง/ยอดเริ่มต้น)`;
-        }
-        if (tx.source === selectedBranch) {
-          totalAdjust -= tx.qty;
-          qtyChange = -tx.qty;
-          effect = `-${tx.qty} (ปรับปรุง/ยอดเริ่มต้น)`;
-        }
-      } else if (tx.dest === selectedBranch) {
+      if (tx.dest === selectedBranch) {
         // Incoming to this branch
         if (tx.status === 'COMPLETED') {
           totalIn += tx.qty;
           qtyChange = tx.qty;
-          effect = `+${tx.qty} (รับเข้า COMPLETED)`;
+          effect = tx.type === 'ADJUST' || tx.isInitial
+            ? `+${tx.qty} (${tx.isInitial ? 'ยอดเริ่มต้น' : 'ปรับปรุง'})`
+            : `+${tx.qty} (รับเข้า COMPLETED)`;
         } else if (tx.status === 'PENDING') {
           pendingIn += tx.qty;
           effect = `(+${tx.qty} รอยืนยัน)`;
         }
-      } else if (tx.source === selectedBranch) {
+      }
+
+      if (tx.source === selectedBranch) {
         // Outgoing from this branch
-        totalOut += tx.qty;
-        qtyChange = -tx.qty;
         if (tx.status === 'COMPLETED') {
-          effect = `-${tx.qty} (จ่ายออก COMPLETED)`;
+          totalOut += tx.qty;
+          qtyChange = -tx.qty;
+          effect = tx.type === 'ADJUST' || tx.isInitial
+            ? `-${tx.qty} (${tx.isInitial ? 'ยอดเริ่มต้น' : 'ปรับปรุง'})`
+            : `-${tx.qty} (จ่ายออก COMPLETED)`;
         } else if (tx.status === 'PENDING') {
           pendingOut += tx.qty;
+          qtyChange = -tx.qty;
           effect = `-${tx.qty} (จ่ายออก PENDING - หักแล้ว)`;
         }
       }
@@ -174,8 +162,8 @@ const StockAnalyzer: React.FC<StockAnalyzerProps> = ({ transactions, stock }) =>
       };
     });
 
-    // Calculate expected stock (รับเข้า - จ่ายออก + ปรับปรุง)
-    const calculatedStock = totalIn - totalOut + totalAdjust;
+    // Calculate expected stock (รับเข้า - จ่ายออก)
+    const calculatedStock = totalIn - totalOut;
 
     // Check for discrepancy
     const discrepancy = currentStock - calculatedStock;
@@ -405,7 +393,6 @@ const StockAnalyzer: React.FC<StockAnalyzerProps> = ({ transactions, stock }) =>
                   <th className="p-3 text-left font-black text-xs uppercase">พาเลท</th>
                   <th className="p-3 text-right font-black text-xs uppercase">รับเข้า</th>
                   <th className="p-3 text-right font-black text-xs uppercase">จ่ายออก</th>
-                  <th className="p-3 text-right font-black text-xs uppercase">ปรับปรุง</th>
                   <th className="p-3 text-right font-black text-xs uppercase">ยอดคำนวณ</th>
                   <th className="p-3 text-right font-black text-xs uppercase">สต็อกจริง</th>
                   <th className="p-3 text-right font-black text-xs uppercase">ส่วนต่าง</th>
@@ -423,7 +410,6 @@ const StockAnalyzer: React.FC<StockAnalyzerProps> = ({ transactions, stock }) =>
                     <td className="p-3 font-bold text-slate-800">{row.palletName}</td>
                     <td className="p-3 text-right font-mono font-bold text-emerald-600">+{row.totalIn.toLocaleString()}</td>
                     <td className="p-3 text-right font-mono font-bold text-red-500">-{row.totalOut.toLocaleString()}</td>
-                    <td className={`p-3 text-right font-mono font-bold ${row.totalAdjust >= 0 ? 'text-purple-600' : 'text-purple-600'}`}>{row.totalAdjust > 0 ? '+' : ''}{row.totalAdjust.toLocaleString()}</td>
                     <td className="p-3 text-right font-mono font-bold text-blue-600">{row.calculated.toLocaleString()}</td>
                     <td className={`p-3 text-right font-mono font-black ${row.currentStock < 0 ? 'text-red-600' : 'text-slate-900'}`}>{row.currentStock.toLocaleString()}</td>
                     <td className={`p-3 text-right font-mono font-black ${row.discrepancy !== 0 ? 'text-red-600' : 'text-emerald-600'}`}>
@@ -447,7 +433,6 @@ const StockAnalyzer: React.FC<StockAnalyzerProps> = ({ transactions, stock }) =>
                   <td className="p-3 text-right uppercase text-xs text-slate-500">รวมทั้งหมด</td>
                   <td className="p-3 text-right font-mono text-emerald-600">+{summaryAll.reduce((s, r) => s + r.totalIn, 0).toLocaleString()}</td>
                   <td className="p-3 text-right font-mono text-red-500">-{summaryAll.reduce((s, r) => s + r.totalOut, 0).toLocaleString()}</td>
-                  <td className="p-3 text-right font-mono text-purple-600">{summaryAll.reduce((s, r) => s + r.totalAdjust, 0).toLocaleString()}</td>
                   <td className="p-3 text-right font-mono text-blue-600">{summaryAll.reduce((s, r) => s + r.calculated, 0).toLocaleString()}</td>
                   <td className="p-3 text-right font-mono text-slate-900">{summaryAll.reduce((s, r) => s + r.currentStock, 0).toLocaleString()}</td>
                   <td className={`p-3 text-right font-mono ${summaryAll.reduce((s, r) => s + r.discrepancy, 0) !== 0 ? 'text-red-600' : 'text-emerald-600'}`}>
@@ -471,35 +456,35 @@ const StockAnalyzer: React.FC<StockAnalyzerProps> = ({ transactions, stock }) =>
                 <button
                   onClick={async () => {
                     const discrepancies = summaryAll.filter(r => r.discrepancy !== 0);
-                    const list = discrepancies.map(r => `${r.palletName}: ${r.discrepancy > 0 ? '+' : ''}${r.discrepancy}`).join('\n');
+                    const list = discrepancies.map(r => `${r.palletName}: สต็อก ${r.currentStock} → ${r.calculated} (ส่วนต่าง ${r.discrepancy > 0 ? '+' : ''}${r.discrepancy})`).join('\n');
                     const result = await Swal.fire({
                       title: 'Reconcile ส่วนต่างทั้งหมด?',
-                      html: `<div style="text-align:left;font-size:14px;"><p>ระบบจะสร้าง transaction เพื่ออธิบายส่วนต่าง<br/><b>โดยไม่เปลี่ยนสต็อกจริง</b></p><pre style="margin-top:8px;background:#f1f5f9;padding:8px;border-radius:8px;font-size:13px;">${list}</pre></div>`,
-                      icon: 'question',
+                      html: `<div style="text-align:left;font-size:14px;"><p>ระบบจะ<b>เปลี่ยนสต็อกจริง (Firebase)</b> ให้ตรงกับยอดคำนวณจาก Transactions</p><pre style="margin-top:8px;background:#f1f5f9;padding:8px;border-radius:8px;font-size:13px;">${list}</pre></div>`,
+                      icon: 'warning',
                       showCancelButton: true,
-                      confirmButtonText: 'Reconcile',
+                      confirmButtonText: 'Reconcile - ปรับสต็อกจริง',
                       cancelButtonText: 'ยกเลิก',
-                      confirmButtonColor: '#7c3aed',
+                      confirmButtonColor: '#dc2626',
                     });
                     if (result.isConfirmed) {
                       for (const row of discrepancies) {
                         await reconcileStock({
                           targetId: selectedBranch,
                           palletId: row.palletId as PalletId,
-                          discrepancy: row.discrepancy,
+                          calculatedStock: row.calculated,
                           userName: 'ADMIN',
                         });
                       }
-                      Swal.fire({ icon: 'success', title: 'Reconcile สำเร็จ!', text: `ปรับยอดคำนวณแล้ว ${discrepancies.length} รายการ`, timer: 2000, showConfirmButton: false });
+                      Swal.fire({ icon: 'success', title: 'Reconcile สำเร็จ!', text: `ปรับสต็อกจริงแล้ว ${discrepancies.length} รายการ`, timer: 2000, showConfirmButton: false });
                     }
                   }}
-                  className="flex items-center gap-2 px-4 py-2 bg-purple-600 text-white text-xs font-black rounded-xl hover:bg-purple-700 transition-colors shadow-lg shadow-purple-200"
+                  className="flex items-center gap-2 px-4 py-2 bg-red-600 text-white text-xs font-black rounded-xl hover:bg-red-700 transition-colors shadow-lg shadow-red-200"
                 >
                   <RefreshCw size={14} />
                   Reconcile ทั้งหมด
                 </button>
               </div>
-              <p className="text-[10px] text-amber-600 mt-2">สร้าง transaction เพื่ออธิบายส่วนต่างทางประวัติศาสตร์ โดยไม่เปลี่ยนสต็อกจริง (Firebase)</p>
+              <p className="text-[10px] text-amber-600 mt-2">ปรับสต็อกจริง (Firebase) ให้ตรงกับยอดคำนวณจาก Transactions — ไม่สร้าง transaction ใหม่</p>
             </div>
           )}
           <p className="text-[10px] text-slate-400 mt-3 italic">* คลิกที่แถวเพื่อดูรายละเอียด Transactions ของพาเลทนั้น</p>

@@ -53,7 +53,7 @@ interface StockContextType {
     thresholds: any;
     updateThresholds: (data: any) => Promise<void>;
     updateTransaction: (tx: Transaction) => void;
-    reconcileStock: (data: { targetId: string; palletId: PalletId; discrepancy: number; userName: string }) => Promise<void>;
+    reconcileStock: (data: { targetId: string; palletId: PalletId; calculatedStock: number; userName: string }) => Promise<void>;
     isDataLoaded: boolean; // Loading Guard: ข้อมูลโหลดเสร็จหรือยัง
 }
 
@@ -359,26 +359,19 @@ export const StockProvider: React.FC<StockProviderProps> = ({ children }) => {
     const reconcileStock = useCallback(async (data: {
         targetId: string;
         palletId: PalletId;
-        discrepancy: number;
+        calculatedStock: number;
         userName: string;
     }) => {
-        const now = new Date();
-        const ts = now.toISOString();
-        const docNo = `REC-${ts.split('T')[0].replace(/-/g, '')}-${Math.floor(Math.random() * 1000)}`;
-        const delta = data.discrepancy;
-        if (delta === 0) return;
+        const isBranch = BRANCHES.some((b: Branch) => b.id === data.targetId);
+        if (!isBranch) return;
 
-        const recTx: Transaction = {
-            id: Date.now(), date: ts, docNo, type: 'ADJUST', status: 'COMPLETED',
-            source: delta < 0 ? 'SYSTEM_ADJUSTMENT' : data.targetId,
-            dest: delta < 0 ? data.targetId : 'SYSTEM_ADJUSTMENT',
-            palletId: data.palletId, qty: Math.abs(delta),
-            note: `Reconcile: ปรับยอดคำนวณให้ตรงกับสต็อกจริง (ส่วนต่าง ${delta})`,
-            adjustedBy: data.userName, isInitial: false
-        } as Transaction;
-
-        // Reconcile: ไม่เปลี่ยน stock จริง แค่เพิ่ม transaction เพื่ออธิบายส่วนต่าง
-        await firebaseService.addMovementBatch([recTx], stock);
+        // Reconcile: เปลี่ยน stock จริง (Firebase) ให้ตรงกับยอดคำนวณจาก transactions
+        const nextStock = { ...stock };
+        const s = { ...nextStock[data.targetId as BranchId] } as any;
+        s[data.palletId] = data.calculatedStock;
+        nextStock[data.targetId as BranchId] = s;
+        await firebaseService.addMovementBatch([], nextStock);
+        console.log(`[Reconcile] ${data.targetId}/${data.palletId}: stock → ${data.calculatedStock} (by ${data.userName})`);
     }, [stock]);
 
     const updateTransaction = useCallback(async (tx: Transaction) => {
