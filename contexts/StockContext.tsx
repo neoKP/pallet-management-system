@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useState, useCallback, ReactNode, useEffect } from 'react';
-import { Stock, Transaction, BranchId, PalletId, TransactionType, PalletRequest, PalletRequestType, Branch, Partner } from '../types';
+import { Stock, Transaction, BranchId, PalletId, TransactionType, PalletRequest, PalletRequestType, Branch, Partner, PalletType } from '../types';
 import { INITIAL_STOCK, INITIAL_TRANSACTIONS, BRANCHES, EXTERNAL_PARTNERS, PALLET_TYPES } from '../constants';
 import * as firebaseService from '../services/firebase';
 import * as telegramService from '../services/telegramService';
@@ -182,6 +182,18 @@ export const StockProvider: React.FC<StockProviderProps> = ({ children }) => {
         } as Transaction));
 
         const nextStock = { ...stock };
+        // Validation: ป้องกัน stock ติดลบ (เฉพาะ source ที่เป็น branch)
+        const isBranchSource = BRANCHES.some((b: Branch) => b.id === data.source);
+        if (isBranchSource && data.type !== 'ADJUST') {
+            for (const tx of batchTxs) {
+                const currentQty = (nextStock[tx.source as BranchId] as any)?.[tx.palletId] || 0;
+                if (currentQty < tx.qty) {
+                    const palletName = PALLET_TYPES.find((p: PalletType) => p.id === tx.palletId)?.name || tx.palletId;
+                    const branchName = BRANCHES.find((b: Branch) => b.id === tx.source)?.name || tx.source;
+                    throw new Error(`สต็อกไม่เพียงพอ: ${branchName} มี ${palletName} เหลือ ${currentQty} แต่ต้องการจ่าย ${tx.qty}`);
+                }
+            }
+        }
         batchTxs.forEach((tx: any) => {
             if (nextStock[tx.source as BranchId]) {
                 const s = { ...nextStock[tx.source as BranchId] } as any;
