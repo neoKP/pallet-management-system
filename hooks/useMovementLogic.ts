@@ -196,11 +196,15 @@ export function useMovementLogic(selectedBranch: BranchId, transactions: Transac
         }
 
         const datePart = transactionDate.replace(/-/g, '');
+        const actualSource = transactionType === 'IN' ? target : selectedBranch;
+        const actualDest = transactionType === 'IN' ? selectedBranch : target;
+        const isSourceBranch = BRANCHES.some(b => b.id === actualSource);
+        const isDestBranch = BRANCHES.some(b => b.id === actualDest);
+        const prefix = (isSourceBranch && isDestBranch) ? 'INT' : (!isSourceBranch && isDestBranch ? 'EXT-IN' : 'EXT-OUT');
         const existingDocNos = Array.from(new Set(transactions
-            .filter(t => t.docNo && t.docNo.includes(datePart))
+            .filter(t => t.docNo && t.docNo.startsWith(`${prefix}-${datePart}`))
             .map(t => t.docNo)));
         const running = (existingDocNos.length + 1).toString().padStart(3, '0');
-        const prefix = 'INT';
         const docNo = `${prefix}-${datePart}-${running}`;
 
         // Version 2.0.0 Automation Logic - Auto-Confirm OUT only (IN always requires manual confirm)
@@ -428,11 +432,11 @@ export function useMovementLogic(selectedBranch: BranchId, transactions: Transac
 
         const transactionDate = additionalData?.date || new Date().toISOString().split('T')[0];
         const datePart = transactionDate.replace(/-/g, '');
+        const prefix = type === 'IN' ? 'QL-IN' : 'QL-OUT';
         const existingDocNos = Array.from(new Set(transactions
-            .filter(t => t.docNo && t.docNo.includes(datePart))
+            .filter(t => t.docNo && t.docNo.startsWith(`${prefix}-${datePart}`))
             .map(t => t.docNo)));
         const running = (existingDocNos.length + 1).toString().padStart(3, '0');
-        const prefix = 'QL'; // Quick Loop
         const docNo = `${prefix}-${datePart}-${running}`;
 
         // Auto-status for Sai 3 partners
