@@ -6,8 +6,10 @@
 import React, { useMemo, useState, useCallback } from 'react';
 import { Transaction, Stock, BranchId, PalletId } from '../../types';
 import { BRANCHES, PALLET_TYPES } from '../../constants';
-import { AlertTriangle, CheckCircle, Search, ChevronDown, ChevronUp, FileSpreadsheet } from 'lucide-react';
+import { AlertTriangle, CheckCircle, Search, ChevronDown, ChevronUp, FileSpreadsheet, RefreshCw } from 'lucide-react';
 import ExcelJS from 'exceljs';
+import { useStock } from '../../contexts/StockContext';
+import Swal from 'sweetalert2';
 
 interface StockAnalyzerProps {
   transactions: Transaction[];
@@ -43,6 +45,7 @@ interface AnalysisResult {
 }
 
 const StockAnalyzer: React.FC<StockAnalyzerProps> = ({ transactions, stock }) => {
+  const { reconcileStock } = useStock();
   const [selectedBranch, setSelectedBranch] = useState<BranchId>('sai3');
   const [selectedPallet, setSelectedPallet] = useState<PalletId>('loscam_red');
   const [showTransactions, setShowTransactions] = useState(false);
@@ -456,6 +459,49 @@ const StockAnalyzer: React.FC<StockAnalyzerProps> = ({ transactions, stock }) =>
               </tfoot>
             </table>
           </div>
+          {summaryAll.some(r => r.discrepancy !== 0) && (
+            <div className="mt-4 p-4 bg-amber-50 border border-amber-200 rounded-xl">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <AlertTriangle className="text-amber-600" size={16} />
+                  <span className="text-sm font-bold text-amber-800">
+                    พบส่วนต่าง {summaryAll.filter(r => r.discrepancy !== 0).length} รายการ
+                  </span>
+                </div>
+                <button
+                  onClick={async () => {
+                    const discrepancies = summaryAll.filter(r => r.discrepancy !== 0);
+                    const list = discrepancies.map(r => `${r.palletName}: ${r.discrepancy > 0 ? '+' : ''}${r.discrepancy}`).join('\n');
+                    const result = await Swal.fire({
+                      title: 'Reconcile ส่วนต่างทั้งหมด?',
+                      html: `<div style="text-align:left;font-size:14px;"><p>ระบบจะสร้าง transaction เพื่ออธิบายส่วนต่าง<br/><b>โดยไม่เปลี่ยนสต็อกจริง</b></p><pre style="margin-top:8px;background:#f1f5f9;padding:8px;border-radius:8px;font-size:13px;">${list}</pre></div>`,
+                      icon: 'question',
+                      showCancelButton: true,
+                      confirmButtonText: 'Reconcile',
+                      cancelButtonText: 'ยกเลิก',
+                      confirmButtonColor: '#7c3aed',
+                    });
+                    if (result.isConfirmed) {
+                      for (const row of discrepancies) {
+                        await reconcileStock({
+                          targetId: selectedBranch,
+                          palletId: row.palletId as PalletId,
+                          discrepancy: row.discrepancy,
+                          userName: 'ADMIN',
+                        });
+                      }
+                      Swal.fire({ icon: 'success', title: 'Reconcile สำเร็จ!', text: `ปรับยอดคำนวณแล้ว ${discrepancies.length} รายการ`, timer: 2000, showConfirmButton: false });
+                    }
+                  }}
+                  className="flex items-center gap-2 px-4 py-2 bg-purple-600 text-white text-xs font-black rounded-xl hover:bg-purple-700 transition-colors shadow-lg shadow-purple-200"
+                >
+                  <RefreshCw size={14} />
+                  Reconcile ทั้งหมด
+                </button>
+              </div>
+              <p className="text-[10px] text-amber-600 mt-2">สร้าง transaction เพื่ออธิบายส่วนต่างทางประวัติศาสตร์ โดยไม่เปลี่ยนสต็อกจริง (Firebase)</p>
+            </div>
+          )}
           <p className="text-[10px] text-slate-400 mt-3 italic">* คลิกที่แถวเพื่อดูรายละเอียด Transactions ของพาเลทนั้น</p>
         </div>
       )}

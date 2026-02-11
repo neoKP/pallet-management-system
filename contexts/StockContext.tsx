@@ -53,6 +53,7 @@ interface StockContextType {
     thresholds: any;
     updateThresholds: (data: any) => Promise<void>;
     updateTransaction: (tx: Transaction) => void;
+    reconcileStock: (data: { targetId: string; palletId: PalletId; discrepancy: number; userName: string }) => Promise<void>;
     isDataLoaded: boolean; // Loading Guard: ข้อมูลโหลดเสร็จหรือยัง
 }
 
@@ -355,6 +356,31 @@ export const StockProvider: React.FC<StockProviderProps> = ({ children }) => {
         await firebaseService.addMovementBatch([adjTx], nextStock);
     }, [stock, transactions]);
 
+    const reconcileStock = useCallback(async (data: {
+        targetId: string;
+        palletId: PalletId;
+        discrepancy: number;
+        userName: string;
+    }) => {
+        const now = new Date();
+        const ts = now.toISOString();
+        const docNo = `REC-${ts.split('T')[0].replace(/-/g, '')}-${Math.floor(Math.random() * 1000)}`;
+        const delta = data.discrepancy;
+        if (delta === 0) return;
+
+        const recTx: Transaction = {
+            id: Date.now(), date: ts, docNo, type: 'ADJUST', status: 'COMPLETED',
+            source: delta < 0 ? 'SYSTEM_ADJUSTMENT' : data.targetId,
+            dest: delta < 0 ? data.targetId : 'SYSTEM_ADJUSTMENT',
+            palletId: data.palletId, qty: Math.abs(delta),
+            note: `Reconcile: ปรับยอดคำนวณให้ตรงกับสต็อกจริง (ส่วนต่าง ${delta})`,
+            adjustedBy: data.userName, isInitial: false
+        } as Transaction;
+
+        // Reconcile: ไม่เปลี่ยน stock จริง แค่เพิ่ม transaction เพื่ออธิบายส่วนต่าง
+        await firebaseService.addMovementBatch([recTx], stock);
+    }, [stock]);
+
     const updateTransaction = useCallback(async (tx: Transaction) => {
         await firebaseService.addMovementBatch([tx], stock);
 
@@ -376,7 +402,7 @@ export const StockProvider: React.FC<StockProviderProps> = ({ children }) => {
                 getStockForBranch: (id: BranchId) => stock[id] || {}, palletRequests, createPalletRequest,
                 updatePalletRequest, config, updateSystemConfig, adjustStock,
                 thresholds, updateThresholds: firebaseService.updateThresholds,
-                updateTransaction, isDataLoaded
+                updateTransaction, reconcileStock, isDataLoaded
             }}
         >
             {children}
