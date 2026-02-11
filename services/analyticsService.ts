@@ -356,8 +356,9 @@ export const getLoscamRentalAnalysis = (transactions: Transaction[], stock: Stoc
 
     for (let i = 0; i < 7; i++) {
         const d = new Date(today); d.setDate(today.getDate() - i);
-        const rate = currentPos > 3000 ? 1.12 : currentPos > 2000 ? 1.19 : 1.40;
-        result.push({ date: d.toISOString().split('T')[0], quantity: currentPos, cost: Math.round(currentPos * rate * 100) / 100 });
+        const absPos = Math.abs(currentPos);
+        const rate = absPos > 3000 ? 1.12 : absPos > 2000 ? 1.19 : 1.40;
+        result.push({ date: d.toISOString().split('T')[0], quantity: currentPos, cost: Math.round(absPos * rate * 100) / 100 });
 
         const dayStart = new Date(d); dayStart.setHours(0, 0, 0, 0);
         const dayEnd = new Date(d); dayEnd.setHours(23, 59, 59, 999);
@@ -439,8 +440,9 @@ export const getAgingRentalAnalysis = (transactions: Transaction[], today: Date 
                     .reduce((sum, t) => sum + t.qty, 0);
 
                 let vReturn = returnsCount;
+                const absBalance = Math.abs(balance);
                 const dailyRate = pId === 'loscam_wangnoi'
-                    ? (balance > 3000 ? 1.12 : balance > 2000 ? 1.19 : 1.40)
+                    ? (absBalance > 3000 ? 1.12 : absBalance > 2000 ? 1.19 : 1.40)
                     : 1.0;
 
                 partnerSummaries[key].currentRate = dailyRate;
@@ -480,8 +482,8 @@ export const getAgingRentalAnalysis = (transactions: Transaction[], today: Date 
                     }
                 });
 
-                if (balance > 0) {
-                    partnerSummaries[key].avgAge = Math.round(partnerSummaries[key].weight / balance);
+                if (absBalance > 0) {
+                    partnerSummaries[key].avgAge = Math.round(partnerSummaries[key].weight / absBalance);
                 }
             }
         });

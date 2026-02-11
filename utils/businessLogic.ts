@@ -3,13 +3,15 @@ import { EXTERNAL_PARTNERS } from '../constants';
 
 /**
  * Calculates the balance contribution of a transaction for a specific partner and pallet.
- * returns positive for "debt/possession increases" and negative for "decreases".
+ * 
+ * Sign Convention:
+ *   Provider (เรายืมจากเขา): ค่าลบ = เรายืมอยู่ (เป็นหนี้), ส่งคืน = บวก (หนี้ลด)
+ *   Customer (เขายืมจากเรา): ค่าบวก = เขายืมอยู่ (เขาเป็นหนี้เรา), รับคืน = ลบ (หนี้ลด)
  */
 export const getPartnerBalanceContribution = (t: Transaction, partnerId: string, palletId: PalletId): number => {
     if (t.palletId !== palletId || t.status !== 'COMPLETED') return 0;
 
     const isLoscamRed = partnerId === 'loscam_wangnoi' && palletId === 'loscam_red';
-    const isSino = partnerId === 'sino' && palletId === 'loscam_red'; // Sino specifically borrow logic for red pallets
 
     // 1. Initial/Adjust Logic (Global for all partners to prevent conflicts)
     if (t.type === 'ADJUST' || t.isInitial) {
@@ -19,32 +21,35 @@ export const getPartnerBalanceContribution = (t: Transaction, partnerId: string,
     }
 
     // 2. Special Case: Loscam Red (Debt from Wangnoi vs Neo Corp)
+    //    รับจาก Neo Corp = ยืมเพิ่ม = ลบ (หนี้เพิ่ม)
+    //    ส่งคืน Loscam = คืนหนี้ = บวก (หนี้ลด)
     if (isLoscamRed) {
-        if (t.source === 'neo_corp') return t.qty;
-        if (t.dest === 'loscam_wangnoi') return -t.qty;
+        if (t.source === 'neo_corp') return -t.qty;       // ยืมเพิ่ม → หนี้เพิ่ม (ลบ)
+        if (t.dest === 'loscam_wangnoi') return t.qty;    // ส่งคืน → หนี้ลด (บวก)
         return 0;
     }
 
     // 3. Special Case: Sino Logic (We borrow from them)
-    // Sino provides pallets to us - handle ALL pallet types (Red, Blue, Yellow, etc.)
+    //    รับจาก Sino = ยืมเพิ่ม = ลบ (หนี้เพิ่ม)
+    //    ส่งคืน Sino = คืนหนี้ = บวก (หนี้ลด)
     if (partnerId === 'sino') {
-        if (t.source === 'sino') return t.qty; // Receiving from Sino = Debt/Borrowing increases
-        if (t.dest === 'sino') return -t.qty;  // Returning to Sino = Debt/Borrowing decreases
+        if (t.source === 'sino') return -t.qty;   // ยืมเพิ่ม → หนี้เพิ่ม (ลบ)
+        if (t.dest === 'sino') return t.qty;       // ส่งคืน → หนี้ลด (บวก)
         return 0;
     }
 
-    // 4. General Partner Logic (Movements only now)
+    // 4. General Partner Logic
     const partner = EXTERNAL_PARTNERS.find(p => p.id === partnerId);
     if (!partner) return 0;
 
     if (partner.type === 'provider') {
-        // Providers (We borrow from them): Positive = We receive more (Debt UP)
-        if (t.source === partnerId) return t.qty; // Received from them
-        if (t.dest === partnerId) return -t.qty; // Returned to them
+        // Provider (เรายืมจากเขา): ลบ = ยืมเพิ่ม, บวก = คืนหนี้
+        if (t.source === partnerId) return -t.qty; // ยืมเพิ่ม → หนี้เพิ่ม (ลบ)
+        if (t.dest === partnerId) return t.qty;    // ส่งคืน → หนี้ลด (บวก)
     } else {
-        // Customers (They borrow from us): Positive = They receive more (Debt UP)
-        if (t.dest === partnerId) return t.qty; // Sent to them
-        if (t.source === partnerId) return -t.qty; // Received back from them
+        // Customer (เขายืมจากเรา): บวก = เขายืมเพิ่ม, ลบ = เขาคืน
+        if (t.dest === partnerId) return t.qty;    // ส่งให้เขา → เขาเป็นหนี้เพิ่ม (บวก)
+        if (t.source === partnerId) return -t.qty; // เขาคืน → หนี้ลด (ลบ)
     }
 
     return 0;
