@@ -4,9 +4,9 @@ import { EXTERNAL_PARTNERS } from '../constants';
 /**
  * Calculates the balance contribution of a transaction for a specific partner and pallet.
  * 
- * Sign Convention:
- *   Provider (เรายืมจากเขา): ค่าลบ = เรายืมอยู่ (เป็นหนี้), ส่งคืน = บวก (หนี้ลด)
- *   Customer (เขายืมจากเรา): ค่าบวก = เขายืมอยู่ (เขาเป็นหนี้เรา), รับคืน = ลบ (หนี้ลด)
+ * Sign Convention (ใช้เหมือนกันทั้ง Provider และ Customer):
+ *   ค่าลบ = ยืมอยู่ (เป็นหนี้) → ยืมเข้า (IN) = ลบมากขึ้น
+ *   ค่าบวก = คืนแล้ว (หนี้ลด) → ส่งคืน (OUT) = ลบน้อยลง
  */
 export const getPartnerBalanceContribution = (t: Transaction, partnerId: string, palletId: PalletId): number => {
     if (t.palletId !== palletId || t.status !== 'COMPLETED') return 0;
@@ -38,18 +38,19 @@ export const getPartnerBalanceContribution = (t: Transaction, partnerId: string,
         return 0;
     }
 
-    // 4. General Partner Logic
+    // 4. General Partner Logic (ทั้ง Provider และ Customer ใช้ sign เดียวกัน)
+    //    ลบ = ยืมอยู่ (หนี้เพิ่ม), บวก = คืนแล้ว (หนี้ลด)
     const partner = EXTERNAL_PARTNERS.find(p => p.id === partnerId);
     if (!partner) return 0;
 
     if (partner.type === 'provider') {
-        // Provider (เรายืมจากเขา): ลบ = ยืมเพิ่ม, บวก = คืนหนี้
-        if (t.source === partnerId) return -t.qty; // ยืมเพิ่ม → หนี้เพิ่ม (ลบ)
-        if (t.dest === partnerId) return t.qty;    // ส่งคืน → หนี้ลด (บวก)
+        // Provider: รับจากเขา = ยืมเพิ่ม (ลบ), ส่งคืนเขา = หนี้ลด (บวก)
+        if (t.source === partnerId) return -t.qty;
+        if (t.dest === partnerId) return t.qty;
     } else {
-        // Customer (เขายืมจากเรา): บวก = เขายืมเพิ่ม, ลบ = เขาคืน
-        if (t.dest === partnerId) return t.qty;    // ส่งให้เขา → เขาเป็นหนี้เพิ่ม (บวก)
-        if (t.source === partnerId) return -t.qty; // เขาคืน → หนี้ลด (ลบ)
+        // Customer: ส่งให้เขา = เขายืมไป (ลบ), เขาคืนมา = หนี้ลด (บวก)
+        if (t.dest === partnerId) return -t.qty;   // ส่งให้เขา → เขายืมไป → หนี้เพิ่ม (ลบ)
+        if (t.source === partnerId) return t.qty;   // เขาคืนมา → หนี้ลด (บวก)
     }
 
     return 0;
