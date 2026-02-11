@@ -43,10 +43,11 @@ interface AnalysisResult {
 }
 
 const StockAnalyzer: React.FC<StockAnalyzerProps> = ({ transactions, stock }) => {
-  const [selectedBranch, setSelectedBranch] = useState<BranchId>('kpp');
+  const [selectedBranch, setSelectedBranch] = useState<BranchId>('sai3');
   const [selectedPallet, setSelectedPallet] = useState<PalletId>('loscam_red');
   const [showTransactions, setShowTransactions] = useState(false);
   const [isExporting, setIsExporting] = useState(false);
+  const [viewMode, setViewMode] = useState<'summary' | 'detail'>('summary');
 
   const branchNames: Record<string, string> = useMemo(() => {
     const names: Record<string, string> = {};
@@ -64,6 +65,36 @@ const StockAnalyzer: React.FC<StockAnalyzerProps> = ({ transactions, stock }) =>
     names['ADJUSTMENT'] = 'ปรับปรุง';
     return names;
   }, []);
+
+  const summaryAll = useMemo(() => {
+    const activePallets: PalletId[] = ['loscam_red', 'loscam_yellow', 'loscam_blue', 'hiq', 'general', 'plastic_circular'];
+    return activePallets.map(palletId => {
+      const currentStock = stock[selectedBranch]?.[palletId] || 0;
+      const palletName = PALLET_TYPES.find(p => p.id === palletId)?.name || palletId;
+      const relatedTxs = transactions.filter(tx =>
+        tx.palletId === palletId &&
+        (tx.source === selectedBranch || tx.dest === selectedBranch) &&
+        tx.status !== 'CANCELLED'
+      );
+      let totalIn = 0, totalOut = 0, pendingIn = 0, totalAdjust = 0;
+      relatedTxs.forEach(tx => {
+        const isAdjust = tx.type === 'ADJUST' || tx.isInitial;
+        if (isAdjust) {
+          if (tx.dest === selectedBranch) totalAdjust += tx.qty;
+          if (tx.source === selectedBranch) totalAdjust -= tx.qty;
+          return;
+        }
+        if (tx.dest === selectedBranch) {
+          if (tx.status === 'COMPLETED') totalIn += tx.qty;
+          else if (tx.status === 'PENDING') pendingIn += tx.qty;
+        }
+        if (tx.source === selectedBranch) totalOut += tx.qty;
+      });
+      const calculated = totalIn - totalOut + totalAdjust;
+      const discrepancy = currentStock - calculated;
+      return { palletId, palletName, currentStock, calculated, totalIn, totalOut, totalAdjust, pendingIn, discrepancy, txCount: relatedTxs.length };
+    });
+  }, [transactions, stock, selectedBranch]);
 
   const analysis = useMemo((): AnalysisResult => {
     const currentStock = stock[selectedBranch]?.[selectedPallet] || 0;
@@ -86,11 +117,24 @@ const StockAnalyzer: React.FC<StockAnalyzerProps> = ({ transactions, stock }) =>
     let runningTotal = 0;
     const issues: string[] = [];
 
+    let totalAdjust = 0;
     const txDetails: TransactionDetail[] = relatedTxs.map(tx => {
       let effect = '';
       let qtyChange = 0;
+      const isAdjust = tx.type === 'ADJUST' || tx.isInitial;
 
-      if (tx.dest === selectedBranch) {
+      if (isAdjust) {
+        if (tx.dest === selectedBranch) {
+          totalAdjust += tx.qty;
+          qtyChange = tx.qty;
+          effect = `+${tx.qty} (ปรับปรุง/ยอดเริ่มต้น)`;
+        }
+        if (tx.source === selectedBranch) {
+          totalAdjust -= tx.qty;
+          qtyChange = -tx.qty;
+          effect = `-${tx.qty} (ปรับปรุง/ยอดเริ่มต้น)`;
+        }
+      } else if (tx.dest === selectedBranch) {
         // Incoming to this branch
         if (tx.status === 'COMPLETED') {
           totalIn += tx.qty;
@@ -100,9 +144,7 @@ const StockAnalyzer: React.FC<StockAnalyzerProps> = ({ transactions, stock }) =>
           pendingIn += tx.qty;
           effect = `(+${tx.qty} รอยืนยัน)`;
         }
-      }
-
-      if (tx.source === selectedBranch) {
+      } else if (tx.source === selectedBranch) {
         // Outgoing from this branch
         totalOut += tx.qty;
         qtyChange = -tx.qty;
@@ -129,8 +171,8 @@ const StockAnalyzer: React.FC<StockAnalyzerProps> = ({ transactions, stock }) =>
       };
     });
 
-    // Calculate expected stock
-    const calculatedStock = totalIn - totalOut;
+    // Calculate expected stock (รับเข้า - จ่ายออก + ปรับปรุง)
+    const calculatedStock = totalIn - totalOut + totalAdjust;
 
     // Check for discrepancy
     const discrepancy = currentStock - calculatedStock;
@@ -319,13 +361,14 @@ const StockAnalyzer: React.FC<StockAnalyzerProps> = ({ transactions, stock }) =>
         </button>
       </div>
 
-      {/* Selectors */}
-      <div className="grid grid-cols-2 gap-4 mb-6">
-        <div>
+      {/* Branch Selector + View Mode Toggle */}
+      <div className="flex flex-col md:flex-row md:items-end gap-4 mb-6">
+        <div className="flex-1">
           <label className="block text-xs font-bold text-slate-500 mb-1">สาขา</label>
           <select
             value={selectedBranch}
             onChange={(e) => setSelectedBranch(e.target.value as BranchId)}
+            aria-label="เลือกสาขา"
             className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm font-bold focus:ring-2 focus:ring-blue-500 outline-none"
           >
             {BRANCHES.map(b => (
@@ -333,18 +376,105 @@ const StockAnalyzer: React.FC<StockAnalyzerProps> = ({ transactions, stock }) =>
             ))}
           </select>
         </div>
-        <div>
-          <label className="block text-xs font-bold text-slate-500 mb-1">ประเภทพาเลท</label>
-          <select
-            value={selectedPallet}
-            onChange={(e) => setSelectedPallet(e.target.value as PalletId)}
-            className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm font-bold focus:ring-2 focus:ring-blue-500 outline-none"
+        <div className="flex bg-slate-100 p-1 rounded-xl w-fit">
+          <button
+            onClick={() => setViewMode('summary')}
+            className={`px-4 py-2 rounded-lg text-xs font-black transition-all ${viewMode === 'summary' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-500'}`}
           >
-            {PALLET_TYPES.map(p => (
-              <option key={p.id} value={p.id}>{p.name}</option>
-            ))}
-          </select>
+            สรุปทุกพาเลท
+          </button>
+          <button
+            onClick={() => setViewMode('detail')}
+            className={`px-4 py-2 rounded-lg text-xs font-black transition-all ${viewMode === 'detail' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-500'}`}
+          >
+            รายละเอียด
+          </button>
         </div>
+      </div>
+
+      {/* ===== SUMMARY ALL PALLETS MODE ===== */}
+      {viewMode === 'summary' && (
+        <div className="mb-6">
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="bg-slate-800 text-white">
+                  <th className="p-3 text-left font-black text-xs uppercase">พาเลท</th>
+                  <th className="p-3 text-right font-black text-xs uppercase">รับเข้า</th>
+                  <th className="p-3 text-right font-black text-xs uppercase">จ่ายออก</th>
+                  <th className="p-3 text-right font-black text-xs uppercase">ปรับปรุง</th>
+                  <th className="p-3 text-right font-black text-xs uppercase">ยอดคำนวณ</th>
+                  <th className="p-3 text-right font-black text-xs uppercase">สต็อกจริง</th>
+                  <th className="p-3 text-right font-black text-xs uppercase">ส่วนต่าง</th>
+                  <th className="p-3 text-right font-black text-xs uppercase">รอรับ</th>
+                  <th className="p-3 text-center font-black text-xs uppercase">สถานะ</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-100">
+                {summaryAll.map(row => (
+                  <tr
+                    key={row.palletId}
+                    className={`hover:bg-slate-50 cursor-pointer transition-colors ${row.discrepancy !== 0 ? 'bg-red-50/50' : ''}`}
+                    onClick={() => { setSelectedPallet(row.palletId as PalletId); setViewMode('detail'); }}
+                  >
+                    <td className="p-3 font-bold text-slate-800">{row.palletName}</td>
+                    <td className="p-3 text-right font-mono font-bold text-emerald-600">+{row.totalIn.toLocaleString()}</td>
+                    <td className="p-3 text-right font-mono font-bold text-red-500">-{row.totalOut.toLocaleString()}</td>
+                    <td className={`p-3 text-right font-mono font-bold ${row.totalAdjust >= 0 ? 'text-purple-600' : 'text-purple-600'}`}>{row.totalAdjust > 0 ? '+' : ''}{row.totalAdjust.toLocaleString()}</td>
+                    <td className="p-3 text-right font-mono font-bold text-blue-600">{row.calculated.toLocaleString()}</td>
+                    <td className={`p-3 text-right font-mono font-black ${row.currentStock < 0 ? 'text-red-600' : 'text-slate-900'}`}>{row.currentStock.toLocaleString()}</td>
+                    <td className={`p-3 text-right font-mono font-black ${row.discrepancy !== 0 ? 'text-red-600' : 'text-emerald-600'}`}>
+                      {row.discrepancy !== 0 ? row.discrepancy.toLocaleString() : '✓'}
+                    </td>
+                    <td className="p-3 text-right font-mono text-amber-500">{row.pendingIn > 0 ? row.pendingIn : '-'}</td>
+                    <td className="p-3 text-center">
+                      {row.discrepancy !== 0 ? (
+                        <span className="px-2 py-0.5 bg-red-100 text-red-600 rounded-full text-[10px] font-black">ไม่ตรง</span>
+                      ) : row.txCount === 0 ? (
+                        <span className="px-2 py-0.5 bg-slate-100 text-slate-400 rounded-full text-[10px] font-black">ไม่มีรายการ</span>
+                      ) : (
+                        <span className="px-2 py-0.5 bg-emerald-100 text-emerald-600 rounded-full text-[10px] font-black">ตรง</span>
+                      )}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+              <tfoot className="bg-slate-100 font-black border-t-2 border-slate-300">
+                <tr>
+                  <td className="p-3 text-right uppercase text-xs text-slate-500">รวมทั้งหมด</td>
+                  <td className="p-3 text-right font-mono text-emerald-600">+{summaryAll.reduce((s, r) => s + r.totalIn, 0).toLocaleString()}</td>
+                  <td className="p-3 text-right font-mono text-red-500">-{summaryAll.reduce((s, r) => s + r.totalOut, 0).toLocaleString()}</td>
+                  <td className="p-3 text-right font-mono text-purple-600">{summaryAll.reduce((s, r) => s + r.totalAdjust, 0).toLocaleString()}</td>
+                  <td className="p-3 text-right font-mono text-blue-600">{summaryAll.reduce((s, r) => s + r.calculated, 0).toLocaleString()}</td>
+                  <td className="p-3 text-right font-mono text-slate-900">{summaryAll.reduce((s, r) => s + r.currentStock, 0).toLocaleString()}</td>
+                  <td className={`p-3 text-right font-mono ${summaryAll.reduce((s, r) => s + r.discrepancy, 0) !== 0 ? 'text-red-600' : 'text-emerald-600'}`}>
+                    {summaryAll.reduce((s, r) => s + r.discrepancy, 0) !== 0 ? summaryAll.reduce((s, r) => s + r.discrepancy, 0).toLocaleString() : '✓'}
+                  </td>
+                  <td className="p-3 text-right font-mono text-amber-500">{summaryAll.reduce((s, r) => s + r.pendingIn, 0) || '-'}</td>
+                  <td className="p-3"></td>
+                </tr>
+              </tfoot>
+            </table>
+          </div>
+          <p className="text-[10px] text-slate-400 mt-3 italic">* คลิกที่แถวเพื่อดูรายละเอียด Transactions ของพาเลทนั้น</p>
+        </div>
+      )}
+
+      {/* ===== DETAIL MODE (Original) ===== */}
+      {viewMode === 'detail' && (
+      <>
+      <div className="mb-4">
+        <label className="block text-xs font-bold text-slate-500 mb-1">ประเภทพาเลท</label>
+        <select
+          value={selectedPallet}
+          onChange={(e) => setSelectedPallet(e.target.value as PalletId)}
+          aria-label="เลือกประเภทพาเลท"
+          className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm font-bold focus:ring-2 focus:ring-blue-500 outline-none"
+        >
+          {PALLET_TYPES.map(p => (
+            <option key={p.id} value={p.id}>{p.name}</option>
+          ))}
+        </select>
       </div>
 
       {/* Summary Cards */}
@@ -485,6 +615,8 @@ const StockAnalyzer: React.FC<StockAnalyzerProps> = ({ transactions, stock }) =>
             </div>
           )}
         </div>
+      )}
+      </>
       )}
     </div>
   );
