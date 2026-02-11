@@ -209,16 +209,13 @@ const Dashboard: React.FC<DashboardProps> = ({ stock, selectedBranch, transactio
             total: (stockOverview.confirmed[pid] || 0) + (stockOverview.pending[pid] || 0)
         });
 
-        const palletIds = ['loscam_red', 'loscam_yellow', 'loscam_blue', 'hiq', 'general', 'plastic_circular'];
         const result: any = {};
         let fleetTotal = 0;
         let fleetPending = 0;
 
-        palletIds.forEach(pid => {
-            const v = getVal(pid);
-            result[pid] = v;
-
-            // All pallets in this list are considered physical stock in branches
+        PALLET_TYPES.forEach(pt => {
+            const v = getVal(pt.id);
+            result[pt.id] = v;
             fleetTotal += v.total;
             fleetPending += v.pending;
         });
@@ -227,12 +224,6 @@ const Dashboard: React.FC<DashboardProps> = ({ stock, selectedBranch, transactio
             ...result,
             totalStock: fleetTotal,
             totalPending: fleetPending,
-            loscamRed: result['loscam_red'],
-            loscamYellow: result['loscam_yellow'],
-            loscamBlue: result['loscam_blue'],
-            hiq: result['hiq'],
-            general: result['general'],
-            plastic: result['plastic_circular']
         };
     }, [stockOverview]);
 
@@ -342,67 +333,28 @@ const Dashboard: React.FC<DashboardProps> = ({ stock, selectedBranch, transactio
                     textColor="text-slate-900"
                     subtext="Excluding Partner Balances"
                 />
-                <StatsCard
-                    title="Loscam Red"
-                    value={stats.loscamRed.total}
-                    confirmedValue={stats.loscamRed.confirmed}
-                    pendingValue={stats.loscamRed.pending}
-                    icon={Flame}
-                    color="bg-red-600"
-                    textColor="text-red-600"
-                    subtext="Critical"
-                    alert={alerts.some(a => a.palletName.includes('Red'))}
-                />
-                <StatsCard
-                    title="Loscam Blue"
-                    value={stats.loscamBlue.total}
-                    confirmedValue={stats.loscamBlue.confirmed}
-                    pendingValue={stats.loscamBlue.pending}
-                    icon={Box}
-                    color="bg-blue-600"
-                    textColor="text-blue-600"
-                    subtext="General"
-                />
-                <StatsCard
-                    title="Loscam Yellow"
-                    value={stats.loscamYellow.total}
-                    confirmedValue={stats.loscamYellow.confirmed}
-                    pendingValue={stats.loscamYellow.pending}
-                    icon={Layers}
-                    color="bg-amber-400"
-                    textColor="text-amber-600"
-                    subtext="Standard"
-                />
-                <StatsCard
-                    title="HI-Q (ในสาขา)"
-                    value={stats.hiq.total}
-                    confirmedValue={stats.hiq.confirmed}
-                    pendingValue={stats.hiq.pending}
-                    icon={ShieldCheck}
-                    color="bg-orange-500"
-                    textColor="text-orange-600"
-                    subtext={stats.hiq.total < 0 ? "⚠️ มีการส่งคืนมากกว่ารับเข้า" : "Physical Stock"}
-                />
-                <StatsCard
-                    title="พาเลทหมุนเวียน (ไม้/คละสี)"
-                    value={stats.general.total}
-                    confirmedValue={stats.general.confirmed}
-                    pendingValue={stats.general.pending}
-                    icon={Package}
-                    color="bg-gray-400"
-                    textColor="text-gray-600"
-                    subtext="General"
-                />
-                <StatsCard
-                    title="พาเลทพลาสติก"
-                    value={stats.plastic.total}
-                    confirmedValue={stats.plastic.confirmed}
-                    pendingValue={stats.plastic.pending}
-                    icon={Recycle}
-                    color="bg-teal-500"
-                    textColor="text-teal-600"
-                    subtext="Circular"
-                />
+                {PALLET_TYPES.map(pt => {
+                    const palletStats = stats[pt.id] || { total: 0, confirmed: 0, pending: 0 };
+                    const colorMap: Record<string, string> = {
+                        'bg-red-600': 'text-red-600', 'bg-yellow-400': 'text-amber-600', 'bg-blue-400': 'text-blue-600',
+                        'bg-orange-500': 'text-orange-600', 'bg-gray-400': 'text-gray-600', 'bg-teal-500': 'text-teal-600',
+                        'bg-indigo-500': 'text-indigo-600',
+                    };
+                    return (
+                        <StatsCard
+                            key={pt.id}
+                            title={pt.name}
+                            value={palletStats.total}
+                            confirmedValue={palletStats.confirmed}
+                            pendingValue={palletStats.pending}
+                            icon={Package}
+                            color={pt.color}
+                            textColor={colorMap[pt.color] || 'text-slate-600'}
+                            subtext={palletStats.total < 0 ? "⚠️ สต็อกติดลบ" : "Physical Stock"}
+                            alert={alerts.some(a => a.palletName.includes(pt.name))}
+                        />
+                    );
+                })}
             </div>
 
             <DashboardTrendChart transactions={transactions} selectedBranch={selectedBranch} />
@@ -570,12 +522,18 @@ const Dashboard: React.FC<DashboardProps> = ({ stock, selectedBranch, transactio
                         <thead>
                             <tr className="bg-slate-50 border-b border-slate-100 text-slate-500">
                                 <th className="p-4 text-left font-bold rounded-tl-xl">Branch Name</th>
-                                <th className="p-4 text-center font-bold text-red-600">Loscam Red</th>
-                                <th className="p-4 text-center font-bold text-amber-500">Loscam Yellow</th>
-                                <th className="p-4 text-center font-bold text-blue-600">Loscam Blue</th>
-                                <th className="p-4 text-center font-bold text-orange-500">HI-Q</th>
-                                <th className="p-4 text-center font-bold text-slate-600">General</th>
-                                <th className="p-4 text-center font-bold text-teal-600 rounded-tr-xl">Plastic</th>
+                                {PALLET_TYPES.map((pt, idx) => {
+                                    const thColorMap: Record<string, string> = {
+                                        'bg-red-600': 'text-red-600', 'bg-yellow-400': 'text-amber-500', 'bg-blue-400': 'text-blue-600',
+                                        'bg-orange-500': 'text-orange-500', 'bg-gray-400': 'text-slate-600', 'bg-teal-500': 'text-teal-600',
+                                        'bg-indigo-500': 'text-indigo-600',
+                                    };
+                                    return (
+                                        <th key={pt.id} className={`p-4 text-center font-bold ${thColorMap[pt.color] || 'text-slate-600'} ${idx === PALLET_TYPES.length - 1 ? 'rounded-tr-xl' : ''}`}>
+                                            {pt.name.length > 15 ? pt.name.split(' ')[0] : pt.name}
+                                        </th>
+                                    );
+                                })}
                                 <th className="p-4 text-center font-black text-slate-800">Total</th>
                             </tr>
                         </thead>
@@ -585,18 +543,14 @@ const Dashboard: React.FC<DashboardProps> = ({ stock, selectedBranch, transactio
                                 .map(branch => {
                                     const branchStock = stock[branch.id] || {};
                                     const getQty = (id: PalletId) => branchStock[id] || 0;
-                                    const total = getQty('loscam_red') + getQty('loscam_yellow') + getQty('loscam_blue') +
-                                        getQty('hiq') + getQty('general') + getQty('plastic_circular');
+                                    const total = PALLET_TYPES.reduce((sum, pt) => sum + getQty(pt.id), 0);
 
                                     return (
                                         <tr key={branch.id} className="hover:bg-slate-50/80 transition-colors">
                                             <td className="p-4 font-bold text-slate-800 border-r border-slate-50">{branch.name}</td>
-                                            <td className="p-4 text-center font-mono text-slate-600">{getQty('loscam_red')}</td>
-                                            <td className="p-4 text-center font-mono text-slate-600">{getQty('loscam_yellow')}</td>
-                                            <td className="p-4 text-center font-mono text-slate-600">{getQty('loscam_blue')}</td>
-                                            <td className="p-4 text-center font-mono text-slate-600">{getQty('hiq')}</td>
-                                            <td className="p-4 text-center font-mono text-slate-600">{getQty('general')}</td>
-                                            <td className="p-4 text-center font-mono text-slate-600">{getQty('plastic_circular')}</td>
+                                            {PALLET_TYPES.map(pt => (
+                                                <td key={pt.id} className="p-4 text-center font-mono text-slate-600">{getQty(pt.id)}</td>
+                                            ))}
                                             <td className="p-4 text-center font-black text-slate-900 bg-slate-50/50">{total}</td>
                                         </tr>
                                     );
@@ -605,12 +559,9 @@ const Dashboard: React.FC<DashboardProps> = ({ stock, selectedBranch, transactio
                         <tfoot className="bg-slate-100 font-black text-slate-900 border-t-2 border-slate-200">
                             <tr>
                                 <td className="p-4 text-right">GRAND TOTAL</td>
-                                <td className="p-4 text-center">{stats.loscamRed.confirmed}</td>
-                                <td className="p-4 text-center">{stats.loscamYellow.confirmed}</td>
-                                <td className="p-4 text-center">{stats.loscamBlue.confirmed}</td>
-                                <td className="p-4 text-center">{stats.hiq.confirmed}</td>
-                                <td className="p-4 text-center">{stats.general.confirmed}</td>
-                                <td className="p-4 text-center">{stats.plastic.confirmed}</td>
+                                {PALLET_TYPES.map(pt => (
+                                    <td key={pt.id} className="p-4 text-center">{stats[pt.id]?.confirmed || 0}</td>
+                                ))}
                                 <td className="p-4 text-center">{stats.totalStock - stats.totalPending}</td>
                             </tr>
                         </tfoot>
@@ -624,8 +575,12 @@ const Dashboard: React.FC<DashboardProps> = ({ stock, selectedBranch, transactio
                         .map(branch => {
                             const branchStock = stock[branch.id] || {};
                             const getQty = (id: PalletId) => branchStock[id] || 0;
-                            const total = getQty('loscam_red') + getQty('loscam_yellow') + getQty('loscam_blue') +
-                                getQty('hiq') + getQty('general') + getQty('plastic_circular');
+                            const total = PALLET_TYPES.reduce((sum, pt) => sum + getQty(pt.id), 0);
+                            const mobileColorMap: Record<string, string> = {
+                                'bg-red-600': 'text-red-500', 'bg-yellow-400': 'text-amber-500', 'bg-blue-400': 'text-blue-500',
+                                'bg-orange-500': 'text-orange-500', 'bg-gray-400': 'text-slate-500', 'bg-teal-500': 'text-teal-500',
+                                'bg-indigo-500': 'text-indigo-500',
+                            };
 
                             return (
                                 <div key={branch.id} className="p-4 bg-slate-50 rounded-2xl border border-slate-100">
@@ -636,30 +591,14 @@ const Dashboard: React.FC<DashboardProps> = ({ stock, selectedBranch, transactio
                                         </span>
                                     </div>
                                     <div className="grid grid-cols-3 gap-2">
-                                        <div className="text-center p-2 bg-white rounded-lg border border-slate-50">
-                                            <div className="text-[9px] font-bold text-red-500 uppercase">RED</div>
-                                            <div className="text-sm font-black text-slate-700">{getQty('loscam_red')}</div>
-                                        </div>
-                                        <div className="text-center p-2 bg-white rounded-lg border border-slate-50">
-                                            <div className="text-[9px] font-bold text-amber-500 uppercase">YEL</div>
-                                            <div className="text-sm font-black text-slate-700">{getQty('loscam_yellow')}</div>
-                                        </div>
-                                        <div className="text-center p-2 bg-white rounded-lg border border-slate-50">
-                                            <div className="text-[9px] font-bold text-blue-500 uppercase">BLU</div>
-                                            <div className="text-sm font-black text-slate-700">{getQty('loscam_blue')}</div>
-                                        </div>
-                                        <div className="text-center p-2 bg-white rounded-lg border border-slate-50">
-                                            <div className="text-[9px] font-bold text-orange-500 uppercase">HIQ</div>
-                                            <div className="text-sm font-black text-slate-700">{getQty('hiq')}</div>
-                                        </div>
-                                        <div className="text-center p-2 bg-white rounded-lg border border-slate-50">
-                                            <div className="text-[9px] font-bold text-slate-500 uppercase">GEN</div>
-                                            <div className="text-sm font-black text-slate-700">{getQty('general')}</div>
-                                        </div>
-                                        <div className="text-center p-2 bg-white rounded-lg border border-slate-50">
-                                            <div className="text-[9px] font-bold text-teal-500 uppercase">PLA</div>
-                                            <div className="text-sm font-black text-slate-700">{getQty('plastic_circular')}</div>
-                                        </div>
+                                        {PALLET_TYPES.map(pt => (
+                                            <div key={pt.id} className="text-center p-2 bg-white rounded-lg border border-slate-50">
+                                                <div className={`text-[9px] font-bold uppercase ${mobileColorMap[pt.color] || 'text-slate-500'}`}>
+                                                    {pt.id === 'cargo_net' ? 'NET' : pt.id.replace('loscam_', '').replace('plastic_circular', 'PLA').replace('general', 'GEN').substring(0, 3).toUpperCase()}
+                                                </div>
+                                                <div className="text-sm font-black text-slate-700">{getQty(pt.id)}</div>
+                                            </div>
+                                        ))}
                                     </div>
                                 </div>
                             );
