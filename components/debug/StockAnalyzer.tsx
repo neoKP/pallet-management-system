@@ -71,7 +71,7 @@ const StockAnalyzer: React.FC<StockAnalyzerProps> = ({ transactions, stock }) =>
   }, []);
 
   const summaryAll = useMemo(() => {
-    const activePallets: PalletId[] = ['loscam_red', 'loscam_yellow', 'loscam_blue', 'hiq', 'general', 'plastic_circular'];
+    const activePallets: PalletId[] = PALLET_TYPES.map(p => p.id);
     return activePallets.map(palletId => {
       const currentStock = stock[selectedBranch]?.[palletId] || 0;
       const palletName = PALLET_TYPES.find(p => p.id === palletId)?.name || palletId;

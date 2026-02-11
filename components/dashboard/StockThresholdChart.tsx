@@ -16,6 +16,7 @@ const PALLET_COLORS: Record<string, { bar: string }> = {
     hiq: { bar: '#f97316' },
     general: { bar: '#6b7280' },
     plastic_circular: { bar: '#14b8a6' },
+    cargo_net: { bar: '#6366f1' },
 };
 
 const BulletBar: React.FC<{
@@ -122,9 +123,7 @@ const StockThresholdChart: React.FC<StockThresholdChartProps> = ({ stock, thresh
     const [expandedBranches, setExpandedBranches] = useState<Set<string>>(new Set(['hub_nw', 'sai3']));
 
     const activePallets = useMemo(() => {
-        return PALLET_TYPES.filter(p =>
-            ['loscam_red', 'loscam_yellow', 'loscam_blue', 'hiq', 'general', 'plastic_circular'].includes(p.id)
-        );
+        return PALLET_TYPES;
     }, []);
 
     const branchData = useMemo(() => {

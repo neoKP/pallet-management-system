@@ -165,7 +165,7 @@ const MovementForm: React.FC<MovementFormProps> = ({
                             }
 
                             // Rule 6: General & Plastic Pallet restriction (User Request 03/02/2026: โอนภายในเท่านั้น)
-                            const hasInternalOnlyPallets = items.some(item => ['general', 'plastic_circular'].includes(item.palletId as string));
+                            const hasInternalOnlyPallets = items.some(item => ['general', 'plastic_circular', 'cargo_net'].includes(item.palletId as string));
                             if (hasInternalOnlyPallets) return false; // These pallets cannot be sent/received from external partners
 
                             return true;

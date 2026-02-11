@@ -1,5 +1,5 @@
 import { Transaction, Stock, BranchId, PalletId } from '../types';
-import { EXTERNAL_PARTNERS } from '../constants';
+import { EXTERNAL_PARTNERS, PALLET_TYPES } from '../constants';
 import { calculatePartnerBalance, getPartnerBalanceContribution } from '../utils/businessLogic';
 
 export interface KPIMetrics {
@@ -636,7 +636,7 @@ export const getStockDepletionPredictions = (
 ): StockPrediction[] => {
     const predictions: StockPrediction[] = [];
     const validBranchIds: BranchId[] = ['hub_nw', 'kpp', 'plk', 'cm', 'ekp', 'ms', 'sai3'];
-    const validPalletIds: PalletId[] = ['loscam_red', 'hiq', 'plastic_circular'];
+    const validPalletIds: PalletId[] = PALLET_TYPES.map(p => p.id);
 
     const now = new Date();
     const thirtyDaysAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
