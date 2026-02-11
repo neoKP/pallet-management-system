@@ -110,7 +110,7 @@ export const AgingRentalReport: React.FC<AgingRentalReportProps> = ({ transactio
                                     <td className="px-6 py-4 text-center text-xs font-bold text-slate-500">{summary.totalIn.toLocaleString()}</td>
                                     <td className="px-6 py-4 text-center text-xs font-bold text-emerald-500">{summary.totalOut.toLocaleString()}</td>
                                     <td className="px-6 py-4 text-center">
-                                        <div className={`text-sm font-bold ${summary.openQty > 0 ? 'text-blue-500' : (isDarkMode ? 'text-slate-500' : 'text-slate-400')}`}>
+                                        <div className={`text-sm font-bold ${summary.openQty !== 0 ? 'text-blue-500' : (isDarkMode ? 'text-slate-500' : 'text-slate-400')}`}>
                                             {summary.openQty.toLocaleString()}
                                         </div>
                                     </td>

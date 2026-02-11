@@ -40,16 +40,17 @@ export const ExecutivePalletSummary: React.FC<ExecutivePalletSummaryProps> = ({ 
     }, [analysis]);
 
     const getActionRecommendation = (p: any) => {
+        const absQty = Math.abs(p.totalQty);
         if (p.id === 'loscam_wangnoi') {
-            if (p.totalQty > 2000 && p.totalQty < 2100) return `คืนเพิ่มอีก ${p.totalQty - 2000} ใบ เพื่อให้ยอดต่ำกว่า Tier 2,000`;
-            if (p.totalQty > 3000 && p.totalQty < 3100) return `คืนเพิ่มอีก ${p.totalQty - 3000} ใบ เพื่อให้ยอดต่ำกว่า Tier 3,000`;
+            if (absQty > 2000 && absQty < 2100) return `คืนเพิ่มอีก ${absQty - 2000} ใบ เพื่อให้ยอดต่ำกว่า Tier 2,000`;
+            if (absQty > 3000 && absQty < 3100) return `คืนเพิ่มอีก ${absQty - 3000} ใบ เพื่อให้ยอดต่ำกว่า Tier 3,000`;
             return 'คืนพาเลทที่ถือครองนานที่สุดไปที่ "Loscam วังน้อย" เพื่อลดค่าเช่าสะสม';
         }
         if (p.id === 'sino') {
             if (p.dangerQty > 0) return `มี ${p.dangerQty} ใบ เกิน 10 วัน! รีบคืนด่วนเพื่อหยุดค่าเช่า`;
             return 'คืนพาเลทล็อตที่ใกล้ครบ 10 วันก่อน (Grace Period)';
         }
-        if (p.totalQty > 0) return 'ตรวจเช็คยอดค้างและวางแผนรับคืนตามรอบขนส่ง';
+        if (absQty > 0) return 'ตรวจเช็คยอดค้างและวางแผนรับคืนตามรอบขนส่ง';
         return 'ไม่มีภาระหนี้ค้างชำระ';
     };
 
