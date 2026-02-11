@@ -79,17 +79,20 @@ const StockAnalyzer: React.FC<StockAnalyzerProps> = ({ transactions, stock }) =>
         (tx.source === selectedBranch || tx.dest === selectedBranch) &&
         tx.status !== 'CANCELLED'
       );
-      let totalIn = 0, totalOut = 0, pendingIn = 0;
+      let totalIn = 0, totalOut = 0, pendingIn = 0, pendingOut = 0;
       relatedTxs.forEach(tx => {
         if (tx.dest === selectedBranch) {
           if (tx.status === 'COMPLETED') totalIn += tx.qty;
           else if (tx.status === 'PENDING') pendingIn += tx.qty;
         }
-        if (tx.source === selectedBranch && tx.status === 'COMPLETED') totalOut += tx.qty;
+        if (tx.source === selectedBranch) {
+          totalOut += tx.qty;
+          if (tx.status === 'PENDING') pendingOut += tx.qty;
+        }
       });
       const calculated = totalIn - totalOut;
       const discrepancy = currentStock - calculated;
-      return { palletId, palletName, currentStock, calculated, totalIn, totalOut, pendingIn, discrepancy, txCount: relatedTxs.length };
+      return { palletId, palletName, currentStock, calculated, totalIn, totalOut, pendingIn, pendingOut, discrepancy, txCount: relatedTxs.length };
     });
   }, [transactions, stock, selectedBranch]);
 
@@ -133,16 +136,15 @@ const StockAnalyzer: React.FC<StockAnalyzerProps> = ({ transactions, stock }) =>
       }
 
       if (tx.source === selectedBranch) {
-        // Outgoing from this branch
+        // Outgoing from this branch (หักทันทีทั้ง PENDING+COMPLETED ตรงกับ addMovementBatch)
+        totalOut += tx.qty;
+        qtyChange = -tx.qty;
         if (tx.status === 'COMPLETED') {
-          totalOut += tx.qty;
-          qtyChange = -tx.qty;
           effect = tx.type === 'ADJUST' || tx.isInitial
             ? `-${tx.qty} (${tx.isInitial ? 'ยอดเริ่มต้น' : 'ปรับปรุง'})`
             : `-${tx.qty} (จ่ายออก COMPLETED)`;
         } else if (tx.status === 'PENDING') {
           pendingOut += tx.qty;
-          qtyChange = -tx.qty;
           effect = `-${tx.qty} (จ่ายออก PENDING - หักแล้ว)`;
         }
       }
