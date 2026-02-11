@@ -52,11 +52,23 @@ export const initializeData = async () => {
             let modified = false;
 
             // 1. Ensure all branches defined in constants exist in the stock object
+            const palletKeys = PALLET_TYPES.map(p => p.id);
             BRANCHES.forEach(branch => {
                 if (!val[branch.id]) {
                     console.log(`Creating branch structure for: ${branch.id}`);
-                    val[branch.id] = { loscam_red: 0, loscam_yellow: 0, loscam_blue: 0, hiq: 0, general: 0, plastic_circular: 0 };
+                    const branchStock: any = {};
+                    palletKeys.forEach(k => branchStock[k] = 0);
+                    val[branch.id] = branchStock;
                     modified = true;
+                } else {
+                    // Ensure all pallet types exist in existing branches
+                    palletKeys.forEach(k => {
+                        if (val[branch.id][k] === undefined) {
+                            console.log(`Adding missing pallet '${k}' to branch '${branch.id}'`);
+                            val[branch.id][k] = 0;
+                            modified = true;
+                        }
+                    });
                 }
             });
 

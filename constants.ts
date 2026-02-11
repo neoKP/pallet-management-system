@@ -7,6 +7,7 @@ export const PALLET_TYPES: PalletType[] = [
   { id: 'hiq', name: 'HI-Q', color: 'bg-orange-500', isRental: false, material: 'wood' },
   { id: 'general', name: 'พาเลทหมุนเวียน (ไม้/คละสี)', color: 'bg-gray-400', isRental: false, material: 'wood' },
   { id: 'plastic_circular', name: 'พาเลทพลาสติก (หมุนเวียน)', color: 'bg-teal-500', isRental: false, material: 'plastic' },
+  { id: 'cargo_net', name: 'ตาข่ายคลุมสินค้า (Cargo Net)', color: 'bg-indigo-500', isRental: false, material: 'net' },
 ];
 
 export const BRANCHES: Branch[] = [
@@ -32,14 +33,14 @@ export const EXTERNAL_PARTNERS: Partner[] = [
 ];
 
 export const INITIAL_STOCK: Stock = {
-  hub_nw: { loscam_red: 0, loscam_yellow: 0, loscam_blue: 0, hiq: 0, general: 0, plastic_circular: 0 },
-  sai3: { loscam_red: 0, loscam_yellow: 0, loscam_blue: 0, hiq: 0, general: 0, plastic_circular: 0 },
-  kpp: { loscam_red: 0, loscam_yellow: 0, loscam_blue: 0, hiq: 0, general: 0, plastic_circular: 0 },
-  plk: { loscam_red: 0, loscam_yellow: 0, loscam_blue: 0, hiq: 0, general: 0, plastic_circular: 0 },
-  cm: { loscam_red: 0, loscam_yellow: 0, loscam_blue: 0, hiq: 0, general: 0, plastic_circular: 0 },
-  ekp: { loscam_red: 0, loscam_yellow: 0, loscam_blue: 0, hiq: 0, general: 0, plastic_circular: 0 },
-  ms: { loscam_red: 0, loscam_yellow: 0, loscam_blue: 0, hiq: 0, general: 0, plastic_circular: 0 },
-  maintenance_stock: { loscam_red: 0, loscam_yellow: 0, loscam_blue: 0, hiq: 0, general: 0, plastic_circular: 0 },
+  hub_nw: { loscam_red: 0, loscam_yellow: 0, loscam_blue: 0, hiq: 0, general: 0, plastic_circular: 0, cargo_net: 0 },
+  sai3: { loscam_red: 0, loscam_yellow: 0, loscam_blue: 0, hiq: 0, general: 0, plastic_circular: 0, cargo_net: 0 },
+  kpp: { loscam_red: 0, loscam_yellow: 0, loscam_blue: 0, hiq: 0, general: 0, plastic_circular: 0, cargo_net: 0 },
+  plk: { loscam_red: 0, loscam_yellow: 0, loscam_blue: 0, hiq: 0, general: 0, plastic_circular: 0, cargo_net: 0 },
+  cm: { loscam_red: 0, loscam_yellow: 0, loscam_blue: 0, hiq: 0, general: 0, plastic_circular: 0, cargo_net: 0 },
+  ekp: { loscam_red: 0, loscam_yellow: 0, loscam_blue: 0, hiq: 0, general: 0, plastic_circular: 0, cargo_net: 0 },
+  ms: { loscam_red: 0, loscam_yellow: 0, loscam_blue: 0, hiq: 0, general: 0, plastic_circular: 0, cargo_net: 0 },
+  maintenance_stock: { loscam_red: 0, loscam_yellow: 0, loscam_blue: 0, hiq: 0, general: 0, plastic_circular: 0, cargo_net: 0 },
 };
 
 /**

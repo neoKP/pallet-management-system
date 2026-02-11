@@ -9,7 +9,8 @@ export type PalletId =
   | 'loscam_blue'
   | 'hiq'
   | 'general'
-  | 'plastic_circular';
+  | 'plastic_circular'
+  | 'cargo_net';
 
 /**
  * Branch Identifiers
@@ -57,7 +58,7 @@ export interface PalletType {
   name: string;
   color: string;
   isRental: boolean;
-  material: 'wood' | 'plastic';
+  material: 'wood' | 'plastic' | 'net';
 }
 
 /**
