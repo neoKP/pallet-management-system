@@ -3,8 +3,8 @@ import { LayoutDashboard, ArrowRightLeft, Wrench, Menu, Settings, ChevronLeft, C
 import { BranchId, User } from '../../types';
 
 interface SidebarProps {
-    activeTab: 'home' | 'dashboard' | 'record' | 'maintenance' | 'settings' | 'analytics' | 'history' | 'scrapsales';
-    setActiveTab: (tab: 'home' | 'dashboard' | 'record' | 'maintenance' | 'settings' | 'analytics' | 'history' | 'scrapsales') => void;
+    activeTab: 'home' | 'inventory' | 'dashboard' | 'record' | 'maintenance' | 'settings' | 'analytics' | 'history' | 'scrapsales';
+    setActiveTab: (tab: 'home' | 'inventory' | 'dashboard' | 'record' | 'maintenance' | 'settings' | 'analytics' | 'history' | 'scrapsales') => void;
     currentUser: User | null;
     selectedBranch: BranchId | 'ALL';
     isCollapsed: boolean;
@@ -61,6 +61,18 @@ const Sidebar: React.FC<SidebarProps> = ({
                 </button>
 
                 <div className="border-t border-slate-100 my-2 opacity-50" />
+
+                <button
+                    onClick={() => setActiveTab('inventory')}
+                    title={isCollapsed ? 'Inventory Overview' : ''}
+                    className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-300 font-bold group cursor-pointer ${activeTab === 'inventory'
+                        ? 'bg-blue-600 text-white shadow-lg shadow-blue-200'
+                        : 'text-slate-500 hover:bg-slate-50 hover:text-blue-600'
+                        } ${isCollapsed ? 'justify-center px-0' : ''}`}
+                >
+                    <LayoutDashboard size={20} className={activeTab === 'inventory' ? 'text-white' : 'text-slate-400 group-hover:text-blue-600 transition-colors'} />
+                    {!isCollapsed && <span className="whitespace-nowrap animate-in fade-in slide-in-from-left-4 duration-300">Inventory</span>}
+                </button>
 
                 <button
                     onClick={() => setActiveTab('dashboard')}

@@ -3,8 +3,8 @@ import { LayoutDashboard, ArrowRightLeft, Wrench, BarChart3, List, Home, Trash2 
 import { BranchId, User } from '../../types';
 
 interface MobileNavProps {
-    activeTab: string;
-    setActiveTab: (tab: any) => void;
+    activeTab: 'home' | 'inventory' | 'dashboard' | 'record' | 'maintenance' | 'settings' | 'analytics' | 'history' | 'scrapsales';
+    setActiveTab: (tab: 'home' | 'inventory' | 'dashboard' | 'record' | 'maintenance' | 'settings' | 'analytics' | 'history' | 'scrapsales') => void;
     selectedBranch: BranchId | 'ALL';
     currentUser: User | null;
 }
@@ -15,6 +15,11 @@ const MobileNav: React.FC<MobileNavProps> = ({ activeTab, setActiveTab, selected
             <button onClick={() => setActiveTab('home')} className={`p-2 rounded-lg flex flex-col items-center ${activeTab === 'home' ? 'text-blue-600' : 'text-slate-400'}`}>
                 <Home size={22} />
                 <span className="text-[10px] font-bold mt-1">Home</span>
+            </button>
+
+            <button onClick={() => setActiveTab('inventory')} className={`p-2 rounded-lg flex flex-col items-center ${activeTab === 'inventory' ? 'text-blue-600' : 'text-slate-400'}`}>
+                <LayoutDashboard size={22} />
+                <span className="text-[10px] font-bold mt-1">Inv</span>
             </button>
 
             <button onClick={() => setActiveTab('dashboard')} className={`p-2 rounded-lg flex flex-col items-center ${activeTab === 'dashboard' ? 'text-blue-600' : 'text-slate-400'}`}>

@@ -28,7 +28,7 @@ interface HomePageProps {
     selectedBranch: BranchId | 'ALL';
     stock: Stock;
     transactions: Transaction[];
-    onNavigate: (tab: 'dashboard' | 'record' | 'maintenance' | 'settings' | 'analytics' | 'history' | 'home') => void;
+    onNavigate: (tab: 'dashboard' | 'inventory' | 'record' | 'maintenance' | 'settings' | 'analytics' | 'history' | 'home') => void;
     onLogout: () => void;
     openLogin: () => void;
 }
@@ -39,7 +39,8 @@ const headerNavItems = [
 ];
 
 const navItems = [
-    { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
+    { id: 'inventory', label: 'Inventory', icon: LayoutDashboard },
+    { id: 'dashboard', label: 'Dashboard', icon: Activity },
     { id: 'record', label: 'Movement', icon: PackagePlus },
     { id: 'history', label: 'Inventory Log', icon: ClipboardList, showBadge: true },
     { id: 'analytics', label: 'Analytics', icon: BarChart3 },

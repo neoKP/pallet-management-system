@@ -6,7 +6,7 @@ import { BRANCHES } from '../../constants';
 import Swal from 'sweetalert2';
 
 interface HeaderProps {
-    activeTab: string;
+    activeTab: 'home' | 'inventory' | 'dashboard' | 'record' | 'maintenance' | 'settings' | 'analytics' | 'history' | 'scrapsales';
     currentUser: User;
     selectedBranch: BranchId | 'ALL';
     setSelectedBranch: (branch: BranchId | 'ALL') => void;
@@ -48,6 +48,7 @@ const Header: React.FC<HeaderProps> = ({
             {/* Left Side (Desktop Page Title) */}
             <div className="hidden md:flex flex-col">
                 <div className="text-white font-black text-xl tracking-tight uppercase font-premium animate-in fade-in slide-in-from-top-2 duration-500 text-glow">
+                    {activeTab === 'inventory' && 'Inventory Overview'}
                     {activeTab === 'dashboard' && 'Inventory Overview'}
                     {activeTab === 'record' && 'Movement Records'}
                     {activeTab === 'maintenance' && 'Maintenance & Repairs'}

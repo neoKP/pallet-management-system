@@ -6,6 +6,7 @@ import { useQRScanner } from './hooks/useQRScanner';
 import LoginScreen from './components/auth/LoginScreen';
 import HomePage from './components/home/HomePage';
 import Dashboard from './components/dashboard/Dashboard';
+import InventoryOverviewTab from './components/dashboard/InventoryOverviewTab';
 import MovementTab from './components/movements/MovementTab';
 import MaintenanceTab from './components/maintenance/MaintenanceTab';
 import ScrapSalesTab from './components/maintenance/ScrapSalesTab.tsx';
@@ -26,7 +27,7 @@ export default function App() {
   const { currentUser, login, logout } = useAuth();
   const { stock, transactions, addTransaction, processBatchMaintenance, confirmTransactionsBatch } = useStock();
 
-  const [activeTab, setActiveTab] = useState<'home' | 'dashboard' | 'record' | 'maintenance' | 'settings' | 'analytics' | 'history' | 'scrapsales'>('home');
+  const [activeTab, setActiveTab] = useState<'home' | 'inventory' | 'dashboard' | 'record' | 'maintenance' | 'settings' | 'analytics' | 'history' | 'scrapsales'>('home');
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
   const [isLoginModalOpen, setIsLoginModalOpen] = useState(false);
 
@@ -95,7 +96,7 @@ export default function App() {
     });
   };
 
-  const handleNavigate = (tab: any) => {
+  const handleNavigate = (tab: 'home' | 'inventory' | 'dashboard' | 'record' | 'maintenance' | 'settings' | 'analytics' | 'history' | 'scrapsales') => {
     if (!currentUser && tab !== 'home') {
       setIsLoginModalOpen(true);
     } else {
@@ -164,6 +165,15 @@ export default function App() {
         />
 
         <main className={`flex-1 overflow-y-auto w-full mx-auto pb-24 md:pb-8 ${activeTab === 'analytics' ? 'max-w-none p-0' : 'p-4 md:p-8 max-w-[1600px]'}`}>
+          {activeTab === 'inventory' && (
+            <InventoryOverviewTab
+              stock={stock}
+              selectedBranch={selectedBranch}
+              transactions={transactions}
+              currentUser={currentUser}
+            />
+          )}
+
           {activeTab === 'dashboard' && (
             <Dashboard
               stock={stock}
@@ -171,6 +181,7 @@ export default function App() {
               transactions={transactions}
               addTransaction={addTransaction}
               currentUser={currentUser}
+              showStockOverview={false}
             />
           )}
 

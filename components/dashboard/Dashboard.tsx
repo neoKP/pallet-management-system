@@ -38,6 +38,7 @@ interface DashboardProps {
     transactions: Transaction[];
     addTransaction: (transaction: Partial<Transaction>) => void;
     currentUser: User | null;
+    showStockOverview?: boolean;
 }
 
 const DashboardTrendChart = React.memo(({ transactions, selectedBranch }: { transactions: Transaction[], selectedBranch: string }) => {
@@ -128,7 +129,7 @@ const DashboardTrendChart = React.memo(({ transactions, selectedBranch }: { tran
     );
 });
 
-const Dashboard: React.FC<DashboardProps> = ({ stock, selectedBranch, transactions, currentUser }) => {
+const Dashboard: React.FC<DashboardProps> = ({ stock, selectedBranch, transactions, currentUser, showStockOverview = true }) => {
     const { thresholds } = useStock();
     const agingAnalysis = useMemo(() => getAgingRentalAnalysis(transactions), [transactions]);
 
@@ -299,63 +300,66 @@ const Dashboard: React.FC<DashboardProps> = ({ stock, selectedBranch, transactio
                 </div>
             </div>
 
-            {alerts.length > 0 && (
-                <div className="space-y-3">
-                    {alerts.map((alert, idx) => (
-                        <div key={idx} className={`${alert.bgColor} border ${alert.borderColor} rounded-2xl p-4 flex items-start gap-3 shadow-sm animate-in fade-in slide-in-from-top-2`}>
-                            <AlertCircle className={alert.color} />
-                            <div>
-                                <h3 className={`${alert.color.replace('text-', 'text-')} font-bold`}>
-                                    แจ้งเตือนระดับสต็อก ({alert.type === 'MAX' ? 'เกินกำหนด' : 'ต่ำกว่าเกณฑ์'})
-                                </h3>
-                                <p className={`${alert.color} text-sm mt-1 font-medium`}>
-                                    พาเลท {alert.palletName} ปัจจุบันมี {alert.qty} ตัว
-                                    {alert.type === 'MAX'
-                                        ? ` (สูงกว่าค่า Max ที่ตั้งไว้ ${alert.limit} ตัว)`
-                                        : ` (ต่ำกว่าค่า Min ที่ตั้งไว้ ${alert.limit} ตัว)`}
-                                    กรุณาตรวจสอบและดำเนินการ
-                                </p>
-                            </div>
+            {showStockOverview && (
+                <>
+                    {alerts.length > 0 && (
+                        <div className="space-y-3">
+                            {alerts.map((alert, idx) => (
+                                <div key={idx} className={`${alert.bgColor} border ${alert.borderColor} rounded-2xl p-4 flex items-start gap-3 shadow-sm animate-in fade-in slide-in-from-top-2`}>
+                                    <AlertCircle className={alert.color} />
+                                    <div>
+                                        <h3 className={`${alert.color.replace('text-', 'text-')} font-bold`}>
+                                            แจ้งเตือนระดับสต็อก ({alert.type === 'MAX' ? 'เกินกำหนด' : 'ต่ำกว่าเกณฑ์'})
+                                        </h3>
+                                        <p className={`${alert.color} text-sm mt-1 font-medium`}>
+                                            พาเลท {alert.palletName} ปัจจุบันมี {alert.qty} ตัว
+                                            {alert.type === 'MAX'
+                                                ? ` (สูงกว่าค่า Max ที่ตั้งไว้ ${alert.limit} ตัว)`
+                                                : ` (ต่ำกว่าค่า Min ที่ตั้งไว้ ${alert.limit} ตัว)`}
+                                            กรุณาตรวจสอบและดำเนินการ
+                                        </p>
+                                    </div>
+                                </div>
+                            ))}
                         </div>
-                    ))}
-                </div>
-            )}
+                    )}
 
-
-            <div className="grid grid-cols-2 lg:grid-cols-4 xl:grid-cols-4 gap-4">
-                <StatsCard
-                    title="ยอดรวมสต็อกในสาขา (Fleet)"
-                    value={stats.totalStock}
-                    confirmedValue={stats.totalStock - stats.totalPending}
-                    pendingValue={stats.totalPending}
-                    icon={Package}
-                    color="bg-slate-900"
-                    textColor="text-slate-900"
-                    subtext="Excluding Partner Balances"
-                />
-                {PALLET_TYPES.map(pt => {
-                    const palletStats = stats[pt.id] || { total: 0, confirmed: 0, pending: 0 };
-                    const colorMap: Record<string, string> = {
-                        'bg-red-600': 'text-red-600', 'bg-yellow-400': 'text-amber-600', 'bg-blue-400': 'text-blue-600',
-                        'bg-orange-500': 'text-orange-600', 'bg-gray-400': 'text-gray-600', 'bg-teal-500': 'text-teal-600',
-                        'bg-indigo-500': 'text-indigo-600',
-                    };
-                    return (
+                    <div className="grid grid-cols-2 lg:grid-cols-4 xl:grid-cols-4 gap-4">
                         <StatsCard
-                            key={pt.id}
-                            title={pt.name}
-                            value={palletStats.total}
-                            confirmedValue={palletStats.confirmed}
-                            pendingValue={palletStats.pending}
+                            title="ยอดรวมสต็อกในสาขา (Fleet)"
+                            value={stats.totalStock}
+                            confirmedValue={stats.totalStock - stats.totalPending}
+                            pendingValue={stats.totalPending}
                             icon={Package}
-                            color={pt.color}
-                            textColor={colorMap[pt.color] || 'text-slate-600'}
-                            subtext={palletStats.total < 0 ? "⚠️ สต็อกติดลบ" : "Physical Stock"}
-                            alert={alerts.some(a => a.palletName.includes(pt.name))}
+                            color="bg-slate-900"
+                            textColor="text-slate-900"
+                            subtext="Excluding Partner Balances"
                         />
-                    );
-                })}
-            </div>
+                        {PALLET_TYPES.map(pt => {
+                            const palletStats = stats[pt.id] || { total: 0, confirmed: 0, pending: 0 };
+                            const colorMap: Record<string, string> = {
+                                'bg-red-600': 'text-red-600', 'bg-yellow-400': 'text-amber-600', 'bg-blue-400': 'text-blue-600',
+                                'bg-orange-500': 'text-orange-600', 'bg-gray-400': 'text-gray-600', 'bg-teal-500': 'text-teal-600',
+                                'bg-indigo-500': 'text-indigo-600',
+                            };
+                            return (
+                                <StatsCard
+                                    key={pt.id}
+                                    title={pt.name}
+                                    value={palletStats.total}
+                                    confirmedValue={palletStats.confirmed}
+                                    pendingValue={palletStats.pending}
+                                    icon={Package}
+                                    color={pt.color}
+                                    textColor={colorMap[pt.color] || 'text-slate-600'}
+                                    subtext={palletStats.total < 0 ? "⚠️ สต็อกติดลบ" : "Physical Stock"}
+                                    alert={alerts.some(a => a.palletName.includes(pt.name))}
+                                />
+                            );
+                        })}
+                    </div>
+                </>
+            )}
 
             <DashboardTrendChart transactions={transactions} selectedBranch={selectedBranch} />
 
