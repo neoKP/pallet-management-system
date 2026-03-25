@@ -295,19 +295,26 @@ export const StockProvider: React.FC<StockProviderProps> = ({ children }) => {
     const deleteTransaction = useCallback(async (txId: number) => {
         const tx = transactions.find(t => t.id === txId);
         if (!tx) return;
-        const utx = { ...tx, status: 'CANCELLED' as const };
+        const docNo = tx.docNo;
+        const rowsToCancel = docNo
+            ? transactions.filter(t => t.docNo === docNo && t.status !== 'CANCELLED')
+            : [tx];
+        if (rowsToCancel.length === 0) return;
+        const cancelledRows = rowsToCancel.map(t => ({ ...t, status: 'CANCELLED' as const }));
         const nextStock = { ...stock };
-        if (nextStock[tx.source as BranchId]) {
-            const s = { ...nextStock[tx.source as BranchId] } as any;
-            s[tx.palletId] += tx.qty;
-            nextStock[tx.source as BranchId] = s;
-        }
-        if (tx.status === 'COMPLETED' && nextStock[tx.dest as BranchId]) {
-            const d = { ...nextStock[tx.dest as BranchId] } as any;
-            d[tx.palletId] -= tx.qty;
-            nextStock[tx.dest as BranchId] = d;
-        }
-        await firebaseService.addMovementBatch([utx], nextStock);
+        rowsToCancel.forEach(t => {
+            if (nextStock[t.source as BranchId]) {
+                const s = { ...nextStock[t.source as BranchId] } as any;
+                s[t.palletId] = (s[t.palletId] || 0) + t.qty;
+                nextStock[t.source as BranchId] = s;
+            }
+            if (t.status === 'COMPLETED' && nextStock[t.dest as BranchId]) {
+                const d = { ...nextStock[t.dest as BranchId] } as any;
+                d[t.palletId] = (d[t.palletId] || 0) - t.qty;
+                nextStock[t.dest as BranchId] = d;
+            }
+        });
+        await firebaseService.addMovementBatch(cancelledRows, nextStock);
     }, [stock, transactions]);
 
     const processBatchMaintenance = useCallback(async (data: {

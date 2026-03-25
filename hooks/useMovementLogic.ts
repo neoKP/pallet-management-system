@@ -60,10 +60,14 @@ export function useMovementLogic(selectedBranch: BranchId, transactions: Transac
 
         const sorted = [...transactions].sort((a, b) => b.id - a.id);
 
+        const cancelledDocNos = new Set(
+            transactions.filter(t => t.status === 'CANCELLED').map(t => t.docNo).filter(Boolean)
+        );
+
         sorted.forEach(tx => {
             const docNo = tx.docNo || `UNKNOWN-${tx.id}`;
 
-            if (tx.dest === selectedBranch && tx.status === 'PENDING') {
+            if (tx.dest === selectedBranch && tx.status === 'PENDING' && !cancelledDocNos.has(tx.docNo)) {
                 if (!pGroups[docNo]) pGroups[docNo] = [];
                 pGroups[docNo].push(tx);
             }

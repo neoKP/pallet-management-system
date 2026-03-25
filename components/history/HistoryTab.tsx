@@ -75,20 +75,20 @@ const HistoryTab: React.FC<HistoryTabProps> = ({ transactions, selectedBranch, c
     const handleDelete = (txId: number) => {
         if (Swal) {
             Swal.fire({
-                title: 'ยืนยันการลบรายการ?',
-                text: "รายการจะถูกขีดฆ่าและทำเครื่องหมายว่ายกเลิก",
+                title: 'ยืนยันการยกเลิกเอกสาร?',
+                text: "พาเลททุกชนิดในเอกสารนี้จะถูกยกเลิกพร้อมกันทั้งหมด",
                 icon: 'warning',
                 showCancelButton: true,
                 confirmButtonColor: '#d33',
                 cancelButtonColor: '#3085d6',
-                confirmButtonText: 'ลบรายการ',
-                cancelButtonText: 'ยกเลิก'
+                confirmButtonText: 'ยืนยันยกเลิกเอกสาร',
+                cancelButtonText: 'ไม่ยกเลิก'
             }).then((result: any) => {
                 if (result.isConfirmed) {
                     deleteTransaction(txId);
                     Swal.fire(
-                        'ลบสำเร็จ!',
-                        'รายการถูกยกเลิกแล้ว',
+                        'ยกเลิกสำเร็จ!',
+                        'เอกสารและรายการพาเลททั้งหมดถูกยกเลิกแล้ว',
                         'success'
                     );
                 }
