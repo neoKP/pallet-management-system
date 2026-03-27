@@ -1,10 +1,10 @@
 import React from 'react';
-import { LayoutDashboard, ArrowRightLeft, Wrench, BarChart3, List, Home, Trash2 } from 'lucide-react';
+import { LayoutDashboard, ArrowRightLeft, Wrench, BarChart3, List, Home, Trash2, FileBarChart2 } from 'lucide-react';
 import { BranchId, User } from '../../types';
 
 interface MobileNavProps {
-    activeTab: 'home' | 'inventory' | 'dashboard' | 'record' | 'maintenance' | 'settings' | 'analytics' | 'history' | 'scrapsales';
-    setActiveTab: (tab: 'home' | 'inventory' | 'dashboard' | 'record' | 'maintenance' | 'settings' | 'analytics' | 'history' | 'scrapsales') => void;
+    activeTab: 'home' | 'inventory' | 'dashboard' | 'record' | 'maintenance' | 'settings' | 'analytics' | 'history' | 'scrapsales' | 'report';
+    setActiveTab: (tab: 'home' | 'inventory' | 'dashboard' | 'record' | 'maintenance' | 'settings' | 'analytics' | 'history' | 'scrapsales' | 'report') => void;
     selectedBranch: BranchId | 'ALL';
     currentUser: User | null;
 }
@@ -47,6 +47,11 @@ const MobileNav: React.FC<MobileNavProps> = ({ activeTab, setActiveTab, selected
                     <span className="text-[10px] font-bold mt-1">Scrap</span>
                 </button>
             )}
+
+            <button onClick={() => setActiveTab('report')} className={`p-2 rounded-lg flex flex-col items-center ${activeTab === 'report' ? 'text-emerald-600' : 'text-slate-400'}`}>
+                <FileBarChart2 size={22} />
+                <span className="text-[10px] font-bold mt-1">Report</span>
+            </button>
 
             <button onClick={() => setActiveTab('history')} className={`p-2 rounded-lg flex flex-col items-center ${activeTab === 'history' ? 'text-blue-600' : 'text-slate-400'}`}>
                 <List size={22} />

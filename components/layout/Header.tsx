@@ -6,7 +6,7 @@ import { BRANCHES } from '../../constants';
 import Swal from 'sweetalert2';
 
 interface HeaderProps {
-    activeTab: 'home' | 'inventory' | 'dashboard' | 'record' | 'maintenance' | 'settings' | 'analytics' | 'history' | 'scrapsales';
+    activeTab: 'home' | 'inventory' | 'dashboard' | 'record' | 'maintenance' | 'settings' | 'analytics' | 'history' | 'scrapsales' | 'report';
     currentUser: User;
     selectedBranch: BranchId | 'ALL';
     setSelectedBranch: (branch: BranchId | 'ALL') => void;
@@ -55,6 +55,7 @@ const Header: React.FC<HeaderProps> = ({
                     {activeTab === 'settings' && 'System Settings'}
                     {activeTab === 'analytics' && 'Performance Analytics'}
                     {activeTab === 'history' && 'Transaction History'}
+                    {activeTab === 'report' && 'Pallet Report'}
                 </div>
                 <div className="text-cyan-400/80 text-[10px] font-black tracking-[0.2em] uppercase mt-0.5">
                     Neosiam Logistics & Transport

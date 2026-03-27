@@ -1,10 +1,10 @@
 import React from 'react';
-import { LayoutDashboard, ArrowRightLeft, Wrench, Menu, Settings, ChevronLeft, ChevronRight, BarChart3, List, Home, Trash2 } from 'lucide-react';
+import { LayoutDashboard, ArrowRightLeft, Wrench, Menu, Settings, ChevronLeft, ChevronRight, BarChart3, List, Home, Trash2, FileBarChart2 } from 'lucide-react';
 import { BranchId, User } from '../../types';
 
 interface SidebarProps {
-    activeTab: 'home' | 'inventory' | 'dashboard' | 'record' | 'maintenance' | 'settings' | 'analytics' | 'history' | 'scrapsales';
-    setActiveTab: (tab: 'home' | 'inventory' | 'dashboard' | 'record' | 'maintenance' | 'settings' | 'analytics' | 'history' | 'scrapsales') => void;
+    activeTab: 'home' | 'inventory' | 'dashboard' | 'record' | 'maintenance' | 'settings' | 'analytics' | 'history' | 'scrapsales' | 'report';
+    setActiveTab: (tab: 'home' | 'inventory' | 'dashboard' | 'record' | 'maintenance' | 'settings' | 'analytics' | 'history' | 'scrapsales' | 'report') => void;
     currentUser: User | null;
     selectedBranch: BranchId | 'ALL';
     isCollapsed: boolean;
@@ -97,6 +97,18 @@ const Sidebar: React.FC<SidebarProps> = ({
                 >
                     <BarChart3 size={20} className={activeTab === 'analytics' ? 'text-white' : 'text-slate-400 group-hover:text-purple-600 transition-colors'} />
                     {!isCollapsed && <span className="whitespace-nowrap animate-in fade-in slide-in-from-left-4 duration-300">Analytics</span>}
+                </button>
+
+                <button
+                    onClick={() => setActiveTab('report')}
+                    title={isCollapsed ? 'Pallet Report' : ''}
+                    className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-300 font-bold group cursor-pointer ${activeTab === 'report'
+                        ? 'bg-emerald-600 text-white shadow-lg shadow-emerald-200'
+                        : 'text-slate-500 hover:bg-slate-50 hover:text-emerald-600'
+                        } ${isCollapsed ? 'justify-center px-0' : ''}`}
+                >
+                    <FileBarChart2 size={20} className={activeTab === 'report' ? 'text-white' : 'text-slate-400 group-hover:text-emerald-600 transition-colors'} />
+                    {!isCollapsed && <span className="whitespace-nowrap animate-in fade-in slide-in-from-left-4 duration-300">Pallet Report</span>}
                 </button>
 
                 <button

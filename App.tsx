@@ -7,6 +7,7 @@ import LoginScreen from './components/auth/LoginScreen';
 import HomePage from './components/home/HomePage';
 import Dashboard from './components/dashboard/Dashboard';
 import InventoryOverviewTab from './components/dashboard/InventoryOverviewTab';
+import PalletReportTab from './components/reports/PalletReportTab';
 import MovementTab from './components/movements/MovementTab';
 import MaintenanceTab from './components/maintenance/MaintenanceTab';
 import ScrapSalesTab from './components/maintenance/ScrapSalesTab.tsx';
@@ -27,7 +28,7 @@ export default function App() {
   const { currentUser, login, logout } = useAuth();
   const { stock, transactions, addTransaction, processBatchMaintenance, confirmTransactionsBatch } = useStock();
 
-  const [activeTab, setActiveTab] = useState<'home' | 'inventory' | 'dashboard' | 'record' | 'maintenance' | 'settings' | 'analytics' | 'history' | 'scrapsales'>('home');
+  const [activeTab, setActiveTab] = useState<'home' | 'inventory' | 'dashboard' | 'record' | 'maintenance' | 'settings' | 'analytics' | 'history' | 'scrapsales' | 'report'>('home');
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
   const [isLoginModalOpen, setIsLoginModalOpen] = useState(false);
 
@@ -96,7 +97,7 @@ export default function App() {
     });
   };
 
-  const handleNavigate = (tab: 'home' | 'inventory' | 'dashboard' | 'record' | 'maintenance' | 'settings' | 'analytics' | 'history' | 'scrapsales') => {
+  const handleNavigate = (tab: 'home' | 'inventory' | 'dashboard' | 'record' | 'maintenance' | 'settings' | 'analytics' | 'history' | 'scrapsales' | 'report') => {
     if (!currentUser && tab !== 'home') {
       setIsLoginModalOpen(true);
     } else {
@@ -226,6 +227,13 @@ export default function App() {
 
           {activeTab === 'settings' && currentUser?.role === 'ADMIN' && (
             <SettingsTab />
+          )}
+
+          {activeTab === 'report' && (
+            <PalletReportTab
+              stock={stock}
+              transactions={transactions}
+            />
           )}
         </main>
       </div>
