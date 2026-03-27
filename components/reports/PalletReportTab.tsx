@@ -17,7 +17,7 @@ const PALLET_GROUPS = [
     lightColor: 'bg-red-50 border-red-100',
     textColor: 'text-red-600',
     pallets: ['loscam_red'] as PalletId[],
-    customerPartners: ['lamsoon', 'ufc', 'loxley', 'kopee', 'neo_corp'],
+    customerPartners: ['lamsoon', 'ufc', 'loxley', 'kopee'],
     providerPartners: ['loscam_wangnoi', 'sino'],
   },
   {
@@ -111,6 +111,7 @@ interface PalletGroupReportProps {
 const PalletGroupReport: React.FC<PalletGroupReportProps> = ({ group, stock, transactions }) => {
   const [showBranchBreakdown, setShowBranchBreakdown] = useState(false);
   const [showPartnerBreakdown, setShowPartnerBreakdown] = useState(false);
+  const [showProviderBreakdown, setShowProviderBreakdown] = useState(false);
 
   const data = useMemo(() => {
     let accountNeo = 0;
@@ -151,8 +152,28 @@ const PalletGroupReport: React.FC<PalletGroupReportProps> = ({ group, stock, tra
       });
     });
 
+    const providerDebts: { partnerId: string; name: string; palletId: string; qty: number }[] = [];
+    group.providerPartners.forEach(partnerId => {
+      const partner = EXTERNAL_PARTNERS.find(p => p.id === partnerId);
+      if (!partner) return;
+      group.pallets.forEach(palletId => {
+        const balance = calculatePartnerBalance(transactions, partnerId, palletId);
+        if (balance !== 0) {
+          providerDebts.push({
+            partnerId,
+            name: partner.name,
+            palletId,
+            qty: Math.abs(balance),
+          });
+        }
+      });
+    });
+
     const totalCustomerDebt = customerDebts.reduce((s, d) => s + d.qty, 0);
-    const grandTotal = accountNeo + totalCustomerDebt + pendingQty;
+    const totalProviderDebt = providerDebts.reduce((s, d) => s + d.qty, 0);
+    const weHave = accountNeo + pendingQty + maintenanceQty;
+    const totalBorrowed = totalProviderDebt + totalCustomerDebt;
+    const netBalance = weHave - totalBorrowed;
 
     const branchBreakdown = OPERATION_BRANCHES.map(branch => {
       let qty = 0;
@@ -178,13 +199,17 @@ const PalletGroupReport: React.FC<PalletGroupReportProps> = ({ group, stock, tra
       maintenanceQty,
       customerDebts,
       totalCustomerDebt,
-      grandTotal,
+      providerDebts,
+      totalProviderDebt,
+      weHave,
+      totalBorrowed,
+      netBalance,
       branchBreakdown,
       palletBreakdown,
     };
   }, [group, stock, transactions]);
 
-  const hasData = data.grandTotal > 0 || data.maintenanceQty > 0;
+  const hasData = data.weHave > 0 || data.maintenanceQty > 0 || data.totalProviderDebt > 0;
 
   return (
     <div className="bg-white rounded-[2.5rem] shadow-sm border border-slate-100 overflow-hidden">
@@ -197,7 +222,7 @@ const PalletGroupReport: React.FC<PalletGroupReportProps> = ({ group, stock, tra
           <div>
             <h2 className="text-xl font-black text-white">{group.label}</h2>
             <p className="text-white/70 text-xs font-bold uppercase tracking-widest mt-0.5">
-              รวมทั้งหมด {data.grandTotal.toLocaleString()} ตัว
+              ยอดสุทธิ (Net) {data.netBalance.toLocaleString()} ตัว
             </p>
           </div>
         </div>
@@ -246,7 +271,7 @@ const PalletGroupReport: React.FC<PalletGroupReportProps> = ({ group, stock, tra
               <div>
                 <div className="flex items-center gap-2 mb-3">
                   <div className={`w-1 h-5 rounded-full bg-gradient-to-b ${group.color}`} />
-                  <h3 className="text-sm font-black text-slate-700 uppercase tracking-widest">Pallet ที่ยืมจาก Customer</h3>
+                  <h3 className="text-sm font-black text-slate-700 uppercase tracking-widest">Pallet ที่ยืมจาก Customer (ยืมไม่มีค่าเช่า)</h3>
                   <span className={`ml-auto text-xs font-black px-3 py-1 rounded-full ${group.lightColor} ${group.textColor} border`}>
                     รวม {data.totalCustomerDebt.toLocaleString()} ตัว
                   </span>
@@ -285,48 +310,141 @@ const PalletGroupReport: React.FC<PalletGroupReportProps> = ({ group, stock, tra
               </div>
             )}
 
-            {/* Section 3: Grand Total */}
-            <div className={`rounded-2xl p-5 border-2 ${group.lightColor} border-dashed`}>
-              <div className="flex items-center justify-between mb-4">
-                <div className="text-xs font-black uppercase tracking-widest text-slate-500">รวม {group.label} ทั้งหมด</div>
-                <div className={`text-3xl font-black ${group.textColor}`}>
-                  {data.grandTotal.toLocaleString()}
-                  <span className="text-sm font-bold text-slate-400 ml-1">ตัว</span>
+            {/* Section 2b: Provider Debt */}
+            {data.providerDebts.length > 0 && (
+              <div>
+                <div className="flex items-center gap-2 mb-3">
+                  <div className="w-1 h-5 rounded-full bg-gradient-to-b from-purple-500 to-purple-600" />
+                  <h3 className="text-sm font-black text-slate-700 uppercase tracking-widest">Pallet ที่ยืมจาก Provider (ยืมที่มีค่าเช่า)</h3>
+                  <span className="ml-auto text-xs font-black px-3 py-1 rounded-full bg-purple-50 text-purple-600 border border-purple-100">
+                    รวม {data.totalProviderDebt.toLocaleString()} ตัว
+                  </span>
+                </div>
+                <button
+                  onClick={() => setShowProviderBreakdown(!showProviderBreakdown)}
+                  className="w-full flex items-center justify-between p-4 bg-slate-50 hover:bg-slate-100 rounded-2xl border border-slate-100 transition-colors"
+                >
+                  <div className="flex items-center gap-2">
+                    <Package size={16} className="text-purple-400" />
+                    <span className="text-sm font-bold text-slate-600">
+                      {data.providerDebts.length} รายการ แยกตาม Provider
+                    </span>
+                  </div>
+                  {showProviderBreakdown ? <ChevronUp size={16} className="text-slate-400" /> : <ChevronDown size={16} className="text-slate-400" />}
+                </button>
+                {showProviderBreakdown && (
+                  <div className="mt-2 space-y-2">
+                    {data.providerDebts.map((d, idx) => {
+                      const palletInfo = PALLET_TYPES.find(p => p.id === d.palletId);
+                      return (
+                        <div key={idx} className="flex items-center justify-between p-3 bg-white rounded-xl border border-purple-100 shadow-sm">
+                          <div>
+                            <div className="font-black text-slate-800 text-sm">{d.name}</div>
+                            <div className="text-[10px] text-purple-400 font-bold uppercase tracking-widest">PROVIDER · {palletInfo?.name || d.palletId}</div>
+                          </div>
+                          <div className="text-right">
+                            <span className="font-black text-purple-700">{d.qty.toLocaleString()}</span>
+                            <span className="text-[10px] ml-1 font-bold text-slate-400">ตัว</span>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* Section 3: Summary */}
+            <div className="space-y-3">
+              {/* A: พาเลทที่เราถือครอง */}
+              <div className="rounded-2xl p-5 bg-emerald-50 border-2 border-emerald-100 border-dashed">
+                <div className="flex items-center justify-between mb-3">
+                  <div className="text-xs font-black uppercase tracking-widest text-emerald-700">พาเลทที่เราถือครอง (ในมือ)</div>
+                  <div className="text-2xl font-black text-emerald-700">
+                    {data.weHave.toLocaleString()}
+                    <span className="text-xs font-bold text-emerald-400 ml-1">ตัว</span>
+                  </div>
+                </div>
+                <div className="space-y-1.5">
+                  <div className="flex items-center justify-between bg-white/70 rounded-xl px-4 py-2">
+                    <div className="flex items-center gap-2">
+                      <CheckCircle size={14} className="text-emerald-500" />
+                      <span className="text-sm font-bold text-slate-700">สต็อกในสาขา</span>
+                    </div>
+                    <span className="text-sm font-black text-slate-800">{data.accountNeo.toLocaleString()}</span>
+                  </div>
+                  {data.pendingQty > 0 && (
+                    <div className="flex items-center justify-between bg-white/70 rounded-xl px-4 py-2">
+                      <div className="flex items-center gap-2">
+                        <Clock size={14} className="text-amber-500" />
+                        <span className="text-sm font-bold text-slate-700">หมุนเวียน (ระหว่างทาง)</span>
+                      </div>
+                      <span className="text-sm font-black text-slate-800">{data.pendingQty.toLocaleString()}</span>
+                    </div>
+                  )}
+                  {data.maintenanceQty > 0 && (
+                    <div className="flex items-center justify-between bg-white/70 rounded-xl px-4 py-2">
+                      <div className="flex items-center gap-2">
+                        <Wrench size={14} className="text-red-500" />
+                        <span className="text-sm font-bold text-slate-700">รอซ่อม</span>
+                      </div>
+                      <span className="text-sm font-black text-slate-800">{data.maintenanceQty.toLocaleString()}</span>
+                    </div>
+                  )}
                 </div>
               </div>
-              <div className="space-y-2">
-                <div className="flex items-center justify-between bg-white/60 rounded-xl px-4 py-2.5">
-                  <div className="flex items-center gap-2">
-                    <CheckCircle size={14} className="text-emerald-500" />
-                    <span className="text-sm font-bold text-slate-700">สต็อกในสาขา</span>
+
+              {/* B: ยืมจากคู่ค้าทั้งหมด */}
+              <div className="rounded-2xl p-5 bg-purple-50 border-2 border-purple-100 border-dashed">
+                <div className="flex items-center justify-between mb-3">
+                  <div className="text-xs font-black uppercase tracking-widest text-purple-700">พาเลทที่ยืมมาทั้งหมด</div>
+                  <div className="text-2xl font-black text-purple-700">
+                    {data.totalBorrowed.toLocaleString()}
+                    <span className="text-xs font-bold text-purple-400 ml-1">ตัว</span>
                   </div>
-                  <span className="text-sm font-black text-emerald-700">{data.accountNeo.toLocaleString()}</span>
                 </div>
-                {data.totalCustomerDebt > 0 && (
-                  <div className="flex items-center justify-between bg-white/60 rounded-xl px-4 py-2.5">
-                    <div className="flex items-center gap-2">
-                      <Users size={14} className="text-indigo-500" />
-                      <span className="text-sm font-bold text-slate-700">ยืมจาก Customer</span>
+                <div className="space-y-1.5">
+                  {data.totalProviderDebt > 0 && (
+                    <div className="flex items-center justify-between bg-white/70 rounded-xl px-4 py-2">
+                      <div className="flex items-center gap-2">
+                        <Package size={14} className="text-purple-500" />
+                        <span className="text-sm font-bold text-slate-700">ยืมจาก Provider (ยืมที่มีค่าเช่า)</span>
+                      </div>
+                      <span className="text-sm font-black text-purple-700">{data.totalProviderDebt.toLocaleString()}</span>
                     </div>
-                    <span className="text-sm font-black text-indigo-700">{data.totalCustomerDebt.toLocaleString()}</span>
+                  )}
+                  {data.totalCustomerDebt > 0 && (
+                    <div className="flex items-center justify-between bg-white/70 rounded-xl px-4 py-2">
+                      <div className="flex items-center gap-2">
+                        <Users size={14} className="text-indigo-500" />
+                        <span className="text-sm font-bold text-slate-700">ยืมจาก Customer (ยืมไม่มีค่าเช่า)</span>
+                      </div>
+                      <span className="text-sm font-black text-indigo-700">{data.totalCustomerDebt.toLocaleString()}</span>
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* C: ยอดสุทธิ (Net) */}
+              <div className={`rounded-2xl p-5 border-2 ${data.netBalance < 0 ? 'bg-red-50 border-red-200' : 'bg-emerald-50 border-emerald-200'}`}>
+                <div className="flex items-center justify-between">
+                  <div>
+                    <div className={`text-xs font-black uppercase tracking-widest ${data.netBalance < 0 ? 'text-red-700' : 'text-emerald-700'}`}>
+                      ยอดสุทธิ (Net) = ถือครอง − ยืมทั้งหมด
+                    </div>
+                    <div className="text-[10px] text-slate-400 font-bold mt-1">
+                      {data.weHave.toLocaleString()} − {data.totalBorrowed.toLocaleString()} = {data.netBalance.toLocaleString()}
+                    </div>
                   </div>
-                )}
-                {data.pendingQty > 0 && (
-                  <div className="flex items-center justify-between bg-white/60 rounded-xl px-4 py-2.5">
-                    <div className="flex items-center gap-2">
-                      <Clock size={14} className="text-amber-500" />
-                      <span className="text-sm font-bold text-slate-700">หมุนเวียน (ระหว่างทาง)</span>
-                    </div>
-                    <span className="text-sm font-black text-amber-700">{data.pendingQty.toLocaleString()}</span>
+                  <div className={`text-3xl font-black ${data.netBalance < 0 ? 'text-red-600' : 'text-emerald-600'}`}>
+                    {data.netBalance.toLocaleString()}
+                    <span className="text-sm font-bold text-slate-400 ml-1">ตัว</span>
                   </div>
-                )}
-                {data.maintenanceQty > 0 && (
-                  <div className="flex items-center justify-between bg-white/60 rounded-xl px-4 py-2.5">
-                    <div className="flex items-center gap-2">
-                      <Wrench size={14} className="text-red-500" />
-                      <span className="text-sm font-bold text-slate-700">รอซ่อม</span>
-                    </div>
-                    <span className="text-sm font-black text-red-700">{data.maintenanceQty.toLocaleString()}</span>
+                </div>
+                {data.netBalance < 0 && (
+                  <div className="flex items-center gap-2 mt-3 text-xs font-bold text-red-600 bg-red-100 rounded-xl px-3 py-2">
+                    <AlertTriangle size={14} />
+                    <span>ติดลบ — ใช้พาเลทมากกว่าที่มี ต้องจัดหาเพิ่มหรือเร่งเก็บคืน {Math.abs(data.netBalance).toLocaleString()} ตัว</span>
                   </div>
                 )}
               </div>
