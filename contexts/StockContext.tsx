@@ -54,6 +54,8 @@ interface StockContextType {
     updateThresholds: (data: any) => Promise<void>;
     updateTransaction: (tx: Transaction) => void;
     reconcileStock: (data: { targetId: string; palletId: PalletId; calculatedStock: number; userName: string }) => Promise<void>;
+    processScrapSale: (data: { palletId: PalletId; qty: number; revenue: number; note?: string }) => Promise<void>;
+    processScrapDiscard: (data: { palletId: PalletId; qty: number; note?: string }) => Promise<void>;
     isDataLoaded: boolean; // Loading Guard: ข้อมูลโหลดเสร็จหรือยัง
 }
 
@@ -347,6 +349,23 @@ export const StockProvider: React.FC<StockProviderProps> = ({ children }) => {
             else s[newTx.palletId as PalletId] = data.fixedQty;
             nextStock[data.branchId as BranchId] = s;
         }
+
+        // Move scrapped pallets to scrap_stock (distribute proportionally among batch item types)
+        if (data.scrappedQty > 0) {
+            const scrap = { ...nextStock['scrap_stock'] } as Record<PalletId, number>;
+            const totalBatchQty = data.items.reduce((sum, i) => sum + i.qty, 0);
+            let remaining = data.scrappedQty;
+            data.items.forEach((item, idx) => {
+                const isLast = idx === data.items.length - 1;
+                const portion = isLast ? remaining : Math.round((item.qty / totalBatchQty) * data.scrappedQty);
+                if (portion > 0) {
+                    scrap[item.palletId] = (scrap[item.palletId] || 0) + portion;
+                    remaining -= portion;
+                }
+            });
+            nextStock['scrap_stock'] = scrap;
+        }
+
         await firebaseService.addMovementBatch([newTx], nextStock);
 
         if (config.telegramChatId) {
@@ -424,6 +443,43 @@ export const StockProvider: React.FC<StockProviderProps> = ({ children }) => {
         console.log(`[Reconcile] ${data.targetId}/${data.palletId}: stock → ${data.calculatedStock} (by ${data.userName})`);
     }, [stock]);
 
+    const processScrapSale = useCallback(async (data: { palletId: PalletId; qty: number; revenue: number; note?: string }) => {
+        const now = new Date();
+        const docNo = generateDocNo('SCRAP_SALE' as any, 'scrap_stock', 'scrap_stock', now.toISOString().split('T')[0]);
+        const tx: Transaction = {
+            id: Date.now(), date: now.toISOString(), docNo, type: 'SCRAP_SALE', status: 'COMPLETED',
+            source: 'scrap_stock', dest: 'SOLD', palletId: data.palletId, qty: data.qty,
+            note: data.note || 'ขายซาก', scrapRevenue: data.revenue,
+        } as Transaction;
+        const nextStock = { ...stock };
+        const scrap = { ...nextStock['scrap_stock'] } as Record<PalletId, number>;
+        scrap[data.palletId] = (scrap[data.palletId] || 0) - data.qty;
+        nextStock['scrap_stock'] = scrap;
+        await firebaseService.addMovementBatch([tx], nextStock);
+        if (config.telegramChatId) {
+            try {
+                const palletName = PALLET_TYPES.find((p: PalletType) => p.id === data.palletId)?.name || data.palletId;
+                const message = `🏷️ *ขายซาก*\n${palletName}: ${data.qty} ตัว\nรายได้: ${data.revenue.toLocaleString()} บาท`;
+                await telegramService.sendMessage(config.telegramChatId, message);
+            } catch (err) { console.error('Failed to send scrap sale notification:', err); }
+        }
+    }, [stock, generateDocNo, config.telegramChatId]);
+
+    const processScrapDiscard = useCallback(async (data: { palletId: PalletId; qty: number; note?: string }) => {
+        const now = new Date();
+        const docNo = generateDocNo('SCRAP_DISCARD' as any, 'scrap_stock', 'scrap_stock', now.toISOString().split('T')[0]);
+        const tx: Transaction = {
+            id: Date.now(), date: now.toISOString(), docNo, type: 'SCRAP_DISCARD', status: 'COMPLETED',
+            source: 'scrap_stock', dest: 'DISCARDED', palletId: data.palletId, qty: data.qty,
+            note: data.note || 'ทิ้ง/เสีย',
+        } as Transaction;
+        const nextStock = { ...stock };
+        const scrap = { ...nextStock['scrap_stock'] } as Record<PalletId, number>;
+        scrap[data.palletId] = (scrap[data.palletId] || 0) - data.qty;
+        nextStock['scrap_stock'] = scrap;
+        await firebaseService.addMovementBatch([tx], nextStock);
+    }, [stock, generateDocNo]);
+
     const updateTransaction = useCallback(async (tx: Transaction) => {
         await firebaseService.addMovementBatch([tx], stock);
 
@@ -445,7 +501,7 @@ export const StockProvider: React.FC<StockProviderProps> = ({ children }) => {
                 getStockForBranch: (id: BranchId) => stock[id] || {}, palletRequests, createPalletRequest,
                 updatePalletRequest, config, updateSystemConfig, adjustStock,
                 thresholds, updateThresholds: firebaseService.updateThresholds,
-                updateTransaction, reconcileStock, isDataLoaded
+                updateTransaction, reconcileStock, processScrapSale, processScrapDiscard, isDataLoaded
             }}
         >
             {children}

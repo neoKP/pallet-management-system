@@ -140,7 +140,7 @@ export const calculateKPIs = (
     endDate: Date
 ): KPIMetrics => {
     const filteredTransactions = filterTransactionsByDate(transactions, startDate, endDate);
-    const validBranchIds: BranchId[] = ['hub_nw', 'kpp', 'plk', 'cm', 'ekp', 'ms', 'maintenance_stock'];
+    const validBranchIds: BranchId[] = ['hub_nw', 'kpp', 'plk', 'cm', 'ekp', 'ms', 'maintenance_stock', 'scrap_stock'];
 
     const totalPalletsInStock = validBranchIds.reduce((sum, branchId) => {
         const branchStock = stock[branchId];

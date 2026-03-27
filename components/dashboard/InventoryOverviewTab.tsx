@@ -29,7 +29,7 @@ export const InventoryOverviewTab: React.FC<InventoryOverviewTabProps> = ({
     const activeBranchIds = BRANCHES.map(b => b.id);
 
     if (selectedBranch === 'ALL') {
-      const allowedBranchIds = ['hub_nw', 'sai3', 'kpp', 'cm', 'plk', 'maintenance_stock', 'ekp', 'ms'];
+      const allowedBranchIds = ['hub_nw', 'sai3', 'kpp', 'cm', 'plk', 'maintenance_stock', 'scrap_stock', 'ekp', 'ms'];
       activeBranchIds.forEach(branchId => {
         if (allowedBranchIds.includes(branchId)) {
           const branchStock = stock[branchId];

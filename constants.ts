@@ -19,6 +19,7 @@ export const BRANCHES: Branch[] = [
   { id: 'ekp', name: 'EKP', type: 'BRANCH' },
   { id: 'ms', name: 'สาขาแม่สอด', type: 'BRANCH' },
   { id: 'maintenance_stock', name: 'คลังซ่อมบำรุง (Maintenance Stock)', type: 'BRANCH' },
+  { id: 'scrap_stock', name: 'คลังซาก (Scrap Stock)', type: 'BRANCH' },
 ];
 
 export const EXTERNAL_PARTNERS: Partner[] = [
@@ -41,6 +42,7 @@ export const INITIAL_STOCK: Stock = {
   ekp: { loscam_red: 0, loscam_yellow: 0, loscam_blue: 0, hiq: 0, general: 0, plastic_circular: 0, cargo_net: 0 },
   ms: { loscam_red: 0, loscam_yellow: 0, loscam_blue: 0, hiq: 0, general: 0, plastic_circular: 0, cargo_net: 0 },
   maintenance_stock: { loscam_red: 0, loscam_yellow: 0, loscam_blue: 0, hiq: 0, general: 0, plastic_circular: 0, cargo_net: 0 },
+  scrap_stock: { loscam_red: 0, loscam_yellow: 0, loscam_blue: 0, hiq: 0, general: 0, plastic_circular: 0, cargo_net: 0 },
 };
 
 /**

@@ -23,12 +23,13 @@ export type BranchId =
   | 'ekp'
   | 'ms'
   | 'sai3'
-  | 'maintenance_stock';
+  | 'maintenance_stock'
+  | 'scrap_stock';
 
 /**
  * Transaction Types
  */
-export type TransactionType = 'IN' | 'OUT' | 'MAINTENANCE' | 'ADJUST';
+export type TransactionType = 'IN' | 'OUT' | 'MAINTENANCE' | 'ADJUST' | 'SCRAP_SALE' | 'SCRAP_DISCARD';
 
 /**
  * Maintenance Action Types

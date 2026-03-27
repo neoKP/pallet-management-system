@@ -26,7 +26,7 @@ import Swal from 'sweetalert2';
 
 export default function App() {
   const { currentUser, login, logout } = useAuth();
-  const { stock, transactions, addTransaction, processBatchMaintenance, confirmTransactionsBatch } = useStock();
+  const { stock, transactions, addTransaction, processBatchMaintenance, confirmTransactionsBatch, processScrapSale, processScrapDiscard } = useStock();
 
   const [activeTab, setActiveTab] = useState<'home' | 'inventory' | 'dashboard' | 'record' | 'maintenance' | 'settings' | 'analytics' | 'history' | 'scrapsales' | 'report'>('home');
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
@@ -222,6 +222,9 @@ export default function App() {
           {activeTab === 'scrapsales' && (currentUser?.role === 'ADMIN' || currentUser?.branchId === 'maintenance_stock') && (
             <ScrapSalesTab
               transactions={transactions}
+              stock={stock}
+              processScrapSale={processScrapSale}
+              processScrapDiscard={processScrapDiscard}
             />
           )}
 

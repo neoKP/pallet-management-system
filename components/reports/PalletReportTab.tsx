@@ -82,7 +82,7 @@ const PALLET_GROUPS = [
   },
 ];
 
-const OPERATION_BRANCHES = BRANCHES.filter(b => b.id !== 'maintenance_stock');
+const OPERATION_BRANCHES = BRANCHES.filter(b => b.id !== 'maintenance_stock' && b.id !== 'scrap_stock');
 
 interface SectionCardProps {
   icon: React.ReactNode;
@@ -118,6 +118,8 @@ const PalletGroupReport: React.FC<PalletGroupReportProps> = ({ group, stock, tra
     let maintenanceQty = 0;
     let pendingQty = 0;
 
+    let scrapQty = 0;
+
     group.pallets.forEach(palletId => {
       OPERATION_BRANCHES.forEach(branch => {
         const qty = (stock[branch.id as BranchId] as any)?.[palletId] || 0;
@@ -125,6 +127,8 @@ const PalletGroupReport: React.FC<PalletGroupReportProps> = ({ group, stock, tra
       });
       const mQty = (stock['maintenance_stock'] as any)?.[palletId] || 0;
       maintenanceQty += mQty;
+      const sQty = (stock['scrap_stock'] as any)?.[palletId] || 0;
+      scrapQty += sQty;
     });
 
     transactions.forEach(t => {
@@ -175,6 +179,27 @@ const PalletGroupReport: React.FC<PalletGroupReportProps> = ({ group, stock, tra
     const totalBorrowed = totalProviderDebt + totalCustomerDebt;
     const netBalance = weHave - totalBorrowed;
 
+    // Scrap metrics from transactions for this pallet group
+    let totalScrappedEver = 0;
+    let totalScrapSold = 0;
+    let totalScrapDiscarded = 0;
+    let totalScrapRevenue = 0;
+    transactions.forEach(t => {
+      if (t.status !== 'COMPLETED') return;
+      if (!group.pallets.includes(t.palletId as PalletId) && !group.pallets.includes(t.originalPalletId as PalletId)) return;
+      if (t.type === 'MAINTENANCE' && t.noteExtended?.includes('SCRAP:')) {
+        const match = t.noteExtended.match(/SCRAP:\s*(\d+)/);
+        if (match) totalScrappedEver += parseInt(match[1]);
+      }
+      if (t.type === 'SCRAP_SALE') {
+        totalScrapSold += t.qty;
+        totalScrapRevenue += (t.scrapRevenue || 0);
+      }
+      if (t.type === 'SCRAP_DISCARD') {
+        totalScrapDiscarded += t.qty;
+      }
+    });
+
     const branchBreakdown = OPERATION_BRANCHES.map(branch => {
       let qty = 0;
       group.pallets.forEach(palletId => {
@@ -206,6 +231,11 @@ const PalletGroupReport: React.FC<PalletGroupReportProps> = ({ group, stock, tra
       netBalance,
       branchBreakdown,
       palletBreakdown,
+      scrapQty,
+      totalScrappedEver,
+      totalScrapSold,
+      totalScrapDiscarded,
+      totalScrapRevenue,
     };
   }, [group, stock, transactions]);
 
@@ -450,7 +480,38 @@ const PalletGroupReport: React.FC<PalletGroupReportProps> = ({ group, stock, tra
               </div>
             </div>
 
-            {/* Section 4: Branch Breakdown */}
+            {/* Section 4: Scrap Summary */}
+            {(data.scrapQty > 0 || data.totalScrappedEver > 0) && (
+              <div className="space-y-3">
+                <div className="flex items-center gap-2">
+                  <div className="w-1 h-5 rounded-full bg-gradient-to-b from-red-400 to-red-600" />
+                  <h3 className="text-sm font-black text-slate-700 uppercase tracking-widest">พาเลทเสีย / ซาก</h3>
+                </div>
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                  <div className="bg-red-50 rounded-2xl p-4 border border-red-100">
+                    <div className="text-[10px] font-black uppercase tracking-widest text-red-500 mb-1">เสียสะสม</div>
+                    <div className="text-xl font-black text-red-700">{data.totalScrappedEver.toLocaleString()} <span className="text-xs font-bold text-red-400">ตัว</span></div>
+                  </div>
+                  <div className="bg-orange-50 rounded-2xl p-4 border border-orange-100 border-dashed">
+                    <div className="text-[10px] font-black uppercase tracking-widest text-orange-500 mb-1">สต๊อกรอขายซาก</div>
+                    <div className="text-xl font-black text-orange-700">{data.scrapQty.toLocaleString()} <span className="text-xs font-bold text-orange-400">ตัว</span></div>
+                  </div>
+                  <div className="bg-blue-50 rounded-2xl p-4 border border-blue-100">
+                    <div className="text-[10px] font-black uppercase tracking-widest text-blue-500 mb-1">ขายซากแล้ว</div>
+                    <div className="text-xl font-black text-blue-700">{data.totalScrapSold.toLocaleString()} <span className="text-xs font-bold text-blue-400">ตัว</span></div>
+                    {data.totalScrapDiscarded > 0 && (
+                      <div className="text-[10px] text-slate-400 font-bold">ทิ้ง: {data.totalScrapDiscarded.toLocaleString()}</div>
+                    )}
+                  </div>
+                  <div className="bg-emerald-50 rounded-2xl p-4 border border-emerald-100">
+                    <div className="text-[10px] font-black uppercase tracking-widest text-emerald-500 mb-1">รายได้ขายซาก</div>
+                    <div className="text-xl font-black text-emerald-700">฿{data.totalScrapRevenue.toLocaleString()}</div>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Section 5: Branch Breakdown */}
             {data.branchBreakdown.length > 0 && (
               <div>
                 <button

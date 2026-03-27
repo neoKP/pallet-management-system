@@ -136,7 +136,7 @@ const Dashboard: React.FC<DashboardProps> = ({ stock, selectedBranch, transactio
     // DEBUG: Log HI-Q stock per branch to console
     React.useEffect(() => {
         console.log('=== DEBUG: HI-Q Stock Per Branch ===');
-        const branches: BranchId[] = ['hub_nw', 'sai3', 'kpp', 'plk', 'cm', 'ekp', 'ms', 'maintenance_stock'];
+        const branches: BranchId[] = ['hub_nw', 'sai3', 'kpp', 'plk', 'cm', 'ekp', 'ms', 'maintenance_stock', 'scrap_stock'];
         let totalHiq = 0;
         branches.forEach(branchId => {
             const hiqQty = stock[branchId]?.hiq || 0;
@@ -170,7 +170,7 @@ const Dashboard: React.FC<DashboardProps> = ({ stock, selectedBranch, transactio
         const activeBranchIds = BRANCHES.map(b => b.id);
 
         if (selectedBranch === 'ALL') {
-            const allowedBranchIds = ['hub_nw', 'sai3', 'kpp', 'cm', 'plk', 'maintenance_stock', 'ekp', 'ms'];
+            const allowedBranchIds = ['hub_nw', 'sai3', 'kpp', 'cm', 'plk', 'maintenance_stock', 'scrap_stock', 'ekp', 'ms'];
             activeBranchIds.forEach(branchId => {
                 if (allowedBranchIds.includes(branchId)) {
                     const branchStock = stock[branchId];
@@ -543,7 +543,7 @@ const Dashboard: React.FC<DashboardProps> = ({ stock, selectedBranch, transactio
                         </thead>
                         <tbody className="divide-y divide-slate-50">
                             {BRANCHES
-                                .filter(b => ['hub_nw', 'sai3', 'kpp', 'cm', 'plk', 'maintenance_stock', 'ekp', 'ms'].includes(b.id))
+                                .filter(b => ['hub_nw', 'sai3', 'kpp', 'cm', 'plk', 'maintenance_stock', 'scrap_stock', 'ekp', 'ms'].includes(b.id))
                                 .map(branch => {
                                     const branchStock = stock[branch.id] || {};
                                     const getQty = (id: PalletId) => branchStock[id] || 0;
@@ -575,7 +575,7 @@ const Dashboard: React.FC<DashboardProps> = ({ stock, selectedBranch, transactio
                 {/* Mobile View */}
                 <div className="md:hidden space-y-3">
                     {BRANCHES
-                        .filter(b => ['hub_nw', 'sai3', 'kpp', 'cm', 'plk', 'maintenance_stock', 'ekp', 'ms'].includes(b.id))
+                        .filter(b => ['hub_nw', 'sai3', 'kpp', 'cm', 'plk', 'maintenance_stock', 'scrap_stock', 'ekp', 'ms'].includes(b.id))
                         .map(branch => {
                             const branchStock = stock[branch.id] || {};
                             const getQty = (id: PalletId) => branchStock[id] || 0;
