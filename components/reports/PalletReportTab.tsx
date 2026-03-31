@@ -137,7 +137,7 @@ const PalletGroupReport: React.FC<PalletGroupReportProps> = ({ group, stock, tra
       }
     });
 
-    const readyQty = accountNeo - pendingQty;
+    const readyQty = accountNeo;
 
     const customerDebts: { partnerId: string; name: string; palletId: string; qty: number }[] = [];
     group.customerPartners.forEach(partnerId => {
@@ -175,7 +175,7 @@ const PalletGroupReport: React.FC<PalletGroupReportProps> = ({ group, stock, tra
 
     const totalCustomerDebt = customerDebts.reduce((s, d) => s + d.qty, 0);
     const totalProviderDebt = providerDebts.reduce((s, d) => s + d.qty, 0);
-    const weHave = accountNeo + pendingQty + maintenanceQty;
+    const weHave = accountNeo + pendingQty + maintenanceQty + scrapQty;
     const totalBorrowed = totalProviderDebt + totalCustomerDebt;
     const netBalance = weHave - totalBorrowed;
 
@@ -419,6 +419,15 @@ const PalletGroupReport: React.FC<PalletGroupReportProps> = ({ group, stock, tra
                         <span className="text-sm font-bold text-slate-700">รอซ่อม</span>
                       </div>
                       <span className="text-sm font-black text-slate-800">{data.maintenanceQty.toLocaleString()}</span>
+                    </div>
+                  )}
+                  {data.scrapQty > 0 && (
+                    <div className="flex items-center justify-between bg-white/70 rounded-xl px-4 py-2">
+                      <div className="flex items-center gap-2">
+                        <Package size={14} className="text-orange-500" />
+                        <span className="text-sm font-bold text-slate-700">คลังซาก</span>
+                      </div>
+                      <span className="text-sm font-black text-slate-800">{data.scrapQty.toLocaleString()}</span>
                     </div>
                   )}
                 </div>
