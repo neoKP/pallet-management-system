@@ -609,14 +609,20 @@ const PalletGroupReport: React.FC<PalletGroupReportProps> = ({ group, stock, tra
 
 const PalletReportTab: React.FC<PalletReportTabProps> = ({ stock, transactions }) => {
   const summary = useMemo(() => {
-    let totalAll = 0;
+    let totalConfirmed = 0;
+    let totalPending = 0;
     PALLET_TYPES.forEach(pt => {
       BRANCHES.forEach(branch => {
-        totalAll += (stock[branch.id as BranchId] as any)?.[pt.id] || 0;
+        totalConfirmed += (stock[branch.id as BranchId] as any)?.[pt.id] || 0;
       });
     });
-    return { totalAll };
-  }, [stock]);
+    transactions.forEach(t => {
+      if (t.status === 'PENDING') {
+        totalPending += t.qty;
+      }
+    });
+    return { totalAll: totalConfirmed + totalPending, totalConfirmed, totalPending };
+  }, [stock, transactions]);
 
   return (
     <div className="space-y-6">
@@ -629,8 +635,12 @@ const PalletReportTab: React.FC<PalletReportTabProps> = ({ stock, transactions }
         <div className="flex items-center gap-3 bg-white px-5 py-3 rounded-2xl border border-slate-100 shadow-sm">
           <TrendingUp size={18} className="text-blue-600" />
           <div>
-            <div className="text-[10px] font-black uppercase tracking-widest text-slate-400">รวมพาเลททุกชนิดในสาขา</div>
+            <div className="text-[10px] font-black uppercase tracking-widest text-slate-400">รวมพาเลททุกชนิด (Fleet)</div>
             <div className="text-2xl font-black text-slate-900">{summary.totalAll.toLocaleString()} <span className="text-sm font-bold text-slate-400">ตัว</span></div>
+            <div className="flex gap-3 text-[10px] font-bold text-slate-400 mt-0.5">
+              <span>ในสาขา: {summary.totalConfirmed.toLocaleString()}</span>
+              {summary.totalPending > 0 && <span className="text-amber-500">บนรถ: {summary.totalPending.toLocaleString()}</span>}
+            </div>
           </div>
         </div>
       </div>
