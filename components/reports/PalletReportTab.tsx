@@ -281,7 +281,7 @@ const PalletGroupReport: React.FC<PalletGroupReportProps> = ({ group, stock, tra
                 />
                 <SectionCard
                   icon={<Clock size={18} className="text-amber-500" />}
-                  label="พาเลทหมุนเวียน (ระหว่างทาง)"
+                  label="ระหว่างทาง (บนรถ)"
                   value={data.pendingQty}
                   sub="PENDING transactions"
                   color="text-amber-700"
@@ -407,7 +407,7 @@ const PalletGroupReport: React.FC<PalletGroupReportProps> = ({ group, stock, tra
                     <div className="flex items-center justify-between bg-white/70 rounded-xl px-4 py-2">
                       <div className="flex items-center gap-2">
                         <Clock size={14} className="text-amber-500" />
-                        <span className="text-sm font-bold text-slate-700">หมุนเวียน (ระหว่างทาง)</span>
+                        <span className="text-sm font-bold text-slate-700">ระหว่างทาง (บนรถ)</span>
                       </div>
                       <span className="text-sm font-black text-slate-800">{data.pendingQty.toLocaleString()}</span>
                     </div>
