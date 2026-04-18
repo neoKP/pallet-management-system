@@ -407,7 +407,8 @@ const Dashboard: React.FC<DashboardProps> = ({ stock, selectedBranch, transactio
                                             <div className="font-black text-slate-900">{partnerId === 'loscam_wangnoi' ? 'Loscam (Main Account)' : partner.name}</div>
                                             <div className="text-[10px] text-slate-400 font-bold uppercase">
                                                 {partnerId === 'loscam_wangnoi' ? 'Aggregated Account' :
-                                                    partnerId === 'sino' ? 'ยืมใช้ / คืนตามกำหนด' : 'ส่วนงานลูกค้า (Customer)'}
+                                                    partnerId === 'sino' ? 'ยืมใช้ / คืนตามกำหนด' :
+                                                    partner.type === 'provider' ? 'เรายืมจากเขา (Provider)' : 'ส่วนงานลูกค้า (Customer)'}
                                             </div>
                                         </td>
                                         <td className="p-4 text-center">
@@ -471,7 +472,7 @@ const Dashboard: React.FC<DashboardProps> = ({ stock, selectedBranch, transactio
                                     <div>
                                         <div className="font-black text-slate-900 text-sm">{partnerId === 'loscam_wangnoi' ? 'Loscam (Main Account)' : partner.name}</div>
                                         <div className="text-[9px] text-slate-400 font-bold uppercase">
-                                            {partnerId === 'loscam_wangnoi' ? 'Aggregated' : partnerId === 'sino' ? 'Sino Pacific' : 'Customer'}
+                                            {partnerId === 'loscam_wangnoi' ? 'Aggregated' : partnerId === 'sino' ? 'Sino Pacific' : partner.type === 'provider' ? 'Provider' : 'Customer'}
                                         </div>
                                     </div>
                                     <div className="text-right">

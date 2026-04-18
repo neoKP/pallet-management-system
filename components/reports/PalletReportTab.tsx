@@ -17,8 +17,8 @@ const PALLET_GROUPS = [
     lightColor: 'bg-red-50 border-red-100',
     textColor: 'text-red-600',
     pallets: ['loscam_red'] as PalletId[],
-    customerPartners: ['lamsoon', 'ufc', 'loxley', 'kopee'],
-    providerPartners: ['loscam_wangnoi', 'sino'],
+    customerPartners: [],
+    providerPartners: ['loscam_wangnoi', 'sino', 'lamsoon', 'ufc', 'loxley', 'kopee'],
   },
   {
     id: 'loscam_yellow',
@@ -27,8 +27,8 @@ const PALLET_GROUPS = [
     lightColor: 'bg-yellow-50 border-yellow-100',
     textColor: 'text-yellow-600',
     pallets: ['loscam_yellow'] as PalletId[],
-    customerPartners: ['loxley'],
-    providerPartners: [],
+    customerPartners: [],
+    providerPartners: ['loxley'],
   },
   {
     id: 'loscam_blue',
@@ -37,8 +37,8 @@ const PALLET_GROUPS = [
     lightColor: 'bg-blue-50 border-blue-100',
     textColor: 'text-blue-600',
     pallets: ['loscam_blue'] as PalletId[],
-    customerPartners: ['ufc', 'loxley'],
-    providerPartners: ['sino'],
+    customerPartners: [],
+    providerPartners: ['sino', 'ufc', 'loxley'],
   },
   {
     id: 'hiq',

@@ -86,7 +86,7 @@ const Sidebar: React.FC<SidebarProps> = ({
                     {!isCollapsed && <span className="whitespace-nowrap animate-in fade-in slide-in-from-left-4 duration-300">Dashboard</span>}
                 </button>
 
-                {/* Analytics Menu */}
+                {/* Analytics Menu - Hidden
                 <button
                     onClick={() => setActiveTab('analytics')}
                     title={isCollapsed ? 'Analytics' : ''}
@@ -98,6 +98,7 @@ const Sidebar: React.FC<SidebarProps> = ({
                     <BarChart3 size={20} className={activeTab === 'analytics' ? 'text-white' : 'text-slate-400 group-hover:text-purple-600 transition-colors'} />
                     {!isCollapsed && <span className="whitespace-nowrap animate-in fade-in slide-in-from-left-4 duration-300">Analytics</span>}
                 </button>
+                */}
 
                 <button
                     onClick={() => setActiveTab('report')}

@@ -25,10 +25,10 @@ export const BRANCHES: Branch[] = [
 export const EXTERNAL_PARTNERS: Partner[] = [
   { id: 'neo_corp', name: 'บ. นีโอ คอร์ปอเรท', type: 'customer', allowedPallets: ['loscam_red'], rentalFee: 0, gracePeriod: 0, branchRestriction: { in: 'all', out: 'none' } },
   { id: 'sino', name: 'บ. ซีโน-แปซิฟิค', type: 'provider', allowedPallets: ['loscam_red', 'loscam_blue'], rentalFee: 1.0, gracePeriod: 10, branchRestriction: { in: 'all', out: 'all' } },
-  { id: 'lamsoon', name: 'บ. ล่ำสูง', type: 'customer', allowedPallets: ['loscam_red'], branchRestriction: { in: ['sai3'], out: ['sai3'] } },
-  { id: 'ufc', name: 'บ. UFC', type: 'customer', allowedPallets: ['loscam_red', 'loscam_blue'], branchRestriction: { in: ['sai3'], out: ['sai3'] } },
-  { id: 'loxley', name: 'บ. Loxley', type: 'customer', allowedPallets: ['loscam_red', 'loscam_blue', 'loscam_yellow'], branchRestriction: { in: ['sai3'], out: ['sai3'] } },
-  { id: 'kopee', name: 'บ. โคพี่', type: 'customer', allowedPallets: ['loscam_red'], branchRestriction: { in: ['sai3'], out: ['sai3'] } },
+  { id: 'lamsoon', name: 'บ. ล่ำสูง', type: 'provider', allowedPallets: ['loscam_red'], branchRestriction: { in: ['sai3', 'hub_nw'], out: ['sai3', 'hub_nw'] } },
+  { id: 'ufc', name: 'บ. UFC', type: 'provider', allowedPallets: ['loscam_red', 'loscam_blue'], branchRestriction: { in: ['sai3'], out: ['sai3'] } },
+  { id: 'loxley', name: 'บ. Loxley', type: 'provider', allowedPallets: ['loscam_red', 'loscam_blue', 'loscam_yellow'], branchRestriction: { in: ['sai3'], out: ['sai3'] } },
+  { id: 'kopee', name: 'บ. โคพี่', type: 'provider', allowedPallets: ['loscam_red'], branchRestriction: { in: ['sai3'], out: ['sai3'] } },
   { id: 'loscam_wangnoi', name: 'Loscam วังน้อย', type: 'provider', allowedPallets: ['loscam_red'], rentalFee: 1.4, gracePeriod: 0, mappingName: 'บ. นีโอ คอร์ปอเรท', branchRestriction: { in: 'none', out: ['hub_nw'] } },
   { id: 'hiq_th', name: 'HI-Q', type: 'provider', allowedPallets: ['hiq'], branchRestriction: { in: ['sai3'], out: ['sai3'] } },
 ];
