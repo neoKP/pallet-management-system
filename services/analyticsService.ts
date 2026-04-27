@@ -409,8 +409,30 @@ export const getAgingRentalAnalysis = (transactions: Transaction[], today: Date 
     const targetPartners = ['loscam_wangnoi', 'sino', 'lamsoon', 'ufc', 'loxley', 'kopee', 'hiq_th'];
     const allPalletIds: PalletId[] = ['loscam_red', 'loscam_blue', 'loscam_yellow', 'hiq'];
 
+    // Diagnostic: detect orphan transactions (partner involved with disallowed pallet)
+    const orphanTxs = transactions.filter(t => {
+        if (t.status !== 'COMPLETED') return false;
+        const partner = EXTERNAL_PARTNERS.find(p => p.id === t.source || p.id === t.dest);
+        if (!partner) return false;
+        if (!partner.allowedPallets || partner.allowedPallets.length === 0) return false;
+        return !partner.allowedPallets.includes(t.palletId);
+    });
+    if (orphanTxs.length > 0 && typeof window !== 'undefined') {
+        console.warn('[Analytics] Orphan transactions detected (partner with disallowed pallet):',
+            orphanTxs.map(t => ({ docNo: t.docNo, date: t.date, type: t.type, source: t.source, dest: t.dest, palletId: t.palletId, qty: t.qty, status: t.status }))
+        );
+    }
+
     targetPartners.forEach(pId => {
-        allPalletIds.forEach(palletId => {
+        // Only process pallets that the partner is allowed to handle
+        const partner = EXTERNAL_PARTNERS.find(p => p.id === pId);
+        // loscam_wangnoi is virtual (not in EXTERNAL_PARTNERS by default for some setups) -> default to red only
+        const partnerAllowedPallets = pId === 'loscam_wangnoi'
+            ? (['loscam_red'] as PalletId[])
+            : (partner?.allowedPallets ?? []);
+        const palletsForPartner = allPalletIds.filter(p => partnerAllowedPallets.includes(p));
+
+        palletsForPartner.forEach(palletId => {
             const balance = calculatePartnerBalance(transactions, pId, palletId);
             const key = `${pId}_${palletId}`;
 
