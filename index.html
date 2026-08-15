@@ -115,7 +115,7 @@
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
     import { getAnalytics } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-analytics.js";
-    import { getDatabase, ref, onValue, set, push, update, get, child } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js";
+    import { getDatabase, ref, onValue, set, push, update, get, child, runTransaction } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js";
 
     const firebaseConfig = {
       apiKey: "AIzaSyApl6zoaw61cStIphgZOt_cqDmFrA5FfEs",
@@ -141,7 +141,7 @@
       app,
       analytics,
       database: () => database,
-      utils: { ref, onValue, set, push, update, get, child }
+      utils: { ref, onValue, set, push, update, get, child, runTransaction }
     };
   </script>
   <script type="module" src="/index.tsx"></script>

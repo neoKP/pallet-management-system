@@ -220,6 +220,10 @@ export function useMovementLogic(selectedBranch: BranchId, transactions: Transac
             if (selectedBranch === 'sai3' && AUTOMATION_RULES.sai3.partnersWithAutoFlow.includes(target)) {
                 status = 'COMPLETED';
             }
+            // Hub NW Auto Confirm (HI-Q) — เปิดให้ศูนย์ฯ นครสวรรค์ทำได้เหมือนสาย 3
+            if (selectedBranch === 'hub_nw' && AUTOMATION_RULES.hub_nw.partnersWithAutoFlow?.includes(target)) {
+                status = 'COMPLETED';
+            }
             // All Branches Auto Confirm (Sino)
             if (AUTOMATION_RULES.allBranches?.partnersWithAutoFlow?.includes(target)) {
                 status = 'COMPLETED';
@@ -443,9 +447,12 @@ export function useMovementLogic(selectedBranch: BranchId, transactions: Transac
         const running = (existingDocNos.length + 1).toString().padStart(3, '0');
         const docNo = `${prefix}-${datePart}-${running}`;
 
-        // Auto-status for Sai 3 partners
+        // Auto-status: ใช้กติกาเดียวกับฟอร์มปกติ (สาย 3 และศูนย์ฯ นครสวรรค์)
         let status: 'PENDING' | 'COMPLETED' = 'PENDING';
         if (selectedBranch === 'sai3' && AUTOMATION_RULES.sai3.partnersWithAutoFlow.includes(partnerId)) {
+            status = 'COMPLETED';
+        }
+        if (selectedBranch === 'hub_nw' && AUTOMATION_RULES.hub_nw.partnersWithAutoFlow?.includes(partnerId)) {
             status = 'COMPLETED';
         }
 
@@ -491,14 +498,36 @@ export function useMovementLogic(selectedBranch: BranchId, transactions: Transac
             cancelButtonColor: '#3085d6',
             confirmButtonText: 'ลบข้อมูล',
             cancelButtonText: 'ยกเลิก'
-        }).then((result: any) => {
-            if (result.isConfirmed) {
-                txGroup.forEach(tx => deleteTransaction(tx.id));
+        }).then(async (result: any) => {
+            if (!result.isConfirmed) return;
+            if (isProcessing) return;
+
+            try {
+                setIsProcessing(true);
+
+                // เรียกครั้งเดียวด้วย id แถวแรกพอ เพราะ createCancelMutator จะหาแถวอื่น
+                // ที่มี docNo เดียวกันจากข้อมูลสดแล้วยกเลิกให้ทั้งเอกสาร
+                // (เดิมวน forEach ทำให้ยิง transaction ซ้ำเท่าจำนวนแถวโดยไม่จำเป็น)
+                await deleteTransaction(txGroup[0].id);
+
                 Swal.fire(
                     'ลบสำเร็จ!',
                     'รายการถูกยกเลิกและคืนยอดสต๊อกแล้ว',
                     'success'
                 );
+            } catch (error: any) {
+                // ต้องรอผลจริงก่อนแจ้งสำเร็จ มิฉะนั้นผู้ใช้จะเข้าใจว่ายกเลิกแล้ว
+                // ทั้งที่ระบบปฏิเสธ (เช่น เอกสารรุ่นเก่า หรือยกเลิกแล้วสต็อกจะติดลบ)
+                console.error('Delete failed:', error);
+                Swal.fire({
+                    icon: 'error',
+                    title: 'ยกเลิกไม่สำเร็จ',
+                    text: error?.message || 'ไม่สามารถยกเลิกเอกสารได้ กรุณาลองใหม่อีกครั้ง',
+                    confirmButtonText: 'รับทราบ',
+                    confirmButtonColor: '#d33',
+                });
+            } finally {
+                setIsProcessing(false);
             }
         });
     };

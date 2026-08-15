@@ -1,5 +1,6 @@
 import { Stock, Transaction, PalletType, Branch, Partner } from '../types';
 import { INITIAL_STOCK, INITIAL_TRANSACTIONS, PALLET_TYPES, BRANCHES, EXTERNAL_PARTNERS } from '../constants';
+import { StockMutator, RootSnapshot, normalizeTransactions } from '../utils/stockMutation';
 
 // Declare global firebase instance interface
 declare global {
@@ -14,6 +15,11 @@ declare global {
                 update: (ref: any, updates: any) => Promise<void>;
                 get: (ref: any) => Promise<any>;
                 child: (ref: any, path: string) => any;
+                runTransaction: (
+                    ref: any,
+                    updateFn: (current: any) => any,
+                    options?: { applyLocally?: boolean }
+                ) => Promise<{ committed: boolean; snapshot: any }>;
             };
         };
     }
@@ -357,6 +363,77 @@ export const addTransaction = async (transaction: Transaction) => {
     } catch (error) {
         console.error("Error adding transaction:", error);
         throw error;
+    }
+};
+
+/**
+ * บันทึกการเปลี่ยนแปลงสต็อกแบบ atomic ด้วย Firebase runTransaction
+ *
+ * ทำไมต้องใช้ runTransaction แทน update():
+ *   update() = อ่านค่ามาก่อน → คำนวณที่เครื่องผู้ใช้ → เขียนทับ
+ *   ถ้ามี 2 คนทำพร้อมกัน คนที่เขียนทีหลังจะลบผลของคนแรกทิ้ง (lost update)
+ *   runTransaction จะส่ง "ข้อมูลสดขณะนั้น" เข้ามาให้คำนวณ และถ้ามีคนแก้แทรก
+ *   Firebase จะเรียก mutator ซ้ำด้วยค่าใหม่จนกว่าจะเขียนสำเร็จ
+ *
+ * mutator ต้องเป็น pure function เพราะถูกเรียกซ้ำได้หลายรอบ
+ * ห้ามให้มี side effect เช่นส่ง Telegram อยู่ข้างใน
+ *
+ * @throws StockValidationError เมื่อสต็อกไม่พอ (ยกเลิกทั้งชุด ไม่เขียนอะไรเลย)
+ */
+export const commitStockMutation = async (mutator: StockMutator): Promise<void> => {
+    const db = getDb();
+    const { ref, runTransaction } = getUtils();
+
+    // เก็บ error เชิงธุรกิจไว้โยนหลัง transaction จบ
+    // เพราะ error ที่โยนใน updateFn จะถูก Firebase กลืนเป็น abort เฉย ๆ
+    let businessError: Error | null = null;
+
+    // หมายเหตุสำคัญ (อ่านก่อนแก้ rules):
+    // transaction ทำที่ root เพราะ stock กับ transactions อยู่คนละ node ที่ root
+    // และต้องแก้พร้อมกันเป็นก้อนเดียว
+    //
+    // ผลข้างเคียง: runTransaction ต้องคืนค่าทั้งก้อนของ node ที่ทำ ทำให้ทุกการบันทึก
+    // นับว่า "เขียนทับ" ทั้ง root ดังนั้น rules จึงต้องเปิดสิทธิ์เขียนที่ root
+    // ซึ่งใน Realtime Database สิทธิ์ที่ให้ไว้ชั้นบนจะไหลลงลูกทั้งหมดและลูกปฏิเสธไม่ได้
+    // → แยกสิทธิ์ "เฉพาะแอดมิน" รายส่วนไม่ได้ตราบใดที่ยังทำ transaction ที่ root
+    //
+    // ทางแก้ระยะยาว: ย้าย stock + transactions ไปอยู่ใต้ node เดียวกัน (เช่น /inventory)
+    // แล้วเปลี่ยนมาทำ transaction ที่ node นั้น เป็นงาน migration ที่ต้องวางแผนแยก
+    // ดูรายละเอียดใน docs/FIREBASE_RULES_GUIDE.md
+    const result = await runTransaction(ref(db, '/'), (current: RootSnapshot | null) => {
+        businessError = null;
+
+        // Firebase เรียกครั้งแรกด้วย null เมื่อเครื่องยังไม่มีข้อมูล root ใน cache
+        // ห้ามตรวจสต็อกกับ snapshot ว่างนี้ เพราะจะเห็นยอดคงเหลือเป็น 0 ทั้งหมด
+        // แล้ว abort ทันที ทำให้ผู้ใช้เจอ "สต็อกไม่เพียงพอ" ทั้งที่ของมีจริง
+        //
+        // การคืน null กลับไปคือการบอก Firebase ว่า "ยังไม่พร้อมตัดสินใจ"
+        // Firebase จะไปดึงค่าจริงจากเซิร์ฟเวอร์แล้วเรียกฟังก์ชันนี้ใหม่อีกครั้ง
+        if (current === null) return null;
+
+        const currentStock = (current?.stock || {}) as Stock;
+        const currentTxs = normalizeTransactions(current?.transactions);
+
+        let next;
+        try {
+            next = mutator(currentStock, currentTxs);
+        } catch (err: any) {
+            businessError = err;
+            return undefined; // undefined = ยกเลิก transaction ไม่เขียนอะไรเลย
+        }
+
+        // ต้องคืนทั้งก้อน ถ้าตัด field ไหนออก Firebase จะถือว่าสั่งลบ field นั้น
+        return {
+            ...(current || {}),
+            stock: JSON.parse(JSON.stringify(next.stock)),
+            transactions: JSON.parse(JSON.stringify(next.txs.filter(Boolean))),
+        };
+    }, { applyLocally: false });
+
+    if (businessError) throw businessError;
+
+    if (!result.committed) {
+        throw new Error('ไม่สามารถบันทึกข้อมูลได้ อาจมีผู้ใช้อื่นแก้ไขพร้อมกัน กรุณาลองใหม่อีกครั้ง');
     }
 };
 

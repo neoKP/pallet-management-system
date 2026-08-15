@@ -83,14 +83,27 @@ const HistoryTab: React.FC<HistoryTabProps> = ({ transactions, selectedBranch, c
                 cancelButtonColor: '#3085d6',
                 confirmButtonText: 'ยืนยันยกเลิกเอกสาร',
                 cancelButtonText: 'ไม่ยกเลิก'
-            }).then((result: any) => {
-                if (result.isConfirmed) {
-                    deleteTransaction(txId);
+            }).then(async (result: any) => {
+                if (!result.isConfirmed) return;
+
+                try {
+                    // ต้องรอผลจริงก่อนแจ้งสำเร็จ เพราะการยกเลิกอาจถูกปฏิเสธได้
+                    // (เอกสารซ่อมรุ่นเก่า หรือยกเลิกแล้วสต็อกจะติดลบ)
+                    await deleteTransaction(txId);
                     Swal.fire(
                         'ยกเลิกสำเร็จ!',
                         'เอกสารและรายการพาเลททั้งหมดถูกยกเลิกแล้ว',
                         'success'
                     );
+                } catch (error: any) {
+                    console.error('Cancel document failed:', error);
+                    Swal.fire({
+                        icon: 'error',
+                        title: 'ยกเลิกไม่สำเร็จ',
+                        text: error?.message || 'ไม่สามารถยกเลิกเอกสารได้ กรุณาลองใหม่อีกครั้ง',
+                        confirmButtonText: 'รับทราบ',
+                        confirmButtonColor: '#d33',
+                    });
                 }
             });
         }

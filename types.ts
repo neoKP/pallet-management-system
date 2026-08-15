@@ -120,6 +120,17 @@ export interface Transaction {
   previousQty?: number;     // For audit log in adjustments
   adjustedBy?: string;     // User who performed the adjustment
   isInitial?: boolean;      // Mark as initial balance setup
+
+  /**
+   * รายละเอียดการเคลื่อนไหวสต็อกของงานซ่อมบำรุง (เก็บเพื่อให้ยกเลิกเอกสารแล้วย้อนได้ครบ)
+   *
+   * เอกสาร MAINTENANCE หนึ่งใบกระทบสต็อกหลายช่องพร้อมกัน (หักของเข้าซ่อม
+   * บวกของที่ซ่อมเสร็จ ย้ายของเสียเข้าคลังซาก) แต่ Transaction มีช่อง
+   * palletId/qty ได้ชุดเดียว จึงต้องเก็บส่วนที่เหลือไว้ที่นี่
+   * ถ้าไม่มีข้อมูลนี้ การยกเลิกจะย้อนได้ไม่ครบและทำให้สต็อกเพี้ยน
+   */
+  maintenanceItems?: { palletId: PalletId; qty: number }[];  // ของที่นำเข้าซ่อม (หักจากสาขา)
+  scrapAllocations?: { palletId: PalletId; qty: number }[];  // ของเสียที่ย้ายเข้าคลังซาก
 }
 
 /**

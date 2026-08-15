@@ -46,7 +46,8 @@ export const QuickLoopRecord: React.FC<QuickLoopRecordProps> = ({ selectedBranch
     // Target partners for branch-specific loop
     const loopPartners = useMemo(() => {
         if (selectedBranch === 'hub_nw') {
-            const ids = ['sino', 'loscam_wangnoi', 'neo_corp'];
+            // เพิ่ม hiq_th: เปิดให้ศูนย์ฯ นครสวรรค์ทำรับเข้า-จ่ายออก HI-Q ได้เหมือนสาย 3
+            const ids = ['sino', 'loscam_wangnoi', 'neo_corp', 'hiq_th'];
             return EXTERNAL_PARTNERS.filter(p => ids.includes(p.id));
         }
         // All branches can receive from Neo Corp & Sino (User request 03/02/2026)
@@ -60,11 +61,15 @@ export const QuickLoopRecord: React.FC<QuickLoopRecordProps> = ({ selectedBranch
     };
 
     const totalActiveDebt = useMemo(() => {
+        // นับจากพาเลททุกชนิดที่คู่ค้าแต่ละรายรองรับ (allowedPallets)
+        // เดิมระบุไว้เฉพาะ Loscam 3 สี ทำให้คู่ค้าที่ใช้พาเลทชนิดอื่น เช่น HI-Q
+        // ไม่ถูกนับ ป้ายแจ้งเตือนจึงไม่ขึ้นแม้มียอดค้างจริง
         return loopPartners.reduce((acc, p) => {
-            const red = Math.abs(getLiability(p.id, 'loscam_red'));
-            const blue = Math.abs(getLiability(p.id, 'loscam_blue'));
-            const yellow = Math.abs(getLiability(p.id, 'loscam_yellow'));
-            return acc + red + blue + yellow;
+            const partnerDebt = (p.allowedPallets || []).reduce(
+                (sum, palletId) => sum + Math.abs(getLiability(p.id, palletId)),
+                0
+            );
+            return acc + partnerDebt;
         }, 0);
     }, [loopPartners, transactions]);
 
