@@ -138,9 +138,19 @@ const MovementForm: React.FC<MovementFormProps> = ({
                                 return false;
                             }
 
-                            // Rule 3: HI-Q logic (User Request 03/02/2026: สาย 3 รับเข้า จ่าย ออก ส่วนสาขา จะโอน กันภายใน)
+                            // Rule 3: HI-Q logic
+                            // เดิมกำหนดสาขาไว้ตรงนี้ (สาย 3 เท่านั้น) ทำให้ต้องแก้ 2 ที่เมื่อเปลี่ยนกติกา
+                            // จึงเปลี่ยนมาอ่านจาก branchRestriction ใน constants ให้เป็นแหล่งความจริงเดียว
+                            // ปัจจุบันอนุญาต: สาย 3 และศูนย์ฯ นครสวรรค์ (hub_nw)
                             if (p.id === 'hiq_th') {
-                                if (selectedBranch !== 'sai3') return false; // External HI-Q only at Sai 3
+                                const allowed = transactionType === 'IN'
+                                    ? p.branchRestriction?.in
+                                    : p.branchRestriction?.out;
+                                const isBranchAllowed = allowed === 'all'
+                                    ? true
+                                    : Array.isArray(allowed) && allowed.includes(selectedBranch);
+                                if (!isBranchAllowed) return false;
+
                                 const hasHiq = items.some(item => item.palletId === 'hiq');
                                 const hasNonHiq = items.some(item => item.palletId !== '' && item.palletId !== 'hiq');
                                 if (hasNonHiq && !hasHiq) return false;

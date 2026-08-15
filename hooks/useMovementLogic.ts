@@ -220,6 +220,10 @@ export function useMovementLogic(selectedBranch: BranchId, transactions: Transac
             if (selectedBranch === 'sai3' && AUTOMATION_RULES.sai3.partnersWithAutoFlow.includes(target)) {
                 status = 'COMPLETED';
             }
+            // Hub NW Auto Confirm (HI-Q) — เปิดให้ศูนย์ฯ นครสวรรค์ทำได้เหมือนสาย 3
+            if (selectedBranch === 'hub_nw' && AUTOMATION_RULES.hub_nw.partnersWithAutoFlow?.includes(target)) {
+                status = 'COMPLETED';
+            }
             // All Branches Auto Confirm (Sino)
             if (AUTOMATION_RULES.allBranches?.partnersWithAutoFlow?.includes(target)) {
                 status = 'COMPLETED';
@@ -443,9 +447,12 @@ export function useMovementLogic(selectedBranch: BranchId, transactions: Transac
         const running = (existingDocNos.length + 1).toString().padStart(3, '0');
         const docNo = `${prefix}-${datePart}-${running}`;
 
-        // Auto-status for Sai 3 partners
+        // Auto-status: ใช้กติกาเดียวกับฟอร์มปกติ (สาย 3 และศูนย์ฯ นครสวรรค์)
         let status: 'PENDING' | 'COMPLETED' = 'PENDING';
         if (selectedBranch === 'sai3' && AUTOMATION_RULES.sai3.partnersWithAutoFlow.includes(partnerId)) {
+            status = 'COMPLETED';
+        }
+        if (selectedBranch === 'hub_nw' && AUTOMATION_RULES.hub_nw.partnersWithAutoFlow?.includes(partnerId)) {
             status = 'COMPLETED';
         }
 

@@ -30,7 +30,8 @@ export const EXTERNAL_PARTNERS: Partner[] = [
   { id: 'loxley', name: 'บ. Loxley', type: 'provider', allowedPallets: ['loscam_red', 'loscam_blue', 'loscam_yellow'], branchRestriction: { in: ['sai3'], out: ['sai3'] } },
   { id: 'kopee', name: 'บ. โคพี่', type: 'provider', allowedPallets: ['loscam_red'], branchRestriction: { in: ['sai3'], out: ['sai3'] } },
   { id: 'loscam_wangnoi', name: 'Loscam วังน้อย', type: 'provider', allowedPallets: ['loscam_red'], rentalFee: 1.4, gracePeriod: 0, mappingName: 'บ. นีโอ คอร์ปอเรท', branchRestriction: { in: 'none', out: ['hub_nw'] } },
-  { id: 'hiq_th', name: 'HI-Q', type: 'provider', allowedPallets: ['hiq'], branchRestriction: { in: ['sai3'], out: ['sai3'] } },
+  // HI-Q: เดิมทำได้เฉพาะสาย 3 ต่อมาเปิดให้ศูนย์ฯ นครสวรรค์ (hub_nw) รับเข้า-จ่ายออกได้ด้วย
+  { id: 'hiq_th', name: 'HI-Q', type: 'provider', allowedPallets: ['hiq'], branchRestriction: { in: ['sai3', 'hub_nw'], out: ['sai3', 'hub_nw'] } },
 ];
 
 export const INITIAL_STOCK: Stock = {
@@ -58,6 +59,8 @@ export const AUTOMATION_RULES = {
     partnersWithAutoFlow: ['sino'], // Sino auto-confirm OUT at all branches
   },
   hub_nw: { // Nakhon Sawan Hub
+    // จ่ายออกให้คู่ค้าเหล่านี้จากนครสวรรค์ ยืนยันอัตโนมัติเหมือนสาย 3
+    partnersWithAutoFlow: ['hiq_th'],
     // Loscam Main (neo_corp/loscam_wangnoi) - NO auto-transaction, manual process only
     sino: {
       provider: 'sino',
