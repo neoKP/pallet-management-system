@@ -3,6 +3,7 @@ import { Trash2, Calendar, FileText, Hash } from 'lucide-react';
 import { Transaction } from '../../types';
 import { PALLET_TYPES } from '../../constants';
 import { useStock } from '../../contexts/StockContext';
+import { summarizeScrapByPallet } from '../../utils/stockMutation';
 // @ts-ignore
 import Swal from 'sweetalert2';
 
@@ -105,7 +106,14 @@ const ScrappedReportTable: React.FC<ScrappedReportTableProps> = ({ transactions 
                             <th className="px-6 py-4 text-xs font-black text-slate-500 uppercase tracking-wider">
                                 <div className="flex items-center gap-1"><FileText size={14} /> เลขที่เอกสาร</div>
                             </th>
-                            <th className="px-6 py-4 text-xs font-black text-slate-500 uppercase tracking-wider">ต้นทาง/ประเภท</th>
+                            <th className="px-6 py-4 text-xs font-black text-slate-500 uppercase tracking-wider">
+                                <div className="flex flex-col gap-0.5">
+                                    <span>ต้นทาง/ประเภท</span>
+                                    <span className="text-[9px] font-medium text-slate-400 normal-case tracking-normal">
+                                        เอกสารเดิมไม่ได้บันทึกชนิดพาเลทไว้ ใบใหม่จะแสดงครบ
+                                    </span>
+                                </div>
+                            </th>
                             <th className="px-6 py-4 text-xs font-black text-slate-500 uppercase tracking-wider text-right">
                                 <div className="flex items-center justify-end gap-1"><Hash size={14} /> จำนวนที่ทิ้ง</div>
                             </th>
@@ -118,6 +126,9 @@ const ScrappedReportTable: React.FC<ScrappedReportTableProps> = ({ transactions 
                                 const scrapQty = getScrapQty(tx.noteExtended || '');
                                 if (scrapQty === 0) return null;
 
+                                // null = เอกสารเก่าที่ไม่ได้บันทึกชนิดพาเลทไว้ (ต่างจากอาเรย์ว่างที่แปลว่าไม่ได้ทิ้งอะไร)
+                                const scrapBreakdown = summarizeScrapByPallet(tx);
+
                                 return (
                                     <tr key={tx.id} className="hover:bg-slate-50/50 transition-colors">
                                         <td className="px-6 py-4">
@@ -129,10 +140,28 @@ const ScrappedReportTable: React.FC<ScrappedReportTableProps> = ({ transactions 
                                             </span>
                                         </td>
                                         <td className="px-6 py-4">
-                                            <div className="flex flex-col">
-                                                <span className="text-sm font-bold text-slate-800">
-                                                    {PALLET_TYPES.find(p => p.id === tx.originalPalletId)?.name || 'ไม่ระบุประเภท'}
-                                                </span>
+                                            <div className="flex flex-col gap-0.5">
+                                                {scrapBreakdown === null ? (
+                                                    // เอกสารที่บันทึกก่อนระบบจะเก็บชนิดพาเลทที่ทิ้ง
+                                                    // แจ้งให้ชัดว่าเป็นข้อจำกัดของข้อมูลเดิม ไม่ใช่ระบบผิดพลาด
+                                                    <span
+                                                        className="text-sm font-medium text-slate-400 italic"
+                                                        title="เอกสารนี้บันทึกไว้ก่อนระบบจะเก็บชนิดพาเลทที่ทิ้ง จึงย้อนดูไม่ได้"
+                                                    >
+                                                        ข้อมูลเดิม (ไม่ได้บันทึกชนิดไว้)
+                                                    </span>
+                                                ) : scrapBreakdown.length === 0 ? (
+                                                    <span className="text-sm font-medium text-slate-400">—</span>
+                                                ) : (
+                                                    scrapBreakdown.map(s => (
+                                                        <span key={s.palletId} className="text-sm font-bold text-slate-800">
+                                                            {PALLET_TYPES.find(p => p.id === s.palletId)?.name || s.palletId}
+                                                            {scrapBreakdown.length > 1 && (
+                                                                <span className="text-slate-500 font-medium"> × {s.qty}</span>
+                                                            )}
+                                                        </span>
+                                                    ))
+                                                )}
                                                 <span className="text-[10px] text-slate-400 font-medium">คลัง: {tx.source}</span>
                                             </div>
                                         </td>

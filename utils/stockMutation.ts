@@ -387,6 +387,26 @@ export const distributeScrap = (
 };
 
 /**
+ * สรุปว่าเอกสารซ่อมบำรุงใบหนึ่งทิ้งพาเลทชนิดใดไปบ้าง สำหรับแสดงในรายงาน
+ *
+ * คืน null เมื่อเป็นเอกสารที่บันทึกก่อนระบบจะเก็บ scrapAllocations
+ * เพื่อให้ผู้เรียกแยกได้ว่า "ไม่มีข้อมูล" (ของเก่า) ต่างจาก "ไม่ได้ทิ้งอะไร" (อาเรย์ว่าง)
+ */
+export const summarizeScrapByPallet = (
+    tx: Pick<Transaction, 'scrapAllocations'>
+): { palletId: PalletId; qty: number }[] | null => {
+    if (!tx.scrapAllocations) return null;
+
+    // รวมยอดชนิดเดียวกันเข้าด้วยกัน กันกรณีมีรายการซ้ำชนิดในใบเดียว
+    const totals = new Map<PalletId, number>();
+    tx.scrapAllocations.forEach(s => {
+        if (s.qty > 0) totals.set(s.palletId, (totals.get(s.palletId) || 0) + s.qty);
+    });
+
+    return Array.from(totals, ([palletId, qty]) => ({ palletId, qty }));
+};
+
+/**
  * งานซ่อมบำรุง: หักพาเลทที่นำเข้าซ่อมออกจากสาขา บวกพาเลทที่ซ่อมเสร็จกลับเข้าสาขา
  * และย้ายพาเลทที่เสียใช้ไม่ได้ไปเก็บที่คลังซาก (scrap_stock)
  */

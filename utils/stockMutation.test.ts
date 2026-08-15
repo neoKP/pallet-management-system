@@ -13,6 +13,7 @@ import {
     createDeltaMutator,
     createMaintenanceMutator,
     distributeScrap,
+    summarizeScrapByPallet,
     StockValidationError,
     StockMutator,
 } from './stockMutation';
@@ -452,6 +453,49 @@ describe('createMaintenanceMutator', () => {
         db.run(build(1));                                  // เหลือ 2
         expect(() => db.run(build(2))).toThrow(StockValidationError);
         expect(db.stock.maintenance_stock.loscam_red).toBe(2); // ไม่ติดลบ
+    });
+});
+
+describe('summarizeScrapByPallet', () => {
+    it('คืน null สำหรับเอกสารเก่าที่ไม่มีข้อมูล (ต่างจากไม่ได้ทิ้งอะไร)', () => {
+        expect(summarizeScrapByPallet({})).toBeNull();
+    });
+
+    it('คืนอาเรย์ว่างเมื่อบันทึกไว้ว่าไม่ได้ทิ้งอะไร', () => {
+        expect(summarizeScrapByPallet({ scrapAllocations: [] })).toEqual([]);
+    });
+
+    it('สรุปชนิดและจำนวนที่ทิ้งได้ถูกต้อง', () => {
+        const result = summarizeScrapByPallet({
+            scrapAllocations: [
+                { palletId: 'loscam_red' as PalletId, qty: 4 },
+                { palletId: 'general' as PalletId, qty: 2 },
+            ],
+        });
+        expect(result).toEqual([
+            { palletId: 'loscam_red', qty: 4 },
+            { palletId: 'general', qty: 2 },
+        ]);
+    });
+
+    it('รวมยอดชนิดเดียวกันที่ซ้ำในใบเดียว', () => {
+        const result = summarizeScrapByPallet({
+            scrapAllocations: [
+                { palletId: 'loscam_red' as PalletId, qty: 3 },
+                { palletId: 'loscam_red' as PalletId, qty: 2 },
+            ],
+        });
+        expect(result).toEqual([{ palletId: 'loscam_red', qty: 5 }]);
+    });
+
+    it('ตัดรายการที่จำนวนเป็น 0 ออก', () => {
+        const result = summarizeScrapByPallet({
+            scrapAllocations: [
+                { palletId: 'loscam_red' as PalletId, qty: 0 },
+                { palletId: 'general' as PalletId, qty: 1 },
+            ],
+        });
+        expect(result).toEqual([{ palletId: 'general', qty: 1 }]);
     });
 });
 
