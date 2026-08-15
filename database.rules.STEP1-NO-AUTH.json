@@ -1,0 +1,59 @@
+{
+  "rules": {
+    ".read": true,
+
+    ".write": true,
+
+    "stock": {
+      ".write": true,
+      "$branchId": {
+        "$palletId": {
+          ".validate": "newData.isNumber() && newData.val() >= 0"
+        }
+      }
+    },
+
+    "transactions": {
+      ".write": true,
+      ".indexOn": ["docNo", "date", "status"],
+      "$txKey": {
+        "id": { ".validate": "newData.isNumber()" },
+        "qty": { ".validate": "newData.isNumber() && newData.val() >= 0" },
+        "docNo": { ".validate": "newData.isString() && newData.val().length <= 40" },
+        "status": { ".validate": "newData.val() === 'PENDING' || newData.val() === 'COMPLETED' || newData.val() === 'CANCELLED'" },
+        "type": { ".validate": "newData.val() === 'IN' || newData.val() === 'OUT' || newData.val() === 'MAINTENANCE' || newData.val() === 'ADJUST' || newData.val() === 'SCRAP_SALE' || newData.val() === 'SCRAP_DISCARD'" },
+        "source": { ".validate": "newData.isString() && newData.val().length <= 40" },
+        "dest": { ".validate": "newData.isString() && newData.val().length <= 40" },
+        "note": { ".validate": "newData.isString() && newData.val().length <= 500" },
+        "driverName": { ".validate": "newData.isString() && newData.val().length <= 100" },
+        "carRegistration": { ".validate": "newData.isString() && newData.val().length <= 20" },
+        "transportCompany": { ".validate": "newData.isString() && newData.val().length <= 150" },
+        "referenceDocNo": { ".validate": "newData.isString() && newData.val().length <= 50" },
+        "adjustedBy": { ".validate": "newData.isString() && newData.val().length <= 100" }
+      }
+    },
+
+    "palletRequests": {
+      ".write": true,
+      ".indexOn": ["requestNo", "status", "branchId"],
+      "$reqKey": {
+        "requestNo": { ".validate": "newData.isString() && newData.val().length <= 40" },
+        "status": { ".validate": "newData.val() === 'PENDING' || newData.val() === 'APPROVED' || newData.val() === 'SHIPPED' || newData.val() === 'REJECTED'" },
+        "priority": { ".validate": "newData.val() === 'NORMAL' || newData.val() === 'URGENT'" },
+        "purpose": { ".validate": "newData.isString() && newData.val().length <= 300" },
+        "note": { ".validate": "newData.isString() && newData.val().length <= 500" }
+      }
+    },
+
+    "config": {
+      ".write": true,
+      "telegramChatId": { ".validate": "newData.isString() && newData.val().length <= 40" }
+    },
+
+    "thresholds": { ".write": true },
+
+    "branches":  { ".write": true },
+    "pallets":   { ".write": true },
+    "partners":  { ".write": true }
+  }
+}

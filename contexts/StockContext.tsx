@@ -4,6 +4,14 @@ import { INITIAL_STOCK, INITIAL_TRANSACTIONS, BRANCHES, EXTERNAL_PARTNERS, PALLE
 import * as firebaseService from '../services/firebase';
 import * as telegramService from '../services/telegramService';
 import { calculatePartnerBalance } from '../utils/businessLogic';
+import {
+    createMovementMutator,
+    createConfirmReceiveMutator,
+    createCancelMutator,
+    createSetStockMutator,
+    createTxOnlyMutator,
+    createMaintenanceMutator,
+} from '../utils/stockMutation';
 
 interface StockContextType {
     stock: Stock;
@@ -154,19 +162,8 @@ export const StockProvider: React.FC<StockProviderProps> = ({ children }) => {
             driverName: txData.driverName, transportCompany: txData.transportCompany, referenceDocNo: txData.referenceDocNo,
         } as Transaction;
 
-        const nextStock = { ...stock };
-        if (nextStock[newTx.source as BranchId]) {
-            const s = { ...nextStock[newTx.source as BranchId] } as any;
-            s[newTx.palletId] -= newTx.qty;
-            nextStock[newTx.source as BranchId] = s;
-        }
-        if (status === 'COMPLETED' && nextStock[newTx.dest as BranchId]) {
-            const d = { ...nextStock[newTx.dest as BranchId] } as any;
-            d[newTx.palletId] += newTx.qty;
-            nextStock[newTx.dest as BranchId] = d;
-        }
-        await firebaseService.addMovementBatch([newTx], nextStock);
-    }, [stock, generateDocNo]);
+        await firebaseService.commitStockMutation(createMovementMutator([newTx]));
+    }, [generateDocNo]);
 
     const addMovementBatch = useCallback(async (data: any) => {
         const now = new Date();
@@ -183,32 +180,9 @@ export const StockProvider: React.FC<StockProviderProps> = ({ children }) => {
             transportCompany: data.transportCompany, referenceDocNo: data.referenceDocNo, note: data.note
         } as Transaction));
 
-        const nextStock = { ...stock };
-        // Validation: ป้องกัน stock ติดลบ (เฉพาะ source ที่เป็น branch)
-        const isBranchSource = BRANCHES.some((b: Branch) => b.id === data.source);
-        if (isBranchSource && data.type !== 'ADJUST') {
-            for (const tx of batchTxs) {
-                const currentQty = (nextStock[tx.source as BranchId] as any)?.[tx.palletId] || 0;
-                if (currentQty < tx.qty) {
-                    const palletName = PALLET_TYPES.find((p: PalletType) => p.id === tx.palletId)?.name || tx.palletId;
-                    const branchName = BRANCHES.find((b: Branch) => b.id === tx.source)?.name || tx.source;
-                    throw new Error(`สต็อกไม่เพียงพอ: ${branchName} มี ${palletName} เหลือ ${currentQty} แต่ต้องการจ่าย ${tx.qty}`);
-                }
-            }
-        }
-        batchTxs.forEach((tx: any) => {
-            if (nextStock[tx.source as BranchId]) {
-                const s = { ...nextStock[tx.source as BranchId] } as any;
-                s[tx.palletId] -= tx.qty;
-                nextStock[tx.source as BranchId] = s;
-            }
-            if (status === 'COMPLETED' && nextStock[tx.dest as BranchId]) {
-                const d = { ...nextStock[tx.dest as BranchId] } as any;
-                d[tx.palletId] += tx.qty;
-                nextStock[tx.dest as BranchId] = d;
-            }
-        });
-        await firebaseService.addMovementBatch(batchTxs, nextStock);
+        // ใช้ runTransaction: การตรวจสต็อกและการหักยอดเกิดขึ้นบน "ข้อมูลสด" ภายใน
+        // transaction เดียวกัน จึงกันกรณีสองสาขาตัดสต็อกก้อนเดียวกันพร้อมกันได้
+        await firebaseService.commitStockMutation(createMovementMutator(batchTxs));
 
         if (config.telegramChatId) {
             try {
@@ -236,88 +210,21 @@ export const StockProvider: React.FC<StockProviderProps> = ({ children }) => {
     }, [stock, generateDocNo, config.telegramChatId]);
 
     const confirmTransactionsBatch = useCallback(async (results: Transaction[], originalTxs?: Transaction[]) => {
-        const nextStock = { ...stock };
-        const finalTxs: Transaction[] = [];
-
-        // Step 1: คืน stock source ตามยอดเดิมที่หักไปตอน PENDING
-        if (originalTxs && originalTxs.length > 0) {
-            originalTxs.forEach(origTx => {
-                if (nextStock[origTx.source as BranchId]) {
-                    const s = { ...nextStock[origTx.source as BranchId] } as any;
-                    s[origTx.palletId] += origTx.qty;
-                    nextStock[origTx.source as BranchId] = s;
-                }
-            });
-        }
-
-        results.forEach(item => {
-            const utx = { ...item, status: 'COMPLETED' as const, receivedAt: new Date().toISOString() } as Transaction;
-
-            // บันทึก originalPalletId/originalQty เมื่อมีการเปลี่ยนแปลงจากยอดเดิม
-            if (originalTxs) {
-                const origTx = originalTxs.find(o => o.id === item.id);
-                if (origTx && (origTx.palletId !== item.palletId || origTx.qty !== item.qty)) {
-                    utx.originalPalletId = origTx.palletId;
-                    utx.originalQty = origTx.qty;
-                }
-            }
-
-            finalTxs.push(utx);
-
-            // Step 2: หัก source ตามยอดรับจริง (เฉพาะเมื่อมี originalTxs = มีการ adjust)
-            if (originalTxs && nextStock[utx.source as BranchId]) {
-                const s = { ...nextStock[utx.source as BranchId] } as any;
-                s[utx.palletId] -= utx.qty;
-                nextStock[utx.source as BranchId] = s;
-            }
-
-            // Step 3: เพิ่ม dest ตามยอดรับจริง
-            if (nextStock[utx.dest as BranchId]) {
-                const d = { ...nextStock[utx.dest as BranchId] } as any;
-                d[utx.palletId] += utx.qty;
-                nextStock[utx.dest as BranchId] = d;
-            }
-        });
-        await firebaseService.addMovementBatch(finalTxs, nextStock);
-    }, [stock]);
+        await firebaseService.commitStockMutation(
+            createConfirmReceiveMutator(results, originalTxs)
+        );
+    }, []);
 
     const confirmTransaction = useCallback(async (txId: number) => {
         const tx = transactions.find(t => t.id === txId);
         if (!tx || tx.status === 'COMPLETED') return;
-        const utx = { ...tx, status: 'COMPLETED' as const, receivedAt: new Date().toISOString() };
-        const nextStock = { ...stock };
-        if (nextStock[utx.dest as BranchId]) {
-            const d = { ...nextStock[utx.dest as BranchId] } as any;
-            d[utx.palletId] += utx.qty;
-            nextStock[utx.dest as BranchId] = d;
-        }
-        await firebaseService.addMovementBatch([utx], nextStock);
-    }, [stock, transactions]);
+        await firebaseService.commitStockMutation(createConfirmReceiveMutator([tx]));
+    }, [transactions]);
 
     const deleteTransaction = useCallback(async (txId: number) => {
-        const tx = transactions.find(t => t.id === txId);
-        if (!tx) return;
-        const docNo = tx.docNo;
-        const rowsToCancel = docNo
-            ? transactions.filter(t => t.docNo === docNo && t.status !== 'CANCELLED')
-            : [tx];
-        if (rowsToCancel.length === 0) return;
-        const cancelledRows = rowsToCancel.map(t => ({ ...t, status: 'CANCELLED' as const }));
-        const nextStock = { ...stock };
-        rowsToCancel.forEach(t => {
-            if (nextStock[t.source as BranchId]) {
-                const s = { ...nextStock[t.source as BranchId] } as any;
-                s[t.palletId] = (s[t.palletId] || 0) + t.qty;
-                nextStock[t.source as BranchId] = s;
-            }
-            if (t.status === 'COMPLETED' && nextStock[t.dest as BranchId]) {
-                const d = { ...nextStock[t.dest as BranchId] } as any;
-                d[t.palletId] = (d[t.palletId] || 0) - t.qty;
-                nextStock[t.dest as BranchId] = d;
-            }
-        });
-        await firebaseService.addMovementBatch(cancelledRows, nextStock);
-    }, [stock, transactions]);
+        // ค้นหาแถวที่จะยกเลิกภายใน transaction (จากข้อมูลสด) เพื่อกันการยกเลิกซ้ำ
+        await firebaseService.commitStockMutation(createCancelMutator(txId));
+    }, []);
 
     const processBatchMaintenance = useCallback(async (data: {
         items: { palletId: PalletId; qty: number }[];
@@ -338,35 +245,14 @@ export const StockProvider: React.FC<StockProviderProps> = ({ children }) => {
             scrapRevenue: data.scrapRevenue
         } as Transaction;
 
-        const nextStock = { ...stock };
-        if (nextStock[data.branchId as BranchId]) {
-            const s = { ...nextStock[data.branchId as BranchId] } as Record<PalletId, number>;
-            data.items.forEach((i: { palletId: PalletId; qty: number }) => {
-                if (s[i.palletId]) s[i.palletId] -= i.qty;
-                else s[i.palletId] = -i.qty;
-            });
-            if (s[newTx.palletId as PalletId]) s[newTx.palletId as PalletId] += data.fixedQty;
-            else s[newTx.palletId as PalletId] = data.fixedQty;
-            nextStock[data.branchId as BranchId] = s;
-        }
-
-        // Move scrapped pallets to scrap_stock (distribute proportionally among batch item types)
-        if (data.scrappedQty > 0) {
-            const scrap = { ...nextStock['scrap_stock'] } as Record<PalletId, number>;
-            const totalBatchQty = data.items.reduce((sum, i) => sum + i.qty, 0);
-            let remaining = data.scrappedQty;
-            data.items.forEach((item, idx) => {
-                const isLast = idx === data.items.length - 1;
-                const portion = isLast ? remaining : Math.round((item.qty / totalBatchQty) * data.scrappedQty);
-                if (portion > 0) {
-                    scrap[item.palletId] = (scrap[item.palletId] || 0) + portion;
-                    remaining -= portion;
-                }
-            });
-            nextStock['scrap_stock'] = scrap;
-        }
-
-        await firebaseService.addMovementBatch([newTx], nextStock);
+        await firebaseService.commitStockMutation(createMaintenanceMutator({
+            branchId: data.branchId,
+            items: data.items,
+            fixedQty: data.fixedQty,
+            targetPalletId: (data.targetPalletId || 'general') as PalletId,
+            scrappedQty: data.scrappedQty,
+            auditTx: newTx,
+        }));
 
         if (config.telegramChatId) {
             try {
@@ -416,13 +302,14 @@ export const StockProvider: React.FC<StockProviderProps> = ({ children }) => {
             palletId: data.palletId, qty: Math.abs(delta), note: data.reason, previousQty: currentQty, adjustedBy: data.userName, isInitial: data.isInitial
         } as Transaction;
 
-        const nextStock = { ...stock };
         if (isBranch) {
-            const s = { ...nextStock[data.targetId as BranchId] } as any;
-            s[data.palletId] = data.newQty;
-            nextStock[data.targetId as BranchId] = s;
+            await firebaseService.commitStockMutation(
+                createSetStockMutator(data.targetId, data.palletId, data.newQty, [adjTx])
+            );
+        } else {
+            // ยอดคู่ค้าคำนวณจากรายการเคลื่อนไหว ไม่มีช่องสต็อกให้ตั้งค่าโดยตรง
+            await firebaseService.commitStockMutation(createTxOnlyMutator([adjTx]));
         }
-        await firebaseService.addMovementBatch([adjTx], nextStock);
     }, [stock, transactions]);
 
     const reconcileStock = useCallback(async (data: {
@@ -435,13 +322,11 @@ export const StockProvider: React.FC<StockProviderProps> = ({ children }) => {
         if (!isBranch) return;
 
         // Reconcile: เปลี่ยน stock จริง (Firebase) ให้ตรงกับยอดคำนวณจาก transactions
-        const nextStock = { ...stock };
-        const s = { ...nextStock[data.targetId as BranchId] } as any;
-        s[data.palletId] = data.calculatedStock;
-        nextStock[data.targetId as BranchId] = s;
-        await firebaseService.addMovementBatch([], nextStock);
+        await firebaseService.commitStockMutation(
+            createSetStockMutator(data.targetId, data.palletId, data.calculatedStock)
+        );
         console.log(`[Reconcile] ${data.targetId}/${data.palletId}: stock → ${data.calculatedStock} (by ${data.userName})`);
-    }, [stock]);
+    }, []);
 
     const processScrapSale = useCallback(async (data: { palletId: PalletId; qty: number; revenue: number; note?: string }) => {
         const now = new Date();
@@ -451,11 +336,7 @@ export const StockProvider: React.FC<StockProviderProps> = ({ children }) => {
             source: 'scrap_stock', dest: 'SOLD', palletId: data.palletId, qty: data.qty,
             note: data.note || 'ขายซาก', scrapRevenue: data.revenue,
         } as Transaction;
-        const nextStock = { ...stock };
-        const scrap = { ...nextStock['scrap_stock'] } as Record<PalletId, number>;
-        scrap[data.palletId] = (scrap[data.palletId] || 0) - data.qty;
-        nextStock['scrap_stock'] = scrap;
-        await firebaseService.addMovementBatch([tx], nextStock);
+        await firebaseService.commitStockMutation(createMovementMutator([tx]));
         if (config.telegramChatId) {
             try {
                 const palletName = PALLET_TYPES.find((p: PalletType) => p.id === data.palletId)?.name || data.palletId;
@@ -473,15 +354,12 @@ export const StockProvider: React.FC<StockProviderProps> = ({ children }) => {
             source: 'scrap_stock', dest: 'DISCARDED', palletId: data.palletId, qty: data.qty,
             note: data.note || 'ทิ้ง/เสีย',
         } as Transaction;
-        const nextStock = { ...stock };
-        const scrap = { ...nextStock['scrap_stock'] } as Record<PalletId, number>;
-        scrap[data.palletId] = (scrap[data.palletId] || 0) - data.qty;
-        nextStock['scrap_stock'] = scrap;
-        await firebaseService.addMovementBatch([tx], nextStock);
-    }, [stock, generateDocNo]);
+        await firebaseService.commitStockMutation(createMovementMutator([tx]));
+    }, [generateDocNo]);
 
     const updateTransaction = useCallback(async (tx: Transaction) => {
-        await firebaseService.addMovementBatch([tx], stock);
+        // แก้ไขข้อมูลเอกสารอย่างเดียว ไม่กระทบยอดสต็อก
+        await firebaseService.commitStockMutation(createTxOnlyMutator([tx]));
 
         if (config.telegramChatId && tx.scrapRevenue) {
             try {
