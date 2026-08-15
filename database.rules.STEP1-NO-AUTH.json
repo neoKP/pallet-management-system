@@ -1,11 +1,9 @@
 {
   "rules": {
     ".read": true,
-
     ".write": true,
 
     "stock": {
-      ".write": true,
       "$branchId": {
         "$palletId": {
           ".validate": "newData.isNumber() && newData.val() >= 0"
@@ -14,7 +12,6 @@
     },
 
     "transactions": {
-      ".write": true,
       ".indexOn": ["docNo", "date", "status"],
       "$txKey": {
         "id": { ".validate": "newData.isNumber()" },
@@ -34,7 +31,6 @@
     },
 
     "palletRequests": {
-      ".write": true,
       ".indexOn": ["requestNo", "status", "branchId"],
       "$reqKey": {
         "requestNo": { ".validate": "newData.isString() && newData.val().length <= 40" },
@@ -46,14 +42,16 @@
     },
 
     "config": {
-      ".write": true,
       "telegramChatId": { ".validate": "newData.isString() && newData.val().length <= 40" }
     },
 
-    "thresholds": { ".write": true },
-
-    "branches":  { ".write": true },
-    "pallets":   { ".write": true },
-    "partners":  { ".write": true }
+    "thresholds": {
+      "$branchId": {
+        "$palletId": {
+          "min": { ".validate": "newData.isNumber() && newData.val() >= 0" },
+          "max": { ".validate": "newData.isNumber() && newData.val() >= 0" }
+        }
+      }
+    }
   }
 }
