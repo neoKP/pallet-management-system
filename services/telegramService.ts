@@ -2,24 +2,16 @@ import { PALLET_TYPES, VEHICLE_TYPES, EXTERNAL_PARTNERS } from '../constants';
 import { Partner } from '../types';
 
 /**
- * Telegram Bot Token อ่านจากไฟล์ .env.local (ไม่ถูก commit ขึ้น git)
+ * ปลายทางที่ใช้ส่งข้อความ Telegram
  *
- * ⚠️ ข้อจำกัดที่ต้องรู้: โค้ดที่รันในเบราว์เซอร์ซ่อนความลับไม่ได้
- * ค่าจาก import.meta.env จะถูกฝังลงไฟล์ JS ตอน build ผู้ใช้เปิด DevTools
- * แล้วอ่านได้อยู่ดี การย้ายมาที่นี่เป็นเพียงการกัน token หลุดเข้า git เท่านั้น
+ * เว็บไม่ถือ bot token เองอีกต่อไป แต่เรียกผ่าน serverless function
+ * ที่ api/telegram/send.ts ซึ่งรันบนเซิร์ฟเวอร์และเป็นผู้ถือ token
  *
- * ทางแก้ที่ปลอดภัยจริงคือให้เซิร์ฟเวอร์กลาง (เช่น Firebase Function) ถือ token
- * แล้วเว็บเรียกผ่านเซิร์ฟเวอร์นั้น ดูแผนใน docs/TELEGRAM_TOKEN_MIGRATION.md
+ * เหตุผล: โค้ดที่รันในเบราว์เซอร์ซ่อนความลับไม่ได้ ค่าใด ๆ ที่ฝังตอน build
+ * ผู้ใช้เปิด DevTools ก็อ่านได้ ถ้า bot token หลุดออกไป คนอื่นจะส่งข้อความ
+ * ในนามบริษัท อ่านข้อความในกลุ่ม หรือลบ webhook ได้ทั้งหมด
  */
-const BOT_TOKEN = import.meta.env.VITE_TELEGRAM_BOT_TOKEN as string | undefined;
-
-/** เตือนครั้งเดียวตอนโหลด ถ้ายังไม่ได้ตั้งค่า token */
-if (!BOT_TOKEN) {
-    console.warn(
-        '[Telegram] ไม่พบ VITE_TELEGRAM_BOT_TOKEN ใน .env.local — ระบบจะไม่ส่งการแจ้งเตือน\n' +
-        'วิธีตั้งค่า: ดู .env.example หรือ docs/TELEGRAM_TOKEN_MIGRATION.md'
-    );
-}
+const TELEGRAM_API_ENDPOINT = '/api/telegram/send';
 
 /**
  * Helper to escape special characters for Telegram MarkdownV2
@@ -38,42 +30,41 @@ export const escapeMarkdown = (text: string) => {
 export const sendMessage = async (chatId: string, text: string) => {
     if (!chatId || !text) return;
 
-    // ไม่ได้ตั้งค่า token → ข้ามการแจ้งเตือนเงียบ ๆ ไม่โยน error
-    // เพราะการแจ้งเตือนล้มเหลวต้องไม่ทำให้การบันทึกพาเลทพังตามไปด้วย
-    if (!BOT_TOKEN) return;
-
-    const url = `https://api.telegram.org/bot${BOT_TOKEN}/sendMessage`;
-
-    try {
-        const response = await fetch(url, {
+    /** ยิงไปที่ serverless function ซึ่งเป็นผู้ถือ token จริง */
+    const post = (payload: { chatId: string; text: string; parseMode: 'MarkdownV2' | 'HTML' }) =>
+        fetch(TELEGRAM_API_ENDPOINT, {
             method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({
-                chat_id: chatId,
-                text: text,
-                parse_mode: 'MarkdownV2',
-            }),
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload),
         });
 
-        const data = await response.json();
+    try {
+        const response = await post({ chatId, text, parseMode: 'MarkdownV2' });
+        const data = await response.json().catch(() => ({ ok: false, error: 'อ่านผลลัพธ์ไม่ได้' }));
+
+        // Vite ธรรมดา (npm run dev / vite preview) ไม่เสิร์ฟ API route จึงได้ 404
+        // แจ้งให้ชัดว่าต้องใช้คำสั่งใด ไม่ปล่อยให้เงียบหายจนเข้าใจผิดว่าระบบพัง
+        if (response.status === 404) {
+            console.warn(
+                '[Telegram] ไม่พบ /api/telegram/send — การแจ้งเตือนจะไม่ทำงานในโหมดนี้\n' +
+                'ถ้าต้องการทดสอบการแจ้งเตือนในเครื่อง ให้ใช้ "npm run dev:vercel" แทน "npm run dev"'
+            );
+            return data;
+        }
+
         if (!data.ok) {
-            console.error('Telegram API Error:', data.description);
+            console.error('Telegram API Error:', data.error);
 
             // MarkdownV2 มีอักขระที่ต้อง escape เยอะ ถ้า escape พลาดจะส่งไม่ผ่าน
             // จึงลองส่งซ้ำแบบถอด escape ออก เพื่อไม่ให้การแจ้งเตือนหายทั้งข้อความ
-            // ใช้ optional chaining กัน description เป็น undefined (เคยทำให้เกิด TypeError)
-            if (data.description?.includes("can't parse")) {
-                await fetch(url, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ chat_id: chatId, text: text.replace(/[\\]/g, ''), parse_mode: 'HTML' })
-                });
+            // ใช้ optional chaining กัน error เป็น undefined (เคยทำให้เกิด TypeError)
+            if (typeof data.error === 'string' && data.error.includes("can't parse")) {
+                await post({ chatId, text: text.replace(/[\\]/g, ''), parseMode: 'HTML' });
             }
         }
         return data;
     } catch (error) {
+        // การแจ้งเตือนล้มเหลวต้องไม่ทำให้การบันทึกพาเลทพังตามไปด้วย
         console.error('Failed to send Telegram message:', error);
     }
 };
