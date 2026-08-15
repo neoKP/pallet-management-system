@@ -5,6 +5,7 @@ import { BRANCHES, PALLET_TYPES, EXTERNAL_PARTNERS } from '../../constants';
 import StatsCard from './StatsCard';
 import { useStock } from '../../contexts/StockContext';
 import { getAgingRentalAnalysis } from '../../services/analyticsService';
+import StockCountReminder from './StockCountReminder';
 
 interface InventoryOverviewTabProps {
   stock: Stock;
@@ -146,6 +147,13 @@ export const InventoryOverviewTab: React.FC<InventoryOverviewTabProps> = ({
 
   return (
     <div className="space-y-6">
+      {/* เตือนว่าช่องไหนไม่ได้นับสต็อกจริงมานาน ยอดในระบบอาจคลาดเคลื่อน */}
+      <StockCountReminder
+        stock={stock}
+        transactions={transactions}
+        selectedBranch={selectedBranch}
+      />
+
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-1">
         <div>
           <h1 className="text-3xl font-black text-slate-900 tracking-tighter">Inventory Overview</h1>
