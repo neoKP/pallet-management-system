@@ -33,7 +33,9 @@ interface StockContextType {
     }) => void;
     confirmTransaction: (txId: number) => void;
     confirmTransactionsBatch: (results: Transaction[], originalTxs?: Transaction[]) => void;
-    deleteTransaction: (txId: number) => void;
+    // คืน Promise เพื่อให้ชั้น UI รอผลและจับ error ได้
+    // (เดิมประกาศเป็น void ทำให้เผลอเรียกโดยไม่ await แล้วแจ้งสำเร็จทั้งที่ล้มเหลว)
+    deleteTransaction: (txId: number) => Promise<void>;
     processBatchMaintenance: (data: {
         items: { palletId: PalletId; qty: number }[];
         fixedQty: number;

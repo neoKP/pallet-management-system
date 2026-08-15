@@ -72,7 +72,7 @@ export function useMaintenanceLogic(
                     <p style="text-align:left"><b>ขั้นตอนถัดไป (สำคัญ):</b></p>
                     <p style="text-align:left">
                         1. สลับสาขาไปที่ <b>คลังซ่อมบำรุง</b><br/>
-                        2. ไปหน้า <b>รับ-จ่ายพาเลท</b> แล้วกด <b>ยืนยันการรับเข้า</b>
+                        2. ไปเมนู <b>Movement</b> (รับ-จ่ายพาเลท) แล้วกด <b>ยืนยันการรับเข้า</b>
                     </p>
                     <p style="text-align:left; color:#d33">
                         ถ้ายังไม่กดยืนยันรับ รายการจะยังไม่ขึ้นใน "รอซ่อม"
