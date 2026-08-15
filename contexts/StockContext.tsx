@@ -11,6 +11,7 @@ import {
     createSetStockMutator,
     createTxOnlyMutator,
     createMaintenanceMutator,
+    distributeScrap,
 } from '../utils/stockMutation';
 
 interface StockContextType {
@@ -238,11 +239,16 @@ export const StockProvider: React.FC<StockProviderProps> = ({ children }) => {
     }) => {
         const now = new Date();
         const docNo = generateDocNo('MAINTENANCE', data.branchId, data.branchId, now.toISOString().split('T')[0]);
+        // บันทึกรายละเอียดการเคลื่อนไหวไว้ในเอกสารด้วย เพราะงานซ่อมกระทบสต็อกหลายช่อง
+        // แต่ Transaction เก็บ palletId/qty ได้ชุดเดียว ถ้าไม่เก็บส่วนนี้ไว้
+        // เวลายกเลิกเอกสารจะย้อนสต็อกไม่ครบ (เคยทำให้คลังซ่อมติดลบและคลังซากเกิน)
         const newTx: Transaction = {
             id: Date.now(), date: now.toISOString(), docNo, type: 'MAINTENANCE', status: 'COMPLETED',
             source: data.branchId, dest: data.branchId, palletId: data.targetPalletId || 'general',
             qty: data.fixedQty, note: data.note, noteExtended: `SCRAP: ${data.scrappedQty}`,
-            scrapRevenue: data.scrapRevenue
+            scrapRevenue: data.scrapRevenue,
+            maintenanceItems: data.items,
+            scrapAllocations: distributeScrap(data.items, data.scrappedQty),
         } as Transaction;
 
         await firebaseService.commitStockMutation(createMaintenanceMutator({

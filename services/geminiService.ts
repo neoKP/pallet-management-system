@@ -9,7 +9,6 @@ export async function getLogisticsAssistantResponse(
   selectedBranch: string,
   branchName: string
 ) {
-  // @ts-ignore
   const apiKey = import.meta.env.VITE_GEMINI_API_KEY;
 
   if (!apiKey) {

@@ -61,12 +61,25 @@ export function useMaintenanceLogic(
                 note: inboundForm.note || 'ส่งซ่อม'
             }) as any);
 
+            // บอกขั้นตอนถัดไปให้ชัด: ของยังอยู่ระหว่างทาง ต้องกดยืนยันรับที่คลังซ่อมก่อน
+            // จึงจะขึ้นในรายการ "รอซ่อม" — ผู้ใช้เคยเข้าใจผิดว่าจบแล้วและงงว่าของหายไปไหน
             Swal.fire({
                 icon: 'success',
-                title: 'สำเร็จ',
-                text: 'ส่งเข้าคลังซ่อมเรียบร้อย',
-                timer: 2000,
-                showConfirmButton: false
+                title: 'ส่งเข้าคลังซ่อมแล้ว',
+                html: `
+                    <p>เอกสารถูกสร้างเรียบร้อย ขณะนี้พาเลทอยู่ในสถานะ <b>ระหว่างทาง</b></p>
+                    <hr/>
+                    <p style="text-align:left"><b>ขั้นตอนถัดไป (สำคัญ):</b></p>
+                    <p style="text-align:left">
+                        1. สลับสาขาไปที่ <b>คลังซ่อมบำรุง</b><br/>
+                        2. ไปหน้า <b>รับ-จ่ายพาเลท</b> แล้วกด <b>ยืนยันการรับเข้า</b>
+                    </p>
+                    <p style="text-align:left; color:#d33">
+                        ถ้ายังไม่กดยืนยันรับ รายการจะยังไม่ขึ้นใน "รอซ่อม"
+                    </p>
+                `,
+                confirmButtonText: 'เข้าใจแล้ว',
+                confirmButtonColor: '#3085d6',
             });
             setInboundForm({ ...inboundForm, qty: '', note: '' });
         } catch (error: any) {

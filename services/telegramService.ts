@@ -1,6 +1,25 @@
-const BOT_TOKEN = '8339371070:AAHw1ri9hn5QAd7DM2RvOnv5ybCabPkrxqM';
 import { PALLET_TYPES, VEHICLE_TYPES, EXTERNAL_PARTNERS } from '../constants';
 import { Partner } from '../types';
+
+/**
+ * Telegram Bot Token อ่านจากไฟล์ .env.local (ไม่ถูก commit ขึ้น git)
+ *
+ * ⚠️ ข้อจำกัดที่ต้องรู้: โค้ดที่รันในเบราว์เซอร์ซ่อนความลับไม่ได้
+ * ค่าจาก import.meta.env จะถูกฝังลงไฟล์ JS ตอน build ผู้ใช้เปิด DevTools
+ * แล้วอ่านได้อยู่ดี การย้ายมาที่นี่เป็นเพียงการกัน token หลุดเข้า git เท่านั้น
+ *
+ * ทางแก้ที่ปลอดภัยจริงคือให้เซิร์ฟเวอร์กลาง (เช่น Firebase Function) ถือ token
+ * แล้วเว็บเรียกผ่านเซิร์ฟเวอร์นั้น ดูแผนใน docs/TELEGRAM_TOKEN_MIGRATION.md
+ */
+const BOT_TOKEN = import.meta.env.VITE_TELEGRAM_BOT_TOKEN as string | undefined;
+
+/** เตือนครั้งเดียวตอนโหลด ถ้ายังไม่ได้ตั้งค่า token */
+if (!BOT_TOKEN) {
+    console.warn(
+        '[Telegram] ไม่พบ VITE_TELEGRAM_BOT_TOKEN ใน .env.local — ระบบจะไม่ส่งการแจ้งเตือน\n' +
+        'วิธีตั้งค่า: ดู .env.example หรือ docs/TELEGRAM_TOKEN_MIGRATION.md'
+    );
+}
 
 /**
  * Helper to escape special characters for Telegram MarkdownV2
@@ -18,6 +37,10 @@ export const escapeMarkdown = (text: string) => {
  */
 export const sendMessage = async (chatId: string, text: string) => {
     if (!chatId || !text) return;
+
+    // ไม่ได้ตั้งค่า token → ข้ามการแจ้งเตือนเงียบ ๆ ไม่โยน error
+    // เพราะการแจ้งเตือนล้มเหลวต้องไม่ทำให้การบันทึกพาเลทพังตามไปด้วย
+    if (!BOT_TOKEN) return;
 
     const url = `https://api.telegram.org/bot${BOT_TOKEN}/sendMessage`;
 
@@ -37,8 +60,11 @@ export const sendMessage = async (chatId: string, text: string) => {
         const data = await response.json();
         if (!data.ok) {
             console.error('Telegram API Error:', data.description);
-            // Fallback to simple text if MarkdownV2 fails due to escaping issues
-            if (data.description.includes('can\'t parse')) {
+
+            // MarkdownV2 มีอักขระที่ต้อง escape เยอะ ถ้า escape พลาดจะส่งไม่ผ่าน
+            // จึงลองส่งซ้ำแบบถอด escape ออก เพื่อไม่ให้การแจ้งเตือนหายทั้งข้อความ
+            // ใช้ optional chaining กัน description เป็น undefined (เคยทำให้เกิด TypeError)
+            if (data.description?.includes("can't parse")) {
                 await fetch(url, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },

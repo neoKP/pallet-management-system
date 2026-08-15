@@ -257,6 +257,94 @@ describe('createCancelMutator', () => {
     it('ปฏิเสธเมื่อไม่พบรายการ', () => {
         expect(() => createCancelMutator(999)(makeStock(), [])).toThrow(StockValidationError);
     });
+
+    it('ย้อนงานซ่อมบำรุงได้ครบทุกช่อง (ของเข้าซ่อม/ซ่อมเสร็จ/เข้าคลังซาก)', () => {
+        // จำลองสภาพหลังบันทึกงานซ่อม: หัก loscam_red 10, ได้ general 6, เข้าคลังซาก 4
+        const stock = makeStock({
+            maintenance_stock: { loscam_red: 10, general: 6 },
+            scrap_stock: { loscam_red: 4, general: 0 },
+        });
+        const maintTx = makeTx({
+            id: 1,
+            type: 'MAINTENANCE',
+            source: 'maintenance_stock',
+            dest: 'maintenance_stock',
+            palletId: 'general' as PalletId,
+            qty: 6,
+            maintenanceItems: [{ palletId: 'loscam_red' as PalletId, qty: 10 }],
+            scrapAllocations: [{ palletId: 'loscam_red' as PalletId, qty: 4 }],
+        });
+
+        const { stock: next } = createCancelMutator(1)(stock, [maintTx]);
+
+        expect(next.maintenance_stock.loscam_red).toBe(20); // คืนของเข้าซ่อม 10
+        expect(next.maintenance_stock.general).toBe(0);      // ถอนของที่ซ่อมเสร็จ 6
+        expect(next.scrap_stock.loscam_red).toBe(0);         // ถอนของออกจากคลังซาก 4
+    });
+
+    it('ปฏิเสธการยกเลิกเมื่อจะทำให้สต็อกติดลบ (ของถูกใช้ไปแล้ว)', () => {
+        // ของในคลังซากถูกขายไปแล้ว เหลือ 0 → ยกเลิกงานซ่อมไม่ได้
+        const stock = makeStock({
+            maintenance_stock: { loscam_red: 0, general: 6 },
+            scrap_stock: { loscam_red: 0, general: 0 },
+        });
+        const maintTx = makeTx({
+            id: 1,
+            type: 'MAINTENANCE',
+            source: 'maintenance_stock',
+            dest: 'maintenance_stock',
+            palletId: 'general' as PalletId,
+            qty: 6,
+            maintenanceItems: [{ palletId: 'loscam_red' as PalletId, qty: 10 }],
+            scrapAllocations: [{ palletId: 'loscam_red' as PalletId, qty: 4 }],
+        });
+
+        expect(() => createCancelMutator(1)(stock, [maintTx])).toThrow(StockValidationError);
+    });
+
+    it('ปฏิเสธการยกเลิกเอกสารซ่อมรุ่นเก่าที่ไม่มีรายละเอียดการเคลื่อนไหว', () => {
+        // เอกสารที่บันทึกไว้ก่อนมี maintenanceItems/scrapAllocations
+        // ย้อนสต็อกให้ครบไม่ได้ จึงต้องปฏิเสธ ไม่ใช่ย้อนครึ่ง ๆ กลาง ๆ จนข้อมูลพัง
+        const legacyTx = makeTx({
+            id: 1,
+            type: 'MAINTENANCE',
+            source: 'maintenance_stock',
+            dest: 'maintenance_stock',
+            palletId: 'general' as PalletId,
+            qty: 6,
+            // ไม่มี maintenanceItems / scrapAllocations
+        });
+        const stock = makeStock({ maintenance_stock: { loscam_red: 10, general: 6 } });
+
+        expect(() => createCancelMutator(1)(stock, [legacyTx])).toThrow(StockValidationError);
+    });
+
+    it('ยกเลิกเอกสารซ่อมที่ไม่มีของเสียได้ ถ้ามี maintenanceItems ครบ', () => {
+        // scrapAllocations ว่างได้ตามปกติ (ซ่อมเสร็จหมด ไม่มีของทิ้ง) ต้องไม่ถูกปฏิเสธ
+        const tx = makeTx({
+            id: 1,
+            type: 'MAINTENANCE',
+            source: 'maintenance_stock',
+            dest: 'maintenance_stock',
+            palletId: 'general' as PalletId,
+            qty: 10,
+            maintenanceItems: [{ palletId: 'loscam_red' as PalletId, qty: 10 }],
+            scrapAllocations: [],
+        });
+        const stock = makeStock({ maintenance_stock: { loscam_red: 0, general: 10 } });
+
+        const { stock: next } = createCancelMutator(1)(stock, [tx]);
+        expect(next.maintenance_stock.loscam_red).toBe(10);
+        expect(next.maintenance_stock.general).toBe(0);
+    });
+
+    it('ปฏิเสธการยกเลิกเอกสารทั่วไปเมื่อปลายทางของหมดแล้ว', () => {
+        // ส่งของไป plk แล้ว plk จ่ายต่อจนหมด → ยกเลิกไม่ได้เพราะจะติดลบ
+        const tx = makeTx({ id: 1, qty: 10, status: 'COMPLETED', dest: 'cm' });
+        const stock = makeStock({ cm: { loscam_red: 0, general: 0 } });
+
+        expect(() => createCancelMutator(1)(stock, [tx])).toThrow(StockValidationError);
+    });
 });
 
 describe('createSetStockMutator', () => {

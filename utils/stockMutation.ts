@@ -263,12 +263,69 @@ export const createCancelMutator = (txId: number): StockMutator => {
             throw new StockValidationError('รายการนี้ถูกยกเลิกไปแล้ว');
         }
 
+        // รวบรวมการเคลื่อนไหวที่ต้องย้อน แยกเป็นรายช่อง (สาขา + ชนิดพาเลท)
+        // เพื่อตรวจก่อนว่าย้อนแล้วช่องไหนจะติดลบบ้าง ก่อนลงมือแก้สต็อกจริง
+        const deltas: { branchId: string; palletId: PalletId; delta: number }[] = [];
+
         rowsToCancel.forEach(t => {
-            applyDelta(stock, t.source, t.palletId, t.qty);
+            if (t.type === 'MAINTENANCE') {
+                // เอกสารที่บันทึกก่อนระบบจะเก็บ maintenanceItems ย้อนสต็อกให้ครบไม่ได้
+                // เพราะไม่รู้ว่าหักพาเลทชนิดใดไปเท่าไร และย้ายเข้าคลังซากเท่าไร
+                // ถ้าปล่อยผ่านจะถอนของที่ซ่อมเสร็จออกอย่างเดียวโดยไม่คืนของเข้าซ่อม → ข้อมูลพัง
+                // จึงปฏิเสธไปเลย ให้ผู้ใช้ใช้การปรับยอด (ADJUST) แทนซึ่งมีร่องรอยชัดเจนกว่า
+                if (!t.maintenanceItems) {
+                    throw new StockValidationError(
+                        `ยกเลิกเอกสาร ${t.docNo || t.id} ไม่ได้: เป็นเอกสารซ่อมบำรุงรุ่นเก่า ` +
+                        `ที่ไม่ได้บันทึกรายละเอียดการเคลื่อนย้ายไว้ จึงคืนยอดสต็อกอัตโนมัติไม่ได้\n\n` +
+                        `กรุณาใช้เมนูปรับยอดสต็อก (Admin Stock Control) แทน`
+                    );
+                }
+
+                // งานซ่อมบำรุงกระทบสต็อกหลายช่องในเอกสารเดียว จึงย้อนตามรายละเอียดที่บันทึกไว้
+                // คืนของที่นำเข้าซ่อม
+                t.maintenanceItems.forEach(i => {
+                    deltas.push({ branchId: t.source, palletId: i.palletId, delta: i.qty });
+                });
+                // ถอนของที่ซ่อมเสร็จออก
+                if (t.qty > 0) {
+                    deltas.push({ branchId: t.source, palletId: t.palletId, delta: -t.qty });
+                }
+                // ถอนของเสียออกจากคลังซาก
+                (t.scrapAllocations || []).forEach(s => {
+                    deltas.push({ branchId: 'scrap_stock', palletId: s.palletId, delta: -s.qty });
+                });
+                return;
+            }
+
+            // เอกสารทั่วไป: คืนต้นทาง และถอนปลายทางถ้าของถึงแล้ว
+            deltas.push({ branchId: t.source, palletId: t.palletId, delta: t.qty });
             if (t.status === 'COMPLETED') {
-                applyDelta(stock, t.dest, t.palletId, -t.qty);
+                deltas.push({ branchId: t.dest, palletId: t.palletId, delta: -t.qty });
             }
         });
+
+        // ตรวจก่อนแก้: การยกเลิกต้องไม่ทำให้ช่องไหนติดลบ
+        // (เช่น ของถูกจ่ายต่อหรือขายซากไปแล้ว จึงถอนคืนไม่ได้)
+        const netByCell = new Map<string, number>();
+        deltas.forEach(d => {
+            if (!isBranch(d.branchId)) return;
+            const key = `${d.branchId}::${d.palletId}`;
+            netByCell.set(key, (netByCell.get(key) || 0) + d.delta);
+        });
+
+        netByCell.forEach((net, key) => {
+            if (net >= 0) return;
+            const [branchId, palletId] = key.split('::');
+            const available = (stock[branchId as BranchId] as Record<PalletId, number> | undefined)?.[palletId as PalletId] || 0;
+            if (available + net < 0) {
+                throw new StockValidationError(
+                    `ยกเลิกไม่ได้: ${getBranchName(branchId)} มี ${getPalletName(palletId as PalletId)} เหลือ ${available} ` +
+                    `แต่การยกเลิกต้องถอนออก ${Math.abs(net)} (ของถูกนำไปใช้ต่อแล้ว)`
+                );
+            }
+        });
+
+        deltas.forEach(d => applyDelta(stock, d.branchId, d.palletId, d.delta));
 
         const cancelled = rowsToCancel.map(t => ({ ...t, status: 'CANCELLED' as const }));
         return { stock, txs: mergeTransactions(currentTxs, cancelled) };
@@ -360,9 +417,12 @@ export const createMaintenanceMutator = (params: {
         params.items.forEach(i => applyDelta(stock, params.branchId, i.palletId, -i.qty));
         applyDelta(stock, params.branchId, params.targetPalletId, params.fixedQty);
 
-        distributeScrap(params.items, params.scrappedQty).forEach(s =>
-            applyDelta(stock, 'scrap_stock', s.palletId, s.qty)
-        );
+        // ใช้ค่าที่บันทึกไว้ในเอกสารเป็นหลัก เพื่อให้สิ่งที่ทำกับสิ่งที่บันทึกตรงกันเสมอ
+        // (ถ้าคำนวณใหม่ตรงนี้ แล้วสูตรกระจายเปลี่ยนในอนาคต การยกเลิกจะย้อนไม่ตรง)
+        const scrapAllocations = params.auditTx.scrapAllocations
+            ?? distributeScrap(params.items, params.scrappedQty);
+
+        scrapAllocations.forEach(s => applyDelta(stock, 'scrap_stock', s.palletId, s.qty));
 
         return { stock, txs: mergeTransactions(currentTxs, [params.auditTx]) };
     };
