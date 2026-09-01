@@ -56,11 +56,13 @@ const ScrappedReportTable: React.FC<ScrappedReportTableProps> = ({ transactions 
                 timer: 1500,
                 showConfirmButton: false
             });
-        } catch (error) {
+        } catch (error: any) {
+            // แสดงสาเหตุจริง เพื่อให้ผู้ใช้รู้ว่าติดอะไร (เช่น สต็อกไม่พอ)
+            console.error('Save scrap revenue failed:', error);
             Swal.fire({
                 icon: 'error',
-                title: 'ผิดพลาด',
-                text: 'ไม่สามารถบันทึกข้อมูลได้'
+                title: 'บันทึกไม่สำเร็จ',
+                text: error?.message || 'ไม่สามารถบันทึกข้อมูลได้'
             });
         }
     };

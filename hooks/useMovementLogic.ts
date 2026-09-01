@@ -398,10 +398,12 @@ export function useMovementLogic(selectedBranch: BranchId, transactions: Transac
             setIsReceiveModalOpen(false);
         } catch (error: any) {
             console.error("Confirm receive failed:", error);
+            // แสดงสาเหตุจริงจากระบบ เดิมแสดงข้อความกลาง ๆ ทำให้ผู้ใช้หน้างาน
+            // ไม่รู้ว่าติดอะไร และทีมงานตามหาสาเหตุไม่ได้
             Swal.fire({
                 icon: 'error',
-                title: 'เกิดข้อผิดพลาด!',
-                text: 'ไม่สามารถยืนยันการรับของได้ กรุณาลองใหม่อีกครั้ง',
+                title: 'ยืนยันรับของไม่สำเร็จ',
+                text: error?.message || 'ไม่สามารถยืนยันการรับของได้ กรุณาลองใหม่อีกครั้ง',
                 confirmButtonText: 'ตกลง',
                 confirmButtonColor: '#d33',
             });

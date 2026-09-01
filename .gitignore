@@ -22,3 +22,6 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+# Codex CLI session transcripts (มีบันทึกการสนทนาและ path ในเครื่อง)
+.codex-history/
