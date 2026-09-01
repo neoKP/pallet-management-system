@@ -1,6 +1,7 @@
 import { Stock, Transaction, PalletType, Branch, Partner } from '../types';
 import { INITIAL_STOCK, INITIAL_TRANSACTIONS, PALLET_TYPES, BRANCHES, EXTERNAL_PARTNERS } from '../constants';
 import { StockMutator, RootSnapshot, normalizeTransactions } from '../utils/stockMutation';
+import { withCommitRetry } from '../utils/commitRetry';
 
 // Declare global firebase instance interface
 declare global {
@@ -380,7 +381,21 @@ export const addTransaction = async (transaction: Transaction) => {
  *
  * @throws StockValidationError เมื่อสต็อกไม่พอ (ยกเลิกทั้งชุด ไม่เขียนอะไรเลย)
  */
-export const commitStockMutation = async (mutator: StockMutator): Promise<void> => {
+/**
+ * บันทึกการเปลี่ยนแปลงสต็อกแบบ atomic พร้อมลองใหม่อัตโนมัติเมื่อชนกับผู้ใช้อื่น
+ *
+ * ตรรกะการลองใหม่อยู่ที่ utils/commitRetry.ts เพื่อให้ทดสอบได้แยกจาก Firebase
+ */
+export const commitStockMutation = (mutator: StockMutator): Promise<void> =>
+    withCommitRetry(
+        () => attemptCommit(mutator),
+        (attempt, delayMs, err) => {
+            console.warn(`[stock] บันทึกไม่สำเร็จ (${err?.message}) — ลองใหม่ครั้งที่ ${attempt} ใน ${delayMs}ms`);
+        }
+    );
+
+/** ทำ transaction หนึ่งรอบ แยกออกมาเพื่อให้ commitStockMutation เรียกซ้ำได้ */
+const attemptCommit = async (mutator: StockMutator): Promise<void> => {
     const db = getDb();
     const { ref, runTransaction } = getUtils();
 
