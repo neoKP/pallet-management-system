@@ -170,6 +170,26 @@ export interface StockThreshold {
 export type BranchThresholds = Record<BranchId, Partial<Record<PalletId, StockThreshold>>>;
 
 /**
+ * โหมดตรวจนับสต็อก — ปิดรับการบันทึกชั่วคราวเพื่อให้ยอดในระบบนิ่งระหว่างนับของจริง
+ * เก็บที่ config/countFreeze และหมดอายุเองเมื่อเลยเวลา until
+ */
+export interface CountFreeze {
+  active: boolean;
+  startedAt: string; // ISO
+  until: string;     // ISO — เลยเวลานี้ถือว่าเปิดระบบแล้ว
+  by: string;        // ผู้เปิดโหมด
+  note?: string;
+}
+
+/**
+ * System Config (config node)
+ */
+export interface SystemConfig {
+  telegramChatId: string;
+  countFreeze?: CountFreeze | null;
+}
+
+/**
  * Form State for Movement
  */
 export interface MovementFormState {

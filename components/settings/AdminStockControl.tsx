@@ -7,6 +7,8 @@ import { PalletId, BranchId, Transaction } from '../../types';
 import Swal from 'sweetalert2';
 import { format } from 'date-fns';
 import { calculatePartnerBalance } from '../../utils/businessLogic';
+import { ADJUST_REF_MAX_LENGTH, ADJUST_REF_MIN_LENGTH } from '../../utils/auditControls';
+import { AuditToolsPanel } from './AuditToolsPanel';
 
 
 interface AdminStockControlProps {
@@ -91,6 +93,9 @@ export const AdminStockControl: React.FC<AdminStockControlProps> = ({ userName }
                     <input id="swal-new-qty" type="number" class="swal2-input w-full m-0" placeholder="ระบุจำนวนที่ถูกต้อง (ยอดใหม่)" value="${currentQty}">
                     <label class="block text-sm font-bold text-slate-700 mt-4 mb-1">เหตุผลการปรับปรุง <span class="text-red-500">*</span></label>
                     <textarea id="swal-reason" class="swal2-textarea w-full m-0" placeholder="เช่น นับจริงหายไป 5 ใบ, แก้ไขยอดเริ่มต้น"></textarea>
+                    <label class="block text-sm font-bold text-slate-700 mt-4 mb-1">เลขที่อ้างอิง (CAR/PAR หรือใบตรวจนับ) <span class="text-red-500">*</span></label>
+                    <input id="swal-reference" type="text" maxlength="${ADJUST_REF_MAX_LENGTH}" class="swal2-input w-full m-0" placeholder="เช่น CAR-26-001">
+                    <p class="text-[10px] text-slate-400 mt-1">ไม่บังคับเฉพาะกรณีตั้งยอดเริ่มต้นระบบ</p>
                     <div class="flex items-center gap-2 mt-4">
                         <input type="checkbox" id="swal-is-initial" class="w-4 h-4">
                         <label for="swal-is-initial" class="text-sm font-bold text-slate-600">เป็นยอดเริ่มต้นระบบ (Initial Balance)</label>
@@ -121,12 +126,17 @@ export const AdminStockControl: React.FC<AdminStockControlProps> = ({ userName }
                 const reason = (document.getElementById('swal-reason') as HTMLTextAreaElement).value;
                 const isInitial = (document.getElementById('swal-is-initial') as HTMLInputElement).checked;
                 const customDate = (document.getElementById('swal-custom-date') as HTMLInputElement).value;
+                const referenceDocNo = (document.getElementById('swal-reference') as HTMLInputElement).value.trim();
 
                 if (!newQtyStr || reason.length < 5) {
                     Swal.showValidationMessage('กรุณากรอกจำนวนและเหตุผล (อย่างน้อย 5 ตัวอักษร)');
                     return false;
                 }
-                return { newQty: parseInt(newQtyStr), reason, isInitial, customDate };
+                if (!isInitial && referenceDocNo.length < ADJUST_REF_MIN_LENGTH) {
+                    Swal.showValidationMessage('กรุณาระบุเลขที่อ้างอิง เช่น เลขที่ CAR/PAR หรือเลขที่ใบตรวจนับ');
+                    return false;
+                }
+                return { newQty: parseInt(newQtyStr), reason, isInitial, customDate, referenceDocNo };
             }
         });
 
@@ -139,7 +149,8 @@ export const AdminStockControl: React.FC<AdminStockControlProps> = ({ userName }
                     reason: formValues.reason,
                     userName,
                     isInitial: formValues.isInitial,
-                    customDate: formValues.isInitial ? formValues.customDate : undefined
+                    customDate: formValues.isInitial ? formValues.customDate : undefined,
+                    referenceDocNo: formValues.referenceDocNo
                 });
                 Swal.fire({ icon: 'success', title: 'ปรับปรุงสำเร็จ', text: 'ยอดสต็อกถูกอัปเดตและบันทึก Audit Log แล้ว', timer: 2000 });
             } catch (error: any) {
@@ -156,6 +167,8 @@ export const AdminStockControl: React.FC<AdminStockControlProps> = ({ userName }
 
     return (
         <div className="space-y-6">
+            <AuditToolsPanel userName={userName} />
+
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
                 <div className="flex bg-slate-100 p-1 rounded-2xl w-fit">
                     <button
@@ -246,6 +259,9 @@ export const AdminStockControl: React.FC<AdminStockControlProps> = ({ userName }
                                                 </td>
                                                 <td className="p-4">
                                                     <div className="text-xs font-bold text-slate-800">{log.note}</div>
+                                                    {log.referenceDocNo && (
+                                                        <div className="text-[10px] font-mono font-bold text-blue-600 mt-0.5">อ้างอิง: {log.referenceDocNo}</div>
+                                                    )}
                                                     <div className="text-[10px] font-black text-slate-400 uppercase flex items-center gap-1 mt-1">
                                                         <ShieldAlert size={10} /> {log.adjustedBy || 'SYSTEM'}
                                                         {log.isInitial && <span className="ml-2 px-1.5 py-0.5 bg-blue-100 text-blue-600 rounded text-[8px]">INITIAL</span>}

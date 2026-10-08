@@ -6,6 +6,8 @@ import { useStock } from '../../contexts/StockContext';
 import { AdminStockControl } from './AdminStockControl';
 import StockAnalyzer from '../debug/StockAnalyzer';
 import * as telegramService from '../../services/telegramService';
+import { isCountFreezeActive } from '../../utils/auditControls';
+import { StockValidationError } from '../../utils/stockMutation';
 import Swal from 'sweetalert2';
 
 type SettingsSection = 'pallets' | 'locations' | 'thresholds' | 'telegram' | 'admin' | 'developer';
@@ -100,7 +102,20 @@ const SettingsTab: React.FC = () => {
         }
     };
 
+    // ปุ่มกู้ข้อมูลเขียนสต็อกโดยตรง ไม่ผ่าน commitStockMutation จึงต้องกันโหมดตรวจนับเองที่นี่
+    // มิฉะนั้นยอดในระบบจะขยับระหว่างที่ผู้ตรวจกำลังนับของจริง
+    const isBlockedByCountFreeze = (): boolean => {
+        if (!isCountFreezeActive(config.countFreeze, Date.now())) return false;
+        Swal.fire({
+            icon: 'warning',
+            title: 'อยู่ระหว่างตรวจนับสต็อก',
+            text: 'ไม่สามารถรีเซ็ตข้อมูลได้จนกว่าจะปิดโหมดตรวจนับ',
+        });
+        return true;
+    };
+
     const handleSeedDemoData = async () => {
+        if (isBlockedByCountFreeze()) return;
         const { value: password } = await Swal.fire({
             title: 'ยืนยันการล้างข้อมูลผ่านระบบ (Deep Reset)',
             text: 'ข้อมูลสต็อก ประวัติ และคำขอทั้งหมดจะถูกลบถาวร กรุณาใส่รหัสผ่านเพื่อดำเนินการ',
@@ -124,7 +139,8 @@ const SettingsTab: React.FC = () => {
                 Swal.fire('สำเร็จ', 'ระบบถูกรีเซ็ตเป็น 0 และประวัติทั้งหมดถูกล้างเรียบร้อยแล้ว', 'success');
             } catch (error) {
                 console.error(error);
-                Swal.fire('ผิดพลาด', 'ไม่สามารถรีเซ็ตข้อมูลได้', 'error');
+                // ข้อจำกัดเชิงธุรกิจ (เช่นอยู่ระหว่างตรวจนับ) ต้องให้ผู้ใช้เห็นสาเหตุจริง
+                Swal.fire('ผิดพลาด', error instanceof StockValidationError ? error.message : 'ไม่สามารถรีเซ็ตข้อมูลได้', 'error');
             }
         } else if (password) {
             Swal.fire('รหัสผ่านไม่ถูกต้อง', 'ไม่สามารถดำเนินการล้างข้อมูลได้เนื่องจากรหัสผ่านผิด', 'error');
@@ -132,6 +148,7 @@ const SettingsTab: React.FC = () => {
     };
 
     const handleRepairBranch = async (branchId?: BranchId) => {
+        if (isBlockedByCountFreeze()) return;
         const { value: password } = await Swal.fire({
             title: 'ยืนยันการรีเซ็ตสต๊อกรายสาขา',
             text: 'กรุณาใส่รหัสผ่านเพื่อดำเนินการ (เพื่อความปลอดภัย)',
@@ -170,7 +187,7 @@ const SettingsTab: React.FC = () => {
             Swal.fire('สำเร็จ', `ยอดสต็อกของ ${branchName} ถูกรีเซ็ตเป็น 0 แล้ว`, 'success');
         } catch (error) {
             console.error(error);
-            Swal.fire('ผิดพลาด', 'ไม่สามารถดำเนินการได้', 'error');
+            Swal.fire('ผิดพลาด', error instanceof StockValidationError ? error.message : 'ไม่สามารถดำเนินการได้', 'error');
         }
     };
 

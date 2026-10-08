@@ -2,6 +2,7 @@ import { Stock, Transaction, PalletType, Branch, Partner } from '../types';
 import { INITIAL_STOCK, INITIAL_TRANSACTIONS, PALLET_TYPES, BRANCHES, EXTERNAL_PARTNERS } from '../constants';
 import { StockMutator, RootSnapshot, normalizeTransactions } from '../utils/stockMutation';
 import { withCommitRetry } from '../utils/commitRetry';
+import { assertNotFrozen } from '../utils/auditControls';
 
 // Declare global firebase instance interface
 declare global {
@@ -379,7 +380,7 @@ export const addTransaction = async (transaction: Transaction) => {
  * mutator ต้องเป็น pure function เพราะถูกเรียกซ้ำได้หลายรอบ
  * ห้ามให้มี side effect เช่นส่ง Telegram อยู่ข้างใน
  *
- * @throws StockValidationError เมื่อสต็อกไม่พอ (ยกเลิกทั้งชุด ไม่เขียนอะไรเลย)
+ * @throws StockValidationError เมื่อสต็อกไม่พอ หรืออยู่ระหว่างตรวจนับสต็อก (ยกเลิกทั้งชุด ไม่เขียนอะไรเลย)
  */
 /**
  * บันทึกการเปลี่ยนแปลงสต็อกแบบ atomic พร้อมลองใหม่อัตโนมัติเมื่อชนกับผู้ใช้อื่น
@@ -431,6 +432,9 @@ const attemptCommit = async (mutator: StockMutator): Promise<void> => {
 
         let next;
         try {
+            // ตรวจโหมดตรวจนับจาก "ข้อมูลสด" ใน transaction เดียวกัน
+            // เพื่อให้เครื่องที่ยังไม่ได้รับสถานะล่าสุดก็บันทึกแทรกระหว่างนับไม่ได้
+            assertNotFrozen((current as any)?.config?.countFreeze, Date.now());
             next = mutator(currentStock, currentTxs);
         } catch (err: any) {
             businessError = err;
@@ -452,8 +456,42 @@ const attemptCommit = async (mutator: StockMutator): Promise<void> => {
     }
 };
 
+/**
+ * อ่านสถานะโหมดตรวจนับจากเซิร์ฟเวอร์ ณ ขณะนั้น แล้วปฏิเสธถ้ายังอยู่ระหว่างตรวจนับ
+ *
+ * ใช้กับเส้นทางที่เขียนสต็อกโดยตรงโดยไม่ผ่าน commitStockMutation (งานกู้ข้อมูลของผู้ดูแลระบบ)
+ * ต้องอ่านสดก่อนเขียน เพราะสถานะในหน้าจออาจเก่า หรือมีคนเปิดโหมดระหว่างที่กำลังกรอกรหัสผ่านยืนยัน
+ *
+ * @throws StockValidationError เมื่ออยู่ระหว่างตรวจนับสต็อก
+ */
+const assertNotFrozenLive = async (): Promise<void> => {
+    const db = getDb();
+    const { ref, get } = getUtils();
+    const snapshot = await get(ref(db, 'config/countFreeze'));
+    assertNotFrozen(snapshot.val(), Date.now());
+};
+
+/**
+ * อ่านสต็อกและรายการจากเซิร์ฟเวอร์ในการอ่านครั้งเดียว
+ *
+ * ใช้กับงานที่ต้องการหลักฐาน ณ จุดเวลาเดียวกัน เช่นไฟล์ตัดยอดของผู้ตรวจ
+ * state ในหน้าจอมาจาก subscription สองเส้นที่อัปเดตไม่พร้อมกัน ถ้าเอามาประกอบกัน
+ * ยอดคงเหลืออาจมาจากคนละเวอร์ชันกับรายการ
+ */
+export const fetchStockAndTransactions = async (): Promise<{ stock: Stock; transactions: Transaction[] }> => {
+    const db = getDb();
+    const { ref, get } = getUtils();
+    const snapshot = await get(ref(db, '/'));
+    const root = (snapshot.val() || {}) as RootSnapshot;
+    return {
+        stock: (root.stock || {}) as Stock,
+        transactions: normalizeTransactions(root.transactions),
+    };
+};
+
 export const addMovementBatch = async (newTransactions: Transaction[], newStock: Stock) => {
     try {
+        await assertNotFrozenLive();
         const db = getDb();
         const { ref, update, get, set } = getUtils();
 
@@ -587,6 +625,7 @@ export const updatePalletRequestsBatch = async (requests: any[]) => {
 
 export const resetAllData = async (initialStock: Stock) => {
     try {
+        await assertNotFrozenLive();
         const db = getDb();
         const { ref, set, update } = getUtils();
 

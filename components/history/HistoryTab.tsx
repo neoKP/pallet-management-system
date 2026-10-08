@@ -109,7 +109,7 @@ const HistoryTab: React.FC<HistoryTabProps> = ({ transactions, selectedBranch, c
         }
     };
 
-    const handleAdjustmentSubmit = async (data: { type: 'IN' | 'OUT' | 'ABSOLUTE'; branchId: string; palletId: PalletId; qty: number; note: string }) => {
+    const handleAdjustmentSubmit = async (data: { type: 'IN' | 'OUT' | 'ABSOLUTE'; branchId: string; palletId: PalletId; qty: number; note: string; referenceDocNo: string }) => {
         try {
             // Calculate the target stock value based on adjustment type
             const currentQty = stock[data.branchId as BranchId]?.[data.palletId] || 0;
@@ -129,7 +129,8 @@ const HistoryTab: React.FC<HistoryTabProps> = ({ transactions, selectedBranch, c
                 palletId: data.palletId,
                 newQty: finalQty,
                 reason: `[${data.type}] ${data.note}`,
-                userName: currentUser?.name || 'Unknown'
+                userName: currentUser?.name || 'Unknown',
+                referenceDocNo: data.referenceDocNo
             });
 
             setIsAdjModalOpen(false);

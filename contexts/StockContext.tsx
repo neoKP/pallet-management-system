@@ -1,9 +1,10 @@
 import React, { createContext, useContext, useState, useCallback, ReactNode, useEffect } from 'react';
-import { Stock, Transaction, BranchId, PalletId, TransactionType, PalletRequest, PalletRequestType, Branch, Partner, PalletType } from '../types';
+import { Stock, Transaction, BranchId, PalletId, TransactionType, PalletRequest, PalletRequestType, Branch, Partner, PalletType, SystemConfig } from '../types';
 import { INITIAL_STOCK, INITIAL_TRANSACTIONS, BRANCHES, EXTERNAL_PARTNERS, PALLET_TYPES } from '../constants';
 import * as firebaseService from '../services/firebase';
 import * as telegramService from '../services/telegramService';
 import { calculatePartnerBalance } from '../utils/businessLogic';
+import { validateAdjustReference } from '../utils/auditControls';
 import {
     createMovementMutator,
     createConfirmReceiveMutator,
@@ -50,8 +51,8 @@ interface StockContextType {
     palletRequests: PalletRequest[];
     createPalletRequest: (data: Partial<PalletRequest>) => Promise<void>;
     updatePalletRequest: (req: PalletRequest) => Promise<void>;
-    config: { telegramChatId: string };
-    updateSystemConfig: (newConfig: Partial<{ telegramChatId: string }>) => Promise<void>;
+    config: SystemConfig;
+    updateSystemConfig: (newConfig: Partial<SystemConfig>) => Promise<void>;
     adjustStock: (data: {
         targetId: string;
         palletId: PalletId;
@@ -60,6 +61,8 @@ interface StockContextType {
         userName: string;
         isInitial?: boolean;
         customDate?: string;
+        // เลขที่ CAR/PAR หรือใบตรวจนับ — บังคับกรอก ยกเว้นการตั้งยอดเริ่มต้น
+        referenceDocNo?: string;
     }) => Promise<void>;
     thresholds: any;
     updateThresholds: (data: any) => Promise<void>;
@@ -88,7 +91,7 @@ export const StockProvider: React.FC<StockProviderProps> = ({ children }) => {
     const [stock, setStock] = useState<Stock>(INITIAL_STOCK);
     const [transactions, setTransactions] = useState<Transaction[]>(INITIAL_TRANSACTIONS);
     const [palletRequests, setPalletRequests] = useState<PalletRequest[]>([]);
-    const [config, setConfig] = useState<{ telegramChatId: string }>({ telegramChatId: '' });
+    const [config, setConfig] = useState<SystemConfig>({ telegramChatId: '' });
     const [thresholds, setThresholds] = useState<any>(null);
     const [isDataLoaded, setIsDataLoaded] = useState(false); // Loading Guard
 
@@ -295,7 +298,10 @@ export const StockProvider: React.FC<StockProviderProps> = ({ children }) => {
         userName: string;
         isInitial?: boolean;
         customDate?: string;
+        referenceDocNo?: string;
     }) => {
+        // ทุกการปรับยอดต้องสอบกลับได้ว่ามาจากใบตรวจนับหรือ CAR/PAR ใบไหน
+        const referenceDocNo = validateAdjustReference(data.referenceDocNo, data.isInitial);
         const now = new Date();
         const ts = data.customDate ? new Date(data.customDate).toISOString() : now.toISOString();
         const isBranch = BRANCHES.some((b: Branch) => b.id === data.targetId);
@@ -309,6 +315,8 @@ export const StockProvider: React.FC<StockProviderProps> = ({ children }) => {
             source: delta > 0 ? 'SYSTEM_ADJUSTMENT' : data.targetId, dest: delta > 0 ? data.targetId : 'SYSTEM_ADJUSTMENT',
             palletId: data.palletId, qty: Math.abs(delta), note: data.reason, previousQty: currentQty, adjustedBy: data.userName, isInitial: data.isInitial
         } as Transaction;
+        // Firebase ไม่รับค่า undefined จึงใส่เฉพาะเมื่อมีค่า
+        if (referenceDocNo) adjTx.referenceDocNo = referenceDocNo;
 
         if (isBranch) {
             await firebaseService.commitStockMutation(

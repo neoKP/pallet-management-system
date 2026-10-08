@@ -3,6 +3,7 @@ import { X, Check, ArrowUp, ArrowDown, Info } from 'lucide-react';
 import { PalletId, BranchId } from '../../types';
 import { PALLET_TYPES, BRANCHES } from '../../constants';
 import Swal from 'sweetalert2';
+import { ADJUST_REF_MAX_LENGTH, ADJUST_REF_MIN_LENGTH } from '../../utils/auditControls';
 
 interface StockAdjustmentModalProps {
     isOpen: boolean;
@@ -13,6 +14,7 @@ interface StockAdjustmentModalProps {
         palletId: PalletId;
         qty: number;
         note: string;
+        referenceDocNo: string;
     }) => void;
     currentBranch: BranchId | 'ALL';
     stock: any;
@@ -32,6 +34,7 @@ const StockAdjustmentModal: React.FC<StockAdjustmentModalProps> = ({
     const [selectedPallet, setSelectedPallet] = useState<PalletId>('loscam_red');
     const [qty, setQty] = useState<string>('');
     const [note, setNote] = useState<string>('');
+    const [referenceDocNo, setReferenceDocNo] = useState<string>('');
 
     // --- Helper to calculate current balance ---
     const currentBalance = React.useMemo(() => {
@@ -59,6 +62,7 @@ const StockAdjustmentModal: React.FC<StockAdjustmentModalProps> = ({
             setSelectedPallet('loscam_red');
             setQty('');
             setNote('');
+            setReferenceDocNo('');
         }
     }, [isOpen, currentBranch]);
 
@@ -86,12 +90,24 @@ const StockAdjustmentModal: React.FC<StockAdjustmentModalProps> = ({
             return;
         }
 
+        // ทุกการปรับยอดต้องสอบกลับได้ว่ามาจากใบตรวจนับหรือ CAR/PAR ใบไหน
+        if (referenceDocNo.trim().length < ADJUST_REF_MIN_LENGTH) {
+            Swal.fire({
+                icon: 'warning',
+                title: 'ต้องระบุเลขที่อ้างอิง',
+                text: 'กรุณาระบุเลขที่ CAR/PAR หรือเลขที่ใบตรวจนับ ของการปรับยอดครั้งนี้',
+                confirmButtonColor: '#f59e0b'
+            });
+            return;
+        }
+
         onSubmit({
             type: adjType,
             branchId: selectedBranch,
             palletId: selectedPallet,
             qty: quantity,
-            note: note.trim()
+            note: note.trim(),
+            referenceDocNo: referenceDocNo.trim()
         });
         onClose();
     };
@@ -243,6 +259,19 @@ const StockAdjustmentModal: React.FC<StockAdjustmentModalProps> = ({
                                 placeholder="Why is this adjustment needed?"
                                 rows={2}
                                 className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-slate-900 text-sm focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none transition-all resize-none"
+                            />
+                        </div>
+                        <div className="space-y-1.5 col-span-2">
+                            <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">
+                                เลขที่อ้างอิง (CAR/PAR หรือใบตรวจนับ) <span className="text-red-500">*</span>
+                            </label>
+                            <input
+                                type="text"
+                                value={referenceDocNo}
+                                onChange={(e) => setReferenceDocNo(e.target.value)}
+                                maxLength={ADJUST_REF_MAX_LENGTH}
+                                placeholder="เช่น CAR-26-001"
+                                className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-slate-900 text-sm font-bold focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none transition-all"
                             />
                         </div>
                     </div>

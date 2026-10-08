@@ -15,6 +15,7 @@ import { AnalyticsDashboard } from './components/analytics/AnalyticsDashboard';
 import Sidebar from './components/layout/Sidebar';
 import Header from './components/layout/Header';
 import MobileNav from './components/layout/MobileNav';
+import CountFreezeBanner from './components/layout/CountFreezeBanner';
 import SettingsTab from './components/settings/SettingsTab';
 import HistoryTab from './components/history/HistoryTab';
 import QRScannerModal from './components/common/QRScannerModal';
@@ -164,6 +165,8 @@ export default function App() {
           onClose={() => setIsScannerOpen(false)}
           onScanSuccess={handleScanSuccess}
         />
+
+        <CountFreezeBanner />
 
         <main className={`flex-1 overflow-y-auto w-full mx-auto pb-24 md:pb-8 ${activeTab === 'analytics' ? 'max-w-none p-0' : 'p-4 md:p-8 max-w-[1600px]'}`}>
           {activeTab === 'inventory' && (
