@@ -20,13 +20,13 @@ import SettingsTab from './components/settings/SettingsTab';
 import HistoryTab from './components/history/HistoryTab';
 import QRScannerModal from './components/common/QRScannerModal';
 import { QuickLoopRecord } from './components/movements/QuickLoopRecord';
+import PartnerPortal from './components/partner/PartnerPortal';
 import { BRANCHES } from './constants';
-import { safeStorage } from './utils/helpers';
 // @ts-ignore
 import Swal from 'sweetalert2';
 
 export default function App() {
-  const { currentUser, login, logout } = useAuth();
+  const { currentUser, login, logout, isInitialLoading } = useAuth();
   const { stock, transactions, addTransaction, processBatchMaintenance, confirmTransactionsBatch, processScrapSale, processScrapDiscard } = useStock();
 
   const [activeTab, setActiveTab] = useState<'home' | 'inventory' | 'dashboard' | 'record' | 'maintenance' | 'settings' | 'analytics' | 'history' | 'scrapsales' | 'report'>('home');
@@ -36,44 +36,28 @@ export default function App() {
   // Memoize canViewAll for performance
   const canViewAll = useMemo(() => currentUser?.role === 'ADMIN', [currentUser]);
 
-  const [selectedBranch, setSelectedBranch] = useState<BranchId | 'ALL'>(() => {
-    const savedUser = safeStorage.getItem('neo-siam-user');
-    if (savedUser) {
-      try {
-        const user = JSON.parse(savedUser);
-        if (user && typeof user === 'object') {
-          if (user.role === 'ADMIN' || user.branchId === 'hub_nw') return 'ALL';
-          if (user.role === 'USER' && user.branchId) return user.branchId;
-        }
-      } catch (e) {
-        console.error('Failed to parse saved user:', e);
-        safeStorage.removeItem('neo-siam-user');
-      }
-    }
-    return 'hub_nw';
-  });
+  // สาขาเริ่มต้นตั้งจากบัตรผ่านตอนล็อกอิน (ดู useEffect ด้านล่าง) — ไม่อ่านจาก localStorage แล้ว
+  const [selectedBranch, setSelectedBranch] = useState<BranchId | 'ALL'>('hub_nw');
 
   const { isScannerOpen, setIsScannerOpen, handleScanSuccess } = useQRScanner(
-    currentUser as any,
+    // ผู้ใช้คู่ค้าดูอย่างเดียว — ห้ามลิงก์ ?receive= ยืนยันรับของแทนสาขา
+    (currentUser?.role === 'PARTNER' ? null : currentUser) as any,
     transactions,
     confirmTransactionsBatch,
     setActiveTab
   );
 
-  // Sync selectedBranch when currentUser changes
+  // ตั้งสาขาเริ่มต้นเมื่อผู้ใช้เปลี่ยน (ล็อกอิน / สลับบัญชี)
+  // ADMIN เห็นทุกสาขา · USER ล็อกที่สาขาตัวเอง (เหมือนพฤติกรรมเดิม)
   useEffect(() => {
-    if (currentUser) {
-      if (currentUser.role === 'ADMIN') {
-        if (!selectedBranch || (selectedBranch !== 'ALL' && !BRANCHES.some(b => b.id === selectedBranch))) {
-          setSelectedBranch('ALL');
-        }
-      } else {
-        if (currentUser.branchId && currentUser.branchId !== selectedBranch) {
-          setSelectedBranch(currentUser.branchId as BranchId);
-        }
-      }
+    if (!currentUser) return;
+    if (currentUser.role === 'ADMIN') {
+      setSelectedBranch('ALL');
+    } else if (currentUser.branchId) {
+      setSelectedBranch(currentUser.branchId as BranchId);
     }
-  }, [currentUser]); // Optimized dependency array
+    setActiveTab('home');
+  }, [currentUser?.username, currentUser?.role, currentUser?.branchId]);
 
   const handleLogout = () => {
     Swal.fire({
@@ -106,7 +90,27 @@ export default function App() {
     }
   };
 
-  // Layer 1: Public-First Priority
+  // Layer 0: รอ Firebase บอกสถานะล็อกอิน (กันหน้าจอกระพริบเป็นหน้า Login)
+  if (isInitialLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-slate-950 text-slate-400 font-bold">
+        กำลังตรวจสอบการเข้าสู่ระบบ…
+      </div>
+    );
+  }
+
+  // Layer 1: ต้องล็อกอินก่อนทุกหน้า (รวมหน้าแรก) — ข้อมูลสต็อกไม่แสดงให้คนที่ยังไม่ล็อกอิน
+  if (!currentUser) {
+    return <LoginScreen onLogin={login} />;
+  }
+
+  // Layer 2: ผู้ใช้คู่ค้า (คนนอกบริษัท) เห็นได้แค่หน้าคู่ค้าหน้าเดียว — ดูอย่างเดียว
+  // ข้อมูลมาจากเซิร์ฟเวอร์ (api/partner/view) ไม่ได้อ่านฐานข้อมูลตรง
+  if (currentUser.role === 'PARTNER') {
+    return <PartnerPortal currentUser={currentUser} onLogout={handleLogout} onSessionExpired={logout} />;
+  }
+
+  // Layer 3: หน้าแรก (หลังล็อกอิน)
   if (activeTab === 'home') {
     return (
       <div className="min-h-screen bg-slate-900 overflow-x-hidden selection:bg-blue-500/30">
@@ -117,25 +121,10 @@ export default function App() {
           transactions={transactions}
           onNavigate={handleNavigate}
           onLogout={handleLogout}
-          openLogin={() => setIsLoginModalOpen(true)}
+          openLogin={() => {}}
         />
-        {isLoginModalOpen && (
-          <LoginScreen
-            onLogin={(user) => {
-              login(user);
-              setIsLoginModalOpen(false);
-            }}
-            onClose={() => setIsLoginModalOpen(false)}
-            isModal={true}
-          />
-        )}
       </div>
     );
-  }
-
-  // Layer 2: Auth Guard
-  if (!currentUser) {
-    return <LoginScreen onLogin={login} />;
   }
 
   return (

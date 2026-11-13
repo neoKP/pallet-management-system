@@ -3,6 +3,8 @@ import { Settings, MapPin, Package, Plus, Trash2, Save, Building2, Truck, X, Sen
 import * as firebaseService from '../../services/firebase';
 import { PalletType, Branch, Partner, BranchId, User } from '../../types';
 import { useStock } from '../../contexts/StockContext';
+import { useAuth } from '../../contexts/AuthContext';
+import { confirmCurrentPassword } from '../../services/authService';
 import { AdminStockControl } from './AdminStockControl';
 import StockAnalyzer from '../debug/StockAnalyzer';
 import * as telegramService from '../../services/telegramService';
@@ -14,12 +16,8 @@ type SettingsSection = 'pallets' | 'locations' | 'thresholds' | 'telegram' | 'ad
 
 const SettingsTab: React.FC = () => {
     const [activeSection, setActiveSection] = useState<SettingsSection>('pallets');
-    const [currentUser, setCurrentUser] = useState<User | null>(null);
-
-    useEffect(() => {
-        const saved = localStorage.getItem('neo-siam-user');
-        if (saved) setCurrentUser(JSON.parse(saved));
-    }, []);
+    // ผู้ใช้ปัจจุบันจากบัตรผ่าน Firebase (เดิมอ่านจาก localStorage ซึ่งแก้เองได้)
+    const { currentUser } = useAuth();
 
     // Real-time data from Firebase
     const [pallets, setPallets] = useState<PalletType[]>([]);
@@ -118,7 +116,7 @@ const SettingsTab: React.FC = () => {
         if (isBlockedByCountFreeze()) return;
         const { value: password } = await Swal.fire({
             title: 'ยืนยันการล้างข้อมูลผ่านระบบ (Deep Reset)',
-            text: 'ข้อมูลสต็อก ประวัติ และคำขอทั้งหมดจะถูกลบถาวร กรุณาใส่รหัสผ่านเพื่อดำเนินการ',
+            text: 'ข้อมูลสต็อก ประวัติ และคำขอทั้งหมดจะถูกลบถาวร กรุณาใส่รหัสผ่านของบัญชีคุณ (รหัสเดียวกับตอนล็อกอิน) เพื่อดำเนินการ',
             input: 'password',
             inputLabel: 'Password',
             inputPlaceholder: 'ใส่รหัสผ่านเพื่อยืนยัน',
@@ -132,7 +130,7 @@ const SettingsTab: React.FC = () => {
             }
         });
 
-        if (password === 'sansan856') {
+        if (password && await confirmCurrentPassword(password)) {
             try {
                 const { INITIAL_STOCK } = await import('../../constants');
                 await firebaseService.resetAllData(INITIAL_STOCK);
@@ -151,7 +149,7 @@ const SettingsTab: React.FC = () => {
         if (isBlockedByCountFreeze()) return;
         const { value: password } = await Swal.fire({
             title: 'ยืนยันการรีเซ็ตสต๊อกรายสาขา',
-            text: 'กรุณาใส่รหัสผ่านเพื่อดำเนินการ (เพื่อความปลอดภัย)',
+            text: 'กรุณาใส่รหัสผ่านของบัญชีคุณ (รหัสเดียวกับตอนล็อกอิน) เพื่อดำเนินการ (เพื่อความปลอดภัย)',
             input: 'password',
             inputLabel: 'Password',
             inputPlaceholder: 'ใส่รหัสผ่าน',
@@ -160,7 +158,7 @@ const SettingsTab: React.FC = () => {
             cancelButtonText: 'ยกเลิก'
         });
 
-        if (password !== 'sansan856') {
+        if (!password || !(await confirmCurrentPassword(password))) {
             if (password) Swal.fire('รหัสผ่านไม่ถูกต้อง', 'ไม่สามารถดำเนินการได้', 'error');
             return;
         }
@@ -197,7 +195,7 @@ const SettingsTab: React.FC = () => {
         if (section === 'telegram' || section === 'developer' || section === 'admin' || section === 'thresholds') {
             const { value: password } = await Swal.fire({
                 title: 'การเข้าถึงส่วนที่จำกัด',
-                text: `กรุณาใส่รหัสผ่านเพื่อเข้าใช้งานส่วน ${section === 'telegram' ? 'ตั้งค่า Telegram' : section === 'admin' ? 'Admin Control Panel' : section === 'thresholds' ? 'ตั้งค่า Thresholds' : 'Developer & Recovery'}`,
+                text: `กรุณาใส่รหัสผ่านของบัญชีคุณ (รหัสเดียวกับตอนล็อกอิน) เพื่อเข้าใช้งานส่วน ${section === 'telegram' ? 'ตั้งค่า Telegram' : section === 'admin' ? 'Admin Control Panel' : section === 'thresholds' ? 'ตั้งค่า Thresholds' : 'Developer & Recovery'}`,
                 input: 'password',
                 inputPlaceholder: 'ใส่รหัสผ่าน',
                 showCancelButton: true,
@@ -205,7 +203,7 @@ const SettingsTab: React.FC = () => {
                 cancelButtonText: 'ยกเลิก'
             });
 
-            if (password === 'sansan856') {
+            if (password && await confirmCurrentPassword(password)) {
                 setActiveSection(section);
             } else if (password) {
                 Swal.fire('รหัสผ่านไม่ถูกต้อง', '', 'error');

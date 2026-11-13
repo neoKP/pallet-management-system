@@ -39,7 +39,7 @@ export type MaintenanceAction = 'REPAIR_CONVERT' | 'DISCARD';
 /**
  * User Role Types
  */
-export type UserRole = 'ADMIN' | 'USER';
+export type UserRole = 'ADMIN' | 'USER' | 'PARTNER';
 
 /**
  * User Interface
@@ -48,6 +48,11 @@ export interface User {
   username: string;
   role: UserRole;
   branchId?: BranchId;
+  /**
+   * ใช้กับ role PARTNER เท่านั้น — id ของคู่ค้าใน EXTERNAL_PARTNERS
+   * ผู้ใช้คู่ค้าเห็นเฉพาะหน้าสรุปของคู่ค้ารายนี้ (ดูอย่างเดียว)
+   */
+  partnerId?: string;
   name: string;
 }
 
@@ -82,6 +87,12 @@ export interface Partner {
   rentalFee?: number; // Daily rate after free period
   gracePeriod?: number; // Free days before billing starts
   mappingName?: string; // Display mapping (e.g., Lascam -> Neo Corporate)
+  /**
+   * หน้าคู่ค้า (ผู้ใช้ role PARTNER): แสดงยอดคงค้างรวม + อายุค้างหรือไม่
+   * ค่าเริ่มต้น = ไม่แสดง (เห็นแค่ประวัติรับ-คืนรายใบ)
+   * เปิดเป็น true หลังทีมกระทบยอดกับคู่ค้ารายนั้นแล้วเท่านั้น
+   */
+  portalShowTotals?: boolean;
   branchRestriction?: {
     in: 'all' | 'none' | string[];  // Branches allowed for IN transactions
     out: 'all' | 'none' | string[]; // Branches allowed for OUT transactions

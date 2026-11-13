@@ -148,7 +148,7 @@ TELEGRAM_ALLOWED_CHAT_IDS=-1002778234464
 ซึ่งทำไม่ได้จนกว่าระบบจะมี **Firebase Authentication**
 (ปัจจุบันยังใช้รหัสผ่านฝังในโค้ด `1234`/`8888`)
 
-เมื่อติดตั้ง Firebase Auth แล้ว ให้เพิ่มขั้นตอนนี้ใน `api/telegram/send.ts`:
+**ทำแล้ว 13 พ.ย. 2569:** `api/telegram/send.ts` ตรวจบัตรผ่าน Firebase ก่อนส่ง (เฉพาะ ADMIN / USER) — เดิมวางแผนไว้ว่า:
 1. รับ ID token จาก header `Authorization: Bearer <token>`
 2. ตรวจด้วย Firebase Admin SDK (`verifyIdToken`)
 3. ปฏิเสธถ้าตรวจไม่ผ่าน

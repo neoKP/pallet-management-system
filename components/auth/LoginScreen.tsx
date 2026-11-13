@@ -1,9 +1,10 @@
-import React, { useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { UserIcon, Lock, ShieldCheck, LogIn, X, Loader2 } from 'lucide-react';
 import BrandLogo from '../common/BrandLogo';
 import { User } from '../../types';
 import { AUTHORIZED_USERS } from '../../constants';
+import { signIn, LoginError } from '../../services/authService';
 
 interface LoginScreenProps {
     onLogin: (user: User) => void;
@@ -17,22 +18,44 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ onLogin, onClose, isModal, is
     const [password, setPassword] = useState('');
     const [error, setError] = useState('');
     const [isLoading, setIsLoading] = useState(false);
+    // รอ Firebase ยืนยันสถานะ — ถ้าผ่านแล้ว App จะเปลี่ยนหน้าเอง (หน้านี้ถูกถอดออก)
+    // ถ้าครบเวลาแล้วยังอยู่หน้านี้ แปลว่าการยืนยันไม่ผ่าน ให้ผู้ใช้ลองใหม่ได้
+    const settleTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
+    const mounted = useRef(true);
+    useEffect(() => {
+        mounted.current = true;
+        return () => {
+            mounted.current = false;
+            clearTimeout(settleTimer.current);
+        };
+    }, []);
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         setIsLoading(true);
         setError('');
 
-        // Simulate network delay for premium feel
-        await new Promise(resolve => setTimeout(resolve, 800));
+        if (!username) {
+            setError('กรุณาเลือกบัญชีผู้ใช้');
+            setIsLoading(false);
+            return;
+        }
 
-        const user = AUTHORIZED_USERS.find(u => u.username === username);
-        const requiredPassword = username === 'admin' ? '8888' : '1234';
-
-        if (user && password === requiredPassword) {
+        // ตรวจรหัสที่ Firebase Authentication — ไม่มีรหัสผ่านในไฟล์เว็บ
+        // สิทธิ์ที่ได้มาจากบัตรผ่าน ไม่ใช่จากรายชื่อในโค้ด
+        try {
+            const user = await signIn(username, password);
             onLogin(user);
-        } else {
-            setError('ชื่อผู้ใช้หรือรหัสผ่านไม่ถูกต้อง');
+            if (!mounted.current) return; // App เปลี่ยนหน้าไปแล้ว
+            clearTimeout(settleTimer.current);
+            settleTimer.current = setTimeout(() => {
+                if (!mounted.current) return;
+                setIsLoading(false);
+                setError('เข้าสู่ระบบไม่สำเร็จ กรุณาลองใหม่');
+            }, 15000);
+        } catch (err) {
+            if (!mounted.current) return;
+            setError(err instanceof LoginError ? err.message : 'เข้าสู่ระบบไม่สำเร็จ กรุณาลองใหม่');
             setIsLoading(false);
         }
     };

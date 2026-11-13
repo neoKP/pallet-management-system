@@ -1,5 +1,6 @@
 import { PALLET_TYPES, VEHICLE_TYPES, EXTERNAL_PARTNERS } from '../constants';
 import { Partner } from '../types';
+import { getIdToken } from './authService';
 
 /**
  * ปลายทางที่ใช้ส่งข้อความ Telegram
@@ -31,12 +32,18 @@ export const sendMessage = async (chatId: string, text: string) => {
     if (!chatId || !text) return;
 
     /** ยิงไปที่ serverless function ซึ่งเป็นผู้ถือ token จริง */
-    const post = (payload: { chatId: string; text: string; parseMode: 'MarkdownV2' | 'HTML' }) =>
-        fetch(TELEGRAM_API_ENDPOINT, {
+    // แนบบัตรผ่านของผู้ใช้ — เซิร์ฟเวอร์รับเฉพาะพนักงานที่ล็อกอิน (ADMIN / USER)
+    const post = async (payload: { chatId: string; text: string; parseMode: 'MarkdownV2' | 'HTML' }) => {
+        const token = await getIdToken().catch(() => null);
+        return fetch(TELEGRAM_API_ENDPOINT, {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
+            headers: {
+                'Content-Type': 'application/json',
+                ...(token ? { Authorization: `Bearer ${token}` } : {}),
+            },
             body: JSON.stringify(payload),
         });
+    };
 
     try {
         const response = await post({ chatId, text, parseMode: 'MarkdownV2' });

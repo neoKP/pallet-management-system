@@ -103,7 +103,8 @@
         "lucide-react": "https://esm.sh/lucide-react@^0.562.0",
         "firebase/app": "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js",
         "firebase/analytics": "https://www.gstatic.com/firebasejs/10.12.0/firebase-analytics.js",
-        "firebase/database": "https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js"
+        "firebase/database": "https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js",
+        "firebase/auth": "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js"
       }
     }
     </script>
@@ -115,7 +116,8 @@
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
     import { getAnalytics } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-analytics.js";
-    import { getDatabase, ref, onValue, set, push, update, get, child, runTransaction } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js";
+    import { getDatabase, ref, onValue, set, push, update, get, child, runTransaction, connectDatabaseEmulator } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js";
+    import { getAuth, signInWithEmailAndPassword, signOut, onAuthStateChanged, EmailAuthProvider, reauthenticateWithCredential, connectAuthEmulator } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
 
     const firebaseConfig = {
       apiKey: "AIzaSyApl6zoaw61cStIphgZOt_cqDmFrA5FfEs",
@@ -132,6 +134,15 @@
     const app = initializeApp(firebaseConfig);
     const analytics = getAnalytics(app);
     const database = getDatabase(app);
+    const auth = getAuth(app);
+
+    // ทดสอบในเครื่องกับ Firebase Emulator: รัน vite ด้วย VITE_FIREBASE_EMULATOR=true
+    // (เว็บจริงไม่มีค่านี้ Vite จะทิ้งข้อความ %...% ไว้ตามเดิม จึงไม่เข้าเงื่อนไข)
+    if ("%VITE_FIREBASE_EMULATOR%" === "true") {
+      connectAuthEmulator(auth, "http://127.0.0.1:9099", { disableWarnings: true });
+      connectDatabaseEmulator(database, "127.0.0.1", 9000);
+      console.warn("[firebase] ใช้ตัวจำลองในเครื่อง (emulator)");
+    }
 
     console.log("Firebase initialized:", app);
     console.log("Realtime Database connected:", database);
@@ -141,6 +152,8 @@
       app,
       analytics,
       database: () => database,
+      auth: () => auth,
+      authUtils: { signInWithEmailAndPassword, signOut, onAuthStateChanged, EmailAuthProvider, reauthenticateWithCredential },
       utils: { ref, onValue, set, push, update, get, child, runTransaction }
     };
   </script>

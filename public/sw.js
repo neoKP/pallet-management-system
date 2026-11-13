@@ -1,4 +1,5 @@
-const CACHE_NAME = 'ns-pallet-v2';
+// v3: ระบบล็อกอินจริง (Firebase Auth) — เปลี่ยนชื่อเพื่อล้างแคชเก่าทุกเครื่อง
+const CACHE_NAME = 'ns-pallet-v3';
 const STATIC_ASSETS = [
   '/',
   '/index.html',
@@ -41,6 +42,11 @@ self.addEventListener('activate', (event) => {
 self.addEventListener('fetch', (event) => {
   const { request } = event;
   const url = new URL(request.url);
+
+  // ไม่แตะ API ของเราและคำขอที่ไม่ใช่ GET — คำตอบมีข้อมูลเฉพาะผู้ใช้ (เช่น หน้าคู่ค้า) ห้ามเก็บแคช
+  if (request.method !== 'GET' || url.pathname.startsWith('/api/')) {
+    return;
+  }
 
   // ข้าม Firebase API requests - ใช้ network เสมอ (ข้อมูลต้อง realtime)
   if (

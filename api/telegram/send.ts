@@ -26,6 +26,9 @@
  */
 export const config = { runtime: 'edge' };
 
+import { verifyRequestToken, errorResponse } from '../_lib/firebaseServer';
+import { parseClaims, isStaffRole } from '../../utils/authClaims';
+
 interface TelegramRequest {
     chatId?: unknown;
     text?: unknown;
@@ -90,6 +93,16 @@ const isRateLimited = (key: string, now: number): boolean => {
 export default async function handler(req: Request): Promise<Response> {
     if (req.method !== 'POST') {
         return json(405, { ok: false, error: 'รองรับเฉพาะ POST' });
+    }
+
+    // ต้องเป็นพนักงานที่ล็อกอินจริง (ADMIN / USER) — คนนอกและคู่ค้าส่งข้อความเข้ากลุ่มบริษัทไม่ได้
+    try {
+        const claims = parseClaims(await verifyRequestToken(req));
+        if (!claims || !isStaffRole(claims.role)) {
+            return json(403, { ok: false, error: 'ไม่มีสิทธิ์ส่งการแจ้งเตือน' });
+        }
+    } catch (e) {
+        return errorResponse(e);
     }
 
     const token = process.env.TELEGRAM_BOT_TOKEN;

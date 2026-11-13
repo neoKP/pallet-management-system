@@ -24,7 +24,9 @@ export const BRANCHES: Branch[] = [
 
 export const EXTERNAL_PARTNERS: Partner[] = [
   { id: 'neo_corp', name: 'บ. นีโอ คอร์ปอเรท', type: 'customer', allowedPallets: ['loscam_red'], rentalFee: 0, gracePeriod: 0, branchRestriction: { in: 'all', out: 'none' } },
-  { id: 'sino', name: 'บ. ซีโน-แปซิฟิค', type: 'provider', allowedPallets: ['loscam_red', 'loscam_blue'], rentalFee: 1.0, gracePeriod: 10, branchRestriction: { in: 'all', out: 'all' } },
+  // portalShowTotals: false — คุณเท็นสั่ง 13 พ.ย. 69 ซ่อนยอดคงค้าง/อายุค้างจากพนักงานซีโน่ จนกว่าทีมกระทบยอดกับซีโน่
+  // (ยอดตามสูตรระบบ ณ วันนั้น = คืนเกิน แดง 386 / ฟ้า 391 ซึ่งรวมรายการคืนอัตโนมัติ -AUTO ที่ศูนย์ NW)
+  { id: 'sino', name: 'บ. ซีโน-แปซิฟิค', type: 'provider', allowedPallets: ['loscam_red', 'loscam_blue'], rentalFee: 1.0, gracePeriod: 10, branchRestriction: { in: 'all', out: 'all' }, portalShowTotals: false },
   { id: 'lamsoon', name: 'บ. ล่ำสูง', type: 'provider', allowedPallets: ['loscam_red'], branchRestriction: { in: ['sai3', 'hub_nw'], out: ['sai3', 'hub_nw'] } },
   { id: 'ufc', name: 'บ. UFC', type: 'provider', allowedPallets: ['loscam_red', 'loscam_blue'], branchRestriction: { in: ['sai3'], out: ['sai3'] } },
   { id: 'loxley', name: 'บ. Loxley', type: 'provider', allowedPallets: ['loscam_red', 'loscam_blue', 'loscam_yellow'], branchRestriction: { in: ['sai3'], out: ['sai3'] } },
@@ -84,6 +86,9 @@ export const AUTHORIZED_USERS: User[] = [
   { username: 'user_ekp', role: 'USER', branchId: 'ekp', name: 'Staff - EKP' },
   { username: 'user_ms', role: 'USER', branchId: 'ms', name: 'Staff - Mae Sot' },
   { username: 'user_maintenance', role: 'USER', branchId: 'maintenance_stock', name: 'Staff - Maintenance' },
+  // ผู้ใช้คู่ค้า (คนนอกบริษัท) — ดูอย่างเดียว เฉพาะข้อมูลคู่ค้าตัวเอง
+  // รายชื่อนี้ใช้แสดงในหน้า Login เท่านั้น — สิทธิ์จริงมาจากบัตรผ่าน Firebase (สร้างด้วย scripts/firebase-accounts.ts)
+  { username: 'user_sino', role: 'PARTNER', partnerId: 'sino', name: 'คู่ค้า - บ. ซีโน-แปซิฟิค (ดูอย่างเดียว)' },
 ];
 
 export const VEHICLE_TYPES = [

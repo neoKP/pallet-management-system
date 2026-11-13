@@ -1,4 +1,6 @@
 import React, { createContext, useContext, useState, useCallback, ReactNode, useEffect } from 'react';
+import { useAuth } from './AuthContext';
+import { isStaffRole } from '../utils/authClaims';
 import { Stock, Transaction, BranchId, PalletId, TransactionType, PalletRequest, PalletRequestType, Branch, Partner, PalletType, SystemConfig } from '../types';
 import { INITIAL_STOCK, INITIAL_TRANSACTIONS, BRANCHES, EXTERNAL_PARTNERS, PALLET_TYPES } from '../constants';
 import * as firebaseService from '../services/firebase';
@@ -95,7 +97,23 @@ export const StockProvider: React.FC<StockProviderProps> = ({ children }) => {
     const [thresholds, setThresholds] = useState<any>(null);
     const [isDataLoaded, setIsDataLoaded] = useState(false); // Loading Guard
 
+    // ดึงข้อมูลเฉพาะเมื่อพนักงาน (ADMIN / USER) ล็อกอินแล้ว
+    // - คนที่ยังไม่ล็อกอิน / คู่ค้า ไม่มีสิทธิ์อ่านฐาน (กฎ STEP3) ถ้าเปิด listener ไว้จะโดนปฏิเสธแล้วถูกตัดทิ้ง
+    // - ออกจากระบบแล้วล้างข้อมูลออกจากหน่วยความจำของหน้าเว็บ
+    const { currentUser } = useAuth();
+    const canReadDb = isStaffRole(currentUser?.role);
+
     useEffect(() => {
+        if (!canReadDb) {
+            setStock(INITIAL_STOCK);
+            setTransactions(INITIAL_TRANSACTIONS);
+            setPalletRequests([]);
+            setConfig({ telegramChatId: '' });
+            setThresholds(null);
+            setIsDataLoaded(false);
+            return;
+        }
+
         let stockLoaded = false;
         let transactionsLoaded = false;
 
@@ -109,30 +127,33 @@ export const StockProvider: React.FC<StockProviderProps> = ({ children }) => {
         firebaseService.initializeData().then(() => {
             console.log('Firebase data initialized/checked.');
         });
-        firebaseService.subscribeToStock((data: Stock) => {
-            if (data) {
-                setStock(data);
-                stockLoaded = true;
-                checkAllLoaded();
-            }
-        });
-        firebaseService.subscribeToTransactions((data: Transaction[]) => {
-            if (data) {
-                setTransactions(data);
-                transactionsLoaded = true;
-                checkAllLoaded();
-            }
-        });
-        firebaseService.subscribeToPalletRequests((data: any[]) => {
-            if (data) setPalletRequests(data as PalletRequest[]);
-        });
-        firebaseService.subscribeToConfig((data: any) => {
-            if (data) setConfig(data);
-        });
-        firebaseService.subscribeToThresholds((data: any) => {
-            if (data) setThresholds(data);
-        });
-    }, []);
+        const unsubs = [
+            firebaseService.subscribeToStock((data: Stock) => {
+                if (data) {
+                    setStock(data);
+                    stockLoaded = true;
+                    checkAllLoaded();
+                }
+            }),
+            firebaseService.subscribeToTransactions((data: Transaction[]) => {
+                if (data) {
+                    setTransactions(data);
+                    transactionsLoaded = true;
+                    checkAllLoaded();
+                }
+            }),
+            firebaseService.subscribeToPalletRequests((data: any[]) => {
+                if (data) setPalletRequests(data as PalletRequest[]);
+            }),
+            firebaseService.subscribeToConfig((data: any) => {
+                if (data) setConfig(data);
+            }),
+            firebaseService.subscribeToThresholds((data: any) => {
+                if (data) setThresholds(data);
+            }),
+        ];
+        return () => unsubs.forEach(u => { try { if (typeof u === 'function') u(); } catch { /* ignore */ } });
+    }, [canReadDb, currentUser?.username]);
 
     const generateDocNo = useCallback((type: TransactionType, source: string, dest: string, dateStr: string) => {
         const isSourceBranch = BRANCHES.some((b: Branch) => b.id === source);
