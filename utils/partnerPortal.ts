@@ -284,3 +284,21 @@ export const formatThaiMonth = (month: string): string => {
     const names = ['ม.ค.', 'ก.พ.', 'มี.ค.', 'เม.ย.', 'พ.ค.', 'มิ.ย.', 'ก.ค.', 'ส.ค.', 'ก.ย.', 'ต.ค.', 'พ.ย.', 'ธ.ค.'];
     return `${names[m - 1]} ${y + 543}`;
 };
+
+export type QuickRangeKey = 'thisMonth' | 'lastMonth' | 'last30';
+
+/** ช่วงวันที่ด่วน ตามเวลาไทย (YYYY-MM-DD) */
+export const quickRange = (key: QuickRangeKey, now: Date = new Date()): { from: string; to: string } => {
+    const today = toBangkokDate(now.toISOString());
+    const [y, m] = today.split('-').map(Number);
+    const pad = (n: number) => String(n).padStart(2, '0');
+    if (key === 'thisMonth') return { from: `${y}-${pad(m)}-01`, to: today };
+    if (key === 'lastMonth') {
+        const py = m === 1 ? y - 1 : y;
+        const pm = m === 1 ? 12 : m - 1;
+        const lastDay = new Date(Date.UTC(py, pm, 0)).getUTCDate();
+        return { from: `${py}-${pad(pm)}-01`, to: `${py}-${pad(pm)}-${pad(lastDay)}` };
+    }
+    const from = toBangkokDate(new Date(now.getTime() - 29 * 86400000).toISOString());
+    return { from, to: today };
+};

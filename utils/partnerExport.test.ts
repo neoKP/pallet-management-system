@@ -101,3 +101,17 @@ describe('ไฟล์ Excel ของคู่ค้า', () => {
         expect(filterLabel({ from: '2026-11-05', to: '2026-11-01' })).toBe('ช่วงวันที่ 01/11/2026 – 05/11/2026');
     });
 });
+
+describe('quickRange (เวลาไทย)', () => {
+    it('เดือนนี้ / เดือนก่อน / 30 วัน — รวมข้ามปีและปีอธิกสุรทิน', async () => {
+        const { quickRange } = await import('./partnerPortal');
+        const now = new Date('2026-11-14T06:00:00Z');
+        expect(quickRange('thisMonth', now)).toEqual({ from: '2026-11-01', to: '2026-11-14' });
+        expect(quickRange('lastMonth', now)).toEqual({ from: '2026-10-01', to: '2026-10-31' });
+        expect(quickRange('last30', now)).toEqual({ from: '2026-10-16', to: '2026-11-14' });
+        expect(quickRange('lastMonth', new Date('2027-01-05T03:00:00Z'))).toEqual({ from: '2026-12-01', to: '2026-12-31' });
+        expect(quickRange('lastMonth', new Date('2028-03-02T03:00:00Z'))).toEqual({ from: '2028-02-01', to: '2028-02-29' });
+        // 1 ธ.ค. 00:30 เวลาไทย = 30 พ.ย. UTC → ยังนับเป็นเดือน ธ.ค.
+        expect(quickRange('thisMonth', new Date('2026-11-30T17:30:00Z'))).toEqual({ from: '2026-12-01', to: '2026-12-01' });
+    });
+});
