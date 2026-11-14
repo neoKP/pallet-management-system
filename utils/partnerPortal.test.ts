@@ -101,16 +101,19 @@ describe('buildPartnerPortalView', () => {
         expect(view.history.map(h => h.docNo)).toEqual(['NEW', 'OLD']);
     });
 
-    it('ซีโน่ตามทะเบียนจริง (portalShowTotals: false) — ไม่ส่งยอดรวม / อายุค้างไปหน้าจอ แต่ยังเห็นประวัติ', () => {
+    it('ซีโน่ตามทะเบียนจริง (portalShowTotals: true ตั้งแต่ 14 พ.ย. 69) — ส่งยอดรวมตามสูตรระบบ รวมรายการคืนอัตโนมัติ', () => {
         const txs = [
-            tx({ source: 'sino', dest: 'kpp', qty: 12, date: '2026-10-01T00:00:00.000Z' }),
-            tx({ type: 'OUT', source: 'hub_nw', dest: 'sino', qty: 5 }),
+            tx({ docNo: 'EXT-IN-1', source: 'sino', dest: 'hub_nw', qty: 12, date: '2026-10-01T00:00:00.000Z' }),
+            tx({ docNo: 'EXT-IN-1-AUTO', type: 'OUT', source: 'hub_nw', dest: 'sino', qty: 12 }),
+            tx({ docNo: 'EXT-OUT-2', type: 'OUT', source: 'hub_nw', dest: 'sino', qty: 5 }),
         ];
         const view = buildPartnerPortalView(txs, 'sino', TODAY)!;
-        expect(view.showTotals).toBe(false);
-        expect(view.balances).toEqual([]);
-        expect(view.aging).toEqual([]);
-        expect(view.history).toHaveLength(2);
+        expect(view.showTotals).toBe(true);
+        const red = view.balances.find(b => b.palletId === 'loscam_red')!;
+        // สูตรเดียวกับแดชบอร์ด: ยอด = ผลรวมทุกแถวที่แสดง (รวม AUTO) จึงตรวจย้อนจากประวัติได้
+        expect(red.balance).toBe(calculatePartnerBalance(txs, 'sino', 'loscam_red'));
+        expect(red.balance).toBe(view.history.filter(h => h.palletId === 'loscam_red').reduce((s, h) => s + h.effect, 0));
+        expect(view.history.map(h => h.kind).sort()).toEqual(['AUTO', 'RECEIVE', 'RETURN']);
     });
 
     it('คู่ค้าที่ไม่ได้ตั้งค่า portalShowTotals = ซ่อนยอดรวมเป็นค่าเริ่มต้น', () => {
@@ -127,7 +130,11 @@ describe('buildPartnerPortalView', () => {
             tx({ docNo: 'ADJ-1', type: 'ADJUST', source: 'sino', dest: 'SYSTEM_ADJUSTMENT', qty: 436, note: 'ยอดยกมา' }),
             tx({ docNo: 'EXT-OUT-REAL', type: 'OUT', source: 'hub_nw', dest: 'sino', qty: 20 }),
         ];
-        const view = buildPartnerPortalView(txs, 'sino', TODAY)!;
+        // โหมดซ่อนยอดรวม (คู่ค้าที่ยังไม่กระทบยอด) — ตั้ง portalShowTotals: false ให้ชัด
+        const hidden = EXTERNAL_PARTNERS.map(p => (p.id === 'sino' ? { ...p, portalShowTotals: false } : p));
+        const view = buildPartnerPortalView(txs, 'sino', TODAY, hidden)!;
+        expect(view.showTotals).toBe(false);
+        expect(view.balances).toEqual([]);
         expect(view.history.map(h => h.docNo).sort()).toEqual(['EXT-IN-1', 'EXT-OUT-REAL']);
         expect(view.history.find(h => h.docNo === 'EXT-OUT-REAL')!.kind).toBe('RETURN');
     });

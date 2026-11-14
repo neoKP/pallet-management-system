@@ -24,9 +24,10 @@ export const BRANCHES: Branch[] = [
 
 export const EXTERNAL_PARTNERS: Partner[] = [
   { id: 'neo_corp', name: 'บ. นีโอ คอร์ปอเรท', type: 'customer', allowedPallets: ['loscam_red'], rentalFee: 0, gracePeriod: 0, branchRestriction: { in: 'all', out: 'none' } },
-  // portalShowTotals: false — คุณเท็นสั่ง 13 พ.ย. 69 ซ่อนยอดคงค้าง/อายุค้างจากพนักงานซีโน่ จนกว่าทีมกระทบยอดกับซีโน่
+  // portalShowTotals: true — คุณเท็นสั่ง 14 พ.ย. 69 เปิดยอดคงค้าง/อายุค้างให้ซีโน่ ด้วยสูตรเดียวกับแดชบอร์ด (นับคืนอัตโนมัติ -AUTO)
+  // (13 พ.ย. 69 เคยซ่อนไว้ · ณ 14 พ.ย. แบบนี้ได้ แดงคืนเกิน 332 / ฟ้าคืนเกิน 374 · ถ้าไม่นับ AUTO จะเป็นเราค้าง 3,731 / 1,218)
   // (ยอดตามสูตรระบบ ณ วันนั้น = คืนเกิน แดง 386 / ฟ้า 391 ซึ่งรวมรายการคืนอัตโนมัติ -AUTO ที่ศูนย์ NW)
-  { id: 'sino', name: 'บ. ซีโน-แปซิฟิค', type: 'provider', allowedPallets: ['loscam_red', 'loscam_blue'], rentalFee: 1.0, gracePeriod: 10, branchRestriction: { in: 'all', out: 'all' }, portalShowTotals: false },
+  { id: 'sino', name: 'บ. ซีโน-แปซิฟิค', type: 'provider', allowedPallets: ['loscam_red', 'loscam_blue'], rentalFee: 1.0, gracePeriod: 10, branchRestriction: { in: 'all', out: 'all' }, portalShowTotals: true },
   { id: 'lamsoon', name: 'บ. ล่ำสูง', type: 'provider', allowedPallets: ['loscam_red'], branchRestriction: { in: ['sai3', 'hub_nw'], out: ['sai3', 'hub_nw'] } },
   { id: 'ufc', name: 'บ. UFC', type: 'provider', allowedPallets: ['loscam_red', 'loscam_blue'], branchRestriction: { in: ['sai3'], out: ['sai3'] } },
   { id: 'loxley', name: 'บ. Loxley', type: 'provider', allowedPallets: ['loscam_red', 'loscam_blue', 'loscam_yellow'], branchRestriction: { in: ['sai3'], out: ['sai3'] } },
