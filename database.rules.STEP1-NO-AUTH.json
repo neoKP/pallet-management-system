@@ -23,7 +23,7 @@
         "dest": { ".validate": "newData.isString() && newData.val().length <= 40" },
         "note": { ".validate": "newData.isString() && newData.val().length <= 500" },
         "driverName": { ".validate": "newData.isString() && newData.val().length <= 100" },
-        "carRegistration": { ".validate": "newData.isString() && newData.val().length <= 20" },
+        "carRegistration": { ".validate": "newData.isString() && newData.val().length <= 60" },
         "transportCompany": { ".validate": "newData.isString() && newData.val().length <= 150" },
         "referenceDocNo": { ".validate": "newData.isString() && newData.val().length <= 50" },
         "adjustedBy": { ".validate": "newData.isString() && newData.val().length <= 100" }
