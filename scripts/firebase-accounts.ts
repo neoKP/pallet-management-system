@@ -6,6 +6,8 @@
  *   สร้างจริง:                       npx vite-node scripts/firebase-accounts.ts -- --key "<ไฟล์>" --apply
  *   รีเซ็ตรหัส 1 บัญชี:              ... --apply --reset user_cm
  *   เปิด / ปิดบัญชี:                  ... --apply --enable user_sino   |   --disable user_sino
+ *   ตั้งรหัสที่ผู้บริหารกำหนดเอง:      ... --apply --set-password admin            (รหัสอ่านจากตัวแปร NEW_PASSWORD)
+ *                                    ... --apply --set-password all-staff        (ทุกบัญชี USER — ไม่รวม ADMIN / PARTNER)
  *
  * กติกา:
  * - บัญชีที่ยังไม่มี → สร้างพร้อมรหัสสุ่ม 14 ตัว · บัญชีที่มีแล้ว → ไม่เปลี่ยนรหัส (ยกเว้น --reset)
@@ -39,6 +41,8 @@ const APPLY = flag('--apply');
 const RESET = value('--reset');
 const ENABLE = value('--enable');
 const DISABLE = value('--disable');
+const SET_PASSWORD = value('--set-password');
+const NEW_PASSWORD = process.env.NEW_PASSWORD;
 const KEY = value('--key') || process.env.GOOGLE_APPLICATION_CREDENTIALS;
 const OUT_DIR = value('--out') || join(homedir(), 'Downloads');
 const EMULATOR = !!process.env.FIREBASE_AUTH_EMULATOR_HOST;
@@ -65,7 +69,25 @@ const initApp = (): App => {
     return initializeApp({ credential: cert(sa), projectId: PROJECT_ID }, 'accounts');
 };
 
+/** บัญชีที่ --set-password ครอบ (all-staff = เฉพาะ USER · คู่ค้าต้องตั้งทีละบัญชีเท่านั้น) */
+const setPasswordTargets = (target: string | undefined): Set<string> => {
+    if (!target) return new Set();
+    if (target === 'all-staff') return new Set(AUTHORIZED_USERS.filter(u => u.role === 'USER').map(u => u.username));
+    return new Set([target]);
+};
+
 const main = async () => {
+    if (SET_PASSWORD) {
+        if (!NEW_PASSWORD || NEW_PASSWORD.length < 6) {
+            console.error('ใส่รหัสใหม่ในตัวแปร NEW_PASSWORD อย่างน้อย 6 ตัว (Firebase บังคับ)');
+            process.exit(2);
+        }
+        if (SET_PASSWORD !== 'all-staff' && !AUTHORIZED_USERS.some(u => u.username === SET_PASSWORD)) {
+            console.error(`ไม่รู้จักบัญชี ${SET_PASSWORD}`);
+            process.exit(2);
+        }
+    }
+    const setTargets = setPasswordTargets(SET_PASSWORD);
     for (const target of [RESET, ENABLE, DISABLE]) {
         if (target && !AUTHORIZED_USERS.some(u => u.username === target)) {
             console.error(`ไม่รู้จักบัญชี ${target}`);
@@ -91,6 +113,12 @@ const main = async () => {
             if (APPLY) {
                 rec = await auth.createUser({ email, password, displayName: u.name, disabled });
                 issued.push({ username: u.username, name: u.name, password, note: disabled ? 'ปิดใช้งานอยู่ — รออนุมัติ' : 'ใหม่' });
+            }
+        } else if (setTargets.has(u.username)) {
+            actions.push('ตั้งรหัสที่กำหนด + ยกเลิกเซสชันเดิม');
+            if (APPLY) {
+                await auth.updateUser(rec.uid, { password: NEW_PASSWORD! });
+                await auth.revokeRefreshTokens(rec.uid);
             }
         } else if (RESET === u.username) {
             actions.push('รีเซ็ตรหัส + ยกเลิกเซสชันเดิม');
