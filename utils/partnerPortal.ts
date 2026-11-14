@@ -187,3 +187,100 @@ export const buildPartnerPortalView = (
         graceDays: partner.gracePeriod ?? 0,
     };
 };
+
+// ---------------------------------------------------------------------------
+// ค้นหา / ช่วงวันที่ / สรุปรายเดือน สำหรับหน้าคู่ค้า
+// ---------------------------------------------------------------------------
+
+/**
+ * วันที่ตามเวลาประเทศไทย รูปแบบ YYYY-MM-DD
+ * ใช้เวลาไทยตายตัว (ไม่ขึ้นกับเครื่องของคู่ค้า) ให้ตัวกรอง / สรุปรายเดือน / ไฟล์ Excel ตรงกันทุกเครื่อง
+ */
+export const toBangkokDate = (iso: string): string => {
+    const d = new Date(iso);
+    if (Number.isNaN(d.getTime())) return '';
+    return new Intl.DateTimeFormat('en-CA', {
+        timeZone: 'Asia/Bangkok', year: 'numeric', month: '2-digit', day: '2-digit',
+    }).format(d);
+};
+
+/** แสดงวันที่แบบ วว/ดด/ปปปป (ค.ศ.) ตามเวลาไทย */
+export const formatBangkokDate = (iso: string): string => {
+    const ymd = toBangkokDate(iso);
+    if (!ymd) return '';
+    const [y, m, d] = ymd.split('-');
+    return `${d}/${m}/${y}`;
+};
+
+export interface PartnerHistoryFilter {
+    /** ค้นเลขที่เอกสาร (บางส่วนก็ได้ ไม่สนตัวพิมพ์เล็กใหญ่) */
+    q?: string;
+    /** ตั้งแต่วันที่ YYYY-MM-DD (รวมวันนั้น) */
+    from?: string;
+    /** ถึงวันที่ YYYY-MM-DD (รวมวันนั้น) */
+    to?: string;
+}
+
+export const filterPartnerHistory = (rows: PartnerHistoryRow[], f: PartnerHistoryFilter): PartnerHistoryRow[] => {
+    const q = (f.q || '').trim().toLowerCase();
+    // ผู้ใช้เลือกวันกลับด้าน (จาก > ถึง) ให้สลับเอง ดีกว่าแสดงว่างแล้วงง
+    let from = f.from || '';
+    let to = f.to || '';
+    if (from && to && from > to) [from, to] = [to, from];
+    return rows.filter(r => {
+        if (q && !String(r.docNo || '').toLowerCase().includes(q)) return false;
+        if (from || to) {
+            const day = toBangkokDate(r.date);
+            if (!day) return false;
+            if (from && day < from) return false;
+            if (to && day > to) return false;
+        }
+        return true;
+    });
+};
+
+export interface PartnerMonthSummaryRow {
+    /** YYYY-MM */
+    month: string;
+    palletId: PalletId;
+    palletName: string;
+    received: number;
+    returned: number;
+    docs: number;
+}
+
+/**
+ * สรุปรับ / คืน รายเดือน แยกประเภทพาเลท (ไม่ใช่ยอดคงค้าง)
+ * นับเฉพาะ RECEIVE / RETURN — รายการคืนอัตโนมัติและปรับยอดไม่นับ
+ * เรียงเดือนใหม่สุดก่อน
+ */
+export const summarizePartnerByMonth = (rows: PartnerHistoryRow[]): PartnerMonthSummaryRow[] => {
+    const map = new Map<string, PartnerMonthSummaryRow>();
+    const docs = new Map<string, Set<string>>();
+    for (const r of rows) {
+        if (r.kind !== 'RECEIVE' && r.kind !== 'RETURN') continue;
+        const day = toBangkokDate(r.date);
+        if (!day) continue;
+        const month = day.slice(0, 7);
+        const key = `${month}|${r.palletId}`;
+        let row = map.get(key);
+        if (!row) {
+            row = { month, palletId: r.palletId, palletName: r.palletName, received: 0, returned: 0, docs: 0 };
+            map.set(key, row);
+            docs.set(key, new Set());
+        }
+        if (r.kind === 'RECEIVE') row.received += r.qty;
+        else row.returned += r.qty;
+        docs.get(key)!.add(String(r.docNo));
+    }
+    for (const [key, row] of map) row.docs = docs.get(key)!.size;
+    return [...map.values()].sort((a, b) => b.month.localeCompare(a.month) || a.palletName.localeCompare(b.palletName));
+};
+
+/** เดือนแบบไทย เช่น 2026-11 → พ.ย. 2569 */
+export const formatThaiMonth = (month: string): string => {
+    const [y, m] = month.split('-').map(Number);
+    if (!y || !m) return month;
+    const names = ['ม.ค.', 'ก.พ.', 'มี.ค.', 'เม.ย.', 'พ.ค.', 'มิ.ย.', 'ก.ค.', 'ส.ค.', 'ก.ย.', 'ต.ค.', 'พ.ย.', 'ธ.ค.'];
+    return `${names[m - 1]} ${y + 543}`;
+};

@@ -1,8 +1,11 @@
-import React, { useCallback, useEffect, useRef, useState } from 'react';
-import { LogOut, Eye, Clock, ArrowDownLeft, ArrowUpRight, SlidersHorizontal, Loader2, RefreshCw } from 'lucide-react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { LogOut, Eye, Clock, ArrowDownLeft, ArrowUpRight, SlidersHorizontal, Loader2, RefreshCw, Search, Download, X, CalendarRange } from 'lucide-react';
 import BrandLogo from '../common/BrandLogo';
 import { User } from '../../types';
-import { PartnerHistoryKind, PartnerHistoryRow, PartnerPortalPublicView } from '../../utils/partnerPortal';
+import {
+    PartnerHistoryKind, PartnerHistoryRow, PartnerPortalPublicView, PartnerHistoryFilter,
+    filterPartnerHistory, summarizePartnerByMonth, formatBangkokDate, formatThaiMonth,
+} from '../../utils/partnerPortal';
 import { formatDateShort } from '../../utils/helpers';
 import { getIdToken } from '../../services/authService';
 
@@ -45,6 +48,10 @@ const fmt = (n: number) => n.toLocaleString('th-TH');
 const PartnerPortal: React.FC<PartnerPortalProps> = ({ currentUser, onLogout, onSessionExpired }) => {
     const [visible, setVisible] = useState(PAGE_SIZE);
     const [state, setState] = useState<LoadState>({ status: 'loading' });
+    const [filter, setFilter] = useState<PartnerHistoryFilter>({ q: '', from: '', to: '' });
+    const [tab, setTab] = useState<'history' | 'monthly'>('history');
+    const [exporting, setExporting] = useState(false);
+    const [exportError, setExportError] = useState('');
     // เก็บใน ref — ฟังก์ชันจาก App ถูกสร้างใหม่ทุกครั้งที่ App วาดใหม่ ถ้าใส่เป็น dependency จะโหลดซ้ำไม่หยุด
     const expiredRef = useRef(onSessionExpired);
     expiredRef.current = onSessionExpired;
@@ -71,6 +78,31 @@ const PartnerPortal: React.FC<PartnerPortalProps> = ({ currentUser, onLogout, on
 
     const view = state.status === 'ok' ? state.view : null;
     const isDataLoaded = state.status === 'ok';
+
+    // ตัวกรองใช้กับทั้งตาราง สรุปรายเดือน และไฟล์ Excel — ทั้งสามจึงตรงกันเสมอ
+    const filtered = useMemo(() => (view ? filterPartnerHistory(view.history, filter) : []), [view, filter]);
+    const monthly = useMemo(() => summarizePartnerByMonth(filtered), [filtered]);
+    const isFiltered = !!(filter.q?.trim() || filter.from || filter.to);
+    const updateFilter = (patch: Partial<PartnerHistoryFilter>) => {
+        setFilter(f => ({ ...f, ...patch }));
+        setVisible(PAGE_SIZE);
+    };
+
+    const handleExport = async () => {
+        if (!view) return;
+        setExporting(true);
+        setExportError('');
+        try {
+            // โหลดตัวสร้าง Excel เมื่อกดเท่านั้น หน้าแรกจะได้ไม่หนัก
+            const { downloadPartnerWorkbook } = await import('../../utils/partnerExport');
+            await downloadPartnerWorkbook(view.partner.name, filtered, monthly, filter);
+        } catch (e) {
+            console.error('[partner] export failed', e);
+            setExportError('สร้างไฟล์ไม่สำเร็จ กรุณาลองใหม่');
+        } finally {
+            setExporting(false);
+        }
+    };
 
     const header = (
         <header className="bg-white border-b border-slate-200 sticky top-0 z-20">
@@ -117,7 +149,7 @@ const PartnerPortal: React.FC<PartnerPortalProps> = ({ currentUser, onLogout, on
     }
     if (!view) return null;
 
-    const shownHistory = view.history.slice(0, visible);
+    const shownHistory = filtered.slice(0, visible);
 
     return (
         <div className="min-h-screen bg-slate-50 text-slate-900 font-sans">
@@ -210,13 +242,126 @@ const PartnerPortal: React.FC<PartnerPortalProps> = ({ currentUser, onLogout, on
                         </section>
                         </>)}
 
+                        {/* ตัวกรอง + ดาวน์โหลด */}
+                        <section className="bg-white rounded-2xl border border-slate-200 p-3 space-y-3">
+                            <label className="flex items-center gap-2 px-3 rounded-xl border border-slate-200 focus-within:border-blue-400">
+                                <Search size={16} className="text-slate-400 shrink-0" />
+                                <input
+                                    type="search"
+                                    inputMode="search"
+                                    value={filter.q}
+                                    onChange={e => updateFilter({ q: e.target.value })}
+                                    placeholder="ค้นเลขที่เอกสาร เช่น EXT-IN-20261113"
+                                    className="w-full min-w-0 py-3 text-sm outline-none bg-transparent"
+                                    aria-label="ค้นเลขที่เอกสาร"
+                                />
+                            </label>
+                            <div className="grid grid-cols-2 gap-2">
+                                <label className="min-w-0 text-xs font-bold text-slate-500">
+                                    ตั้งแต่วันที่
+                                    <input
+                                        type="date"
+                                        value={filter.from}
+                                        onChange={e => updateFilter({ from: e.target.value })}
+                                        className="mt-1 w-full min-w-0 px-2 py-2.5 rounded-xl border border-slate-200 text-sm text-slate-800 bg-white"
+                                    />
+                                </label>
+                                <label className="min-w-0 text-xs font-bold text-slate-500">
+                                    ถึงวันที่
+                                    <input
+                                        type="date"
+                                        value={filter.to}
+                                        onChange={e => updateFilter({ to: e.target.value })}
+                                        className="mt-1 w-full min-w-0 px-2 py-2.5 rounded-xl border border-slate-200 text-sm text-slate-800 bg-white"
+                                    />
+                                </label>
+                            </div>
+                            <div className="flex flex-wrap items-center gap-2">
+                                <button
+                                    type="button"
+                                    onClick={handleExport}
+                                    disabled={exporting || filtered.length === 0}
+                                    className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-emerald-600 text-white text-sm font-bold hover:bg-emerald-500 disabled:opacity-50"
+                                >
+                                    {exporting ? <Loader2 size={16} className="animate-spin" /> : <Download size={16} />}
+                                    ดาวน์โหลด Excel ({fmt(filtered.length)} รายการ)
+                                </button>
+                                {isFiltered && (
+                                    <button
+                                        type="button"
+                                        onClick={() => updateFilter({ q: '', from: '', to: '' })}
+                                        className="inline-flex items-center gap-1 px-3 py-2.5 rounded-xl border border-slate-200 text-sm font-bold text-slate-600 hover:bg-slate-50"
+                                    >
+                                        <X size={14} /> ล้างตัวกรอง
+                                    </button>
+                                )}
+                            </div>
+                            {exportError && <p className="text-sm font-bold text-red-600">{exportError}</p>}
+                        </section>
+
+                        {/* สลับ: รายเอกสาร / สรุปรายเดือน */}
+                        <div className="grid grid-cols-2 gap-1 p-1 rounded-xl bg-slate-200/60" role="tablist">
+                            {([['history', 'ประวัติรายเอกสาร'], ['monthly', 'สรุปรายเดือน']] as const).map(([key, label]) => (
+                                <button
+                                    key={key}
+                                    type="button"
+                                    role="tab"
+                                    aria-selected={tab === key}
+                                    onClick={() => setTab(key)}
+                                    className={`py-2.5 rounded-lg text-sm font-bold ${tab === key ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-500'}`}
+                                >
+                                    {label}
+                                </button>
+                            ))}
+                        </div>
+
+                        {tab === 'monthly' && (
+                            <section>
+                                <h2 className="text-base font-black mb-1 inline-flex items-center gap-2">
+                                    <CalendarRange size={18} /> สรุปรับ-คืนรายเดือน
+                                </h2>
+                                <p className="text-xs text-slate-500 mb-3">นับเฉพาะเอกสารรับ-คืนจริง ตามตัวกรองด้านบน · ไม่ใช่ยอดคงค้าง</p>
+                                {monthly.length === 0 ? (
+                                    <p className="bg-white rounded-2xl border border-slate-200 p-4 text-sm text-slate-500">ไม่มีรายการ</p>
+                                ) : (
+                                    <div className="bg-white rounded-2xl border border-slate-200 overflow-x-auto">
+                                        <table className="w-full min-w-[320px] text-sm">
+                                            <thead className="bg-slate-50 text-slate-500 text-xs">
+                                                <tr>
+                                                    <th className="text-left p-3">เดือน</th>
+                                                    <th className="text-left p-3">ประเภทพาเลท</th>
+                                                    <th className="text-right p-3">ส่งให้นีโอสยาม</th>
+                                                    <th className="text-right p-3">นีโอสยามคืน</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody className="divide-y divide-slate-100">
+                                                {monthly.map(m => (
+                                                    <tr key={`${m.month}-${m.palletId}`}>
+                                                        <td className="p-3 whitespace-nowrap font-bold">{formatThaiMonth(m.month)}</td>
+                                                        <td className="p-3">{m.palletName}</td>
+                                                        <td className="p-3 text-right font-black text-amber-700">{fmt(m.received)}</td>
+                                                        <td className="p-3 text-right font-black text-emerald-700">{fmt(m.returned)}</td>
+                                                    </tr>
+                                                ))}
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                )}
+                            </section>
+                        )}
+
                         {/* ประวัติรับ-คืน */}
+                        {tab === 'history' && (
                         <section>
                             <h2 className="text-base font-black mb-3">
-                                ประวัติรับ-คืน <span className="text-sm font-bold text-slate-400">({fmt(view.history.length)} รายการ)</span>
+                                ประวัติรับ-คืน <span className="text-sm font-bold text-slate-400">
+                                    ({isFiltered ? `${fmt(filtered.length)} จาก ${fmt(view.history.length)}` : fmt(view.history.length)} รายการ)
+                                </span>
                             </h2>
-                            {view.history.length === 0 ? (
-                                <p className="bg-white rounded-2xl border border-slate-200 p-4 text-sm text-slate-500">ยังไม่มีรายการ</p>
+                            {filtered.length === 0 ? (
+                                <p className="bg-white rounded-2xl border border-slate-200 p-4 text-sm text-slate-500">
+                                    {isFiltered ? 'ไม่พบรายการตามตัวกรอง' : 'ยังไม่มีรายการ'}
+                                </p>
                             ) : (
                                 <>
                                     {/* มือถือ: การ์ด */}
@@ -233,7 +378,7 @@ const PartnerPortal: React.FC<PartnerPortalProps> = ({ currentUser, onLogout, on
                                                     </div>
                                                     <p className="mt-1 text-sm font-bold break-all">{h.docNo}</p>
                                                     <p className="text-xs text-slate-500">
-                                                        {formatDateShort(h.date)} · {h.palletName} · {h.branchName}
+                                                        {formatBangkokDate(h.date)} · {h.palletName} · {h.branchName}
                                                     </p>
                                                 </div>
                                             );
@@ -258,7 +403,7 @@ const PartnerPortal: React.FC<PartnerPortalProps> = ({ currentUser, onLogout, on
                                                     const k = KIND_LABEL[h.kind];
                                                     return (
                                                         <tr key={`${h.id ?? ''}-${h.docNo}-${i}`}>
-                                                            <td className="p-3 whitespace-nowrap">{formatDateShort(h.date)}</td>
+                                                            <td className="p-3 whitespace-nowrap">{formatBangkokDate(h.date)}</td>
                                                             <td className="p-3 font-bold">{h.docNo}</td>
                                                             <td className="p-3">
                                                                 <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-lg border text-xs font-bold ${k.cls}`}>
@@ -275,18 +420,19 @@ const PartnerPortal: React.FC<PartnerPortalProps> = ({ currentUser, onLogout, on
                                         </table>
                                     </div>
 
-                                    {visible < view.history.length && (
+                                    {visible < filtered.length && (
                                         <button
                                             type="button"
                                             onClick={() => setVisible(v => v + PAGE_SIZE)}
                                             className="mt-3 w-full py-3 rounded-xl bg-white border border-slate-200 font-bold text-slate-700 hover:bg-slate-50"
                                         >
-                                            ดูเพิ่มอีก {fmt(Math.min(PAGE_SIZE, view.history.length - visible))} รายการ
+                                            ดูเพิ่มอีก {fmt(Math.min(PAGE_SIZE, filtered.length - visible))} รายการ
                                         </button>
                                     )}
                                 </>
                             )}
                         </section>
+                        )}
                     </>
                 )}
             </main>
