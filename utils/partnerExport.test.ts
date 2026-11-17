@@ -115,3 +115,16 @@ describe('quickRange (เวลาไทย)', () => {
         expect(quickRange('thisMonth', new Date('2026-11-30T17:30:00Z'))).toEqual({ from: '2026-12-01', to: '2026-12-01' });
     });
 });
+
+describe('formatThaiShortDate', () => {
+    it('แปลง YYYY-MM-DD เป็นวันที่ไทยสั้น พ.ศ.', async () => {
+        const { formatThaiShortDate } = await import('./partnerPortal');
+        expect(formatThaiShortDate('2026-11-01')).toBe('1 พ.ย. 2569');
+        expect(formatThaiShortDate('2027-01-31')).toBe('31 ม.ค. 2570');
+        expect(formatThaiShortDate('')).toBe('');
+        expect(formatThaiShortDate(undefined)).toBe('');
+        expect(formatThaiShortDate('2026-13-01')).toBe('');
+        expect(formatThaiShortDate('2026-02-31')).toBe('');
+        expect(formatThaiShortDate('2028-02-29')).toBe('29 ก.พ. 2571');
+    });
+});

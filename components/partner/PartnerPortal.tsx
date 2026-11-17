@@ -7,7 +7,7 @@ import { User } from '../../types';
 import { PALLET_TYPES } from '../../constants';
 import {
     PartnerHistoryKind, PartnerHistoryRow, PartnerPortalPublicView, PartnerHistoryFilter, QuickRangeKey,
-    filterPartnerHistory, summarizePartnerByMonth, formatBangkokDate, formatThaiMonth, quickRange,
+    filterPartnerHistory, summarizePartnerByMonth, formatBangkokDate, formatThaiMonth, quickRange, formatThaiShortDate,
 } from '../../utils/partnerPortal';
 import { getIdToken } from '../../services/authService';
 
@@ -68,6 +68,48 @@ const Badge: React.FC<{ h: PartnerHistoryRow }> = ({ h }) => {
         <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full ring-1 text-xs font-semibold whitespace-nowrap ${k.cls}`}>
             <k.Icon size={12} /> {kindText(h)}
         </span>
+    );
+};
+
+/**
+ * ช่องเลือกวันที่ที่แสดงเป็นวันที่ไทยทุกเครื่อง (เช่น "1 พ.ย. 2569")
+ * ช่องวันที่ของเบราว์เซอร์แสดงตามภาษาเครื่อง (บางเครื่องเป็น mm/dd/yyyy) จึงวางช่องจริงแบบโปร่งใสทับไว้
+ * แตะตรงไหนก็เปิดปฏิทินของเครื่อง · ค่าที่เก็บยังเป็น YYYY-MM-DD เหมือนเดิม
+ */
+const ThaiDateField: React.FC<{ label: string; value: string; onChange: (v: string) => void }> = ({ label, value, onChange }) => {
+    const ref = useRef<HTMLInputElement>(null);
+    const text = formatThaiShortDate(value);
+    return (
+        <div className="min-w-0">
+            <span className="block text-xs font-medium text-slate-500">{label}</span>
+            <div className="relative mt-1 rounded-xl bg-slate-50 ring-1 ring-slate-200 focus-within:ring-2 focus-within:ring-blue-500">
+                <div className="flex items-center justify-between gap-2 px-3 py-2.5 text-sm pointer-events-none">
+                    <span className={text ? 'text-slate-800 font-medium' : 'text-slate-400'}>{text || 'เลือกวันที่'}</span>
+                    <CalendarRange size={16} className="shrink-0 text-slate-400" />
+                </div>
+                <input
+                    ref={ref}
+                    type="date"
+                    value={value}
+                    aria-label={label}
+                    onChange={e => onChange(e.target.value)}
+                    onClick={() => { try { ref.current?.showPicker?.(); } catch { /* เบราว์เซอร์เก่า: ใช้การแตะปกติ */ } }}
+                    onKeyDown={e => {
+                        // คีย์บอร์ด: Enter / Space เปิดปฏิทิน (ช่องจริงโปร่งใส กรอบจะมีเส้นฟ้าเมื่อโฟกัส)
+                        if (e.key === 'Enter' || e.key === ' ') {
+                            e.preventDefault();
+                            try { ref.current?.showPicker?.(); } catch { /* ไม่รองรับ */ }
+                        }
+                    }}
+                    className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                />
+            </div>
+            {value && (
+                <button type="button" onClick={() => onChange('')} className="mt-1 text-xs font-medium text-slate-500 hover:text-slate-800 underline underline-offset-2">
+                    ล้างวันที่
+                </button>
+            )}
+        </div>
     );
 };
 
@@ -271,31 +313,36 @@ const PartnerPortal: React.FC<PartnerPortalProps> = ({ currentUser, onLogout, on
                                 <div key={b.palletId} className="relative overflow-hidden bg-white rounded-3xl shadow-xl shadow-slate-900/5 ring-1 ring-slate-200 p-5">
                                     <div className={`absolute inset-x-0 top-0 h-1.5 ${palletDot(b.palletId)}`} />
                                     <div className="flex items-center justify-between gap-2">
-                                        <p className="inline-flex items-center gap-2 text-sm font-semibold text-slate-600">
-                                            <span className={`w-2.5 h-2.5 rounded-full ${palletDot(b.palletId)}`} /> {b.palletName}
+                                        <p className="inline-flex items-center gap-2 text-base font-semibold text-slate-700">
+                                            <span className={`w-3 h-3 rounded-full ${palletDot(b.palletId)}`} /> {b.palletName}
                                         </p>
-                                        <span className="text-[11px] font-medium text-slate-400">ยอดคงค้าง</span>
+                                        <span className="text-xs font-medium text-slate-500">ยอดคงค้าง</span>
                                     </div>
-                                    <p className="mt-3 text-4xl font-bold tracking-tight tabular-nums">
-                                        {fmt(owed || over)} <span className="text-base font-semibold text-slate-400">ใบ</span>
+                                    <p className="mt-3 text-5xl font-bold tracking-tight tabular-nums">
+                                        {fmt(owed || over)} <span className="text-lg font-semibold text-slate-400">ใบ</span>
                                     </p>
-                                    <span className={`mt-2 inline-flex px-2.5 py-1 rounded-full ring-1 text-xs font-semibold ${status.cls}`}>{status.text}</span>
-                                    <div className="mt-4 grid grid-cols-2 gap-3 text-sm">
-                                        <div className="rounded-2xl bg-slate-50 px-3 py-2">
-                                            <p className="text-[11px] text-slate-500">ส่งให้นีโอสยามรวม</p>
-                                            <p className="font-bold tabular-nums">{fmt(b.received)}</p>
+                                    <span className={`mt-2 inline-flex px-3 py-1 rounded-full ring-1 text-sm font-semibold ${status.cls}`}>{status.text}</span>
+                                    <div className="mt-4 grid grid-cols-2 gap-3">
+                                        <div className="rounded-2xl bg-slate-50 px-3 py-2.5">
+                                            <p className="text-sm text-slate-500">ส่งให้นีโอสยามรวม</p>
+                                            <p className="text-lg font-bold tabular-nums">{fmt(b.received)} <span className="text-sm font-medium text-slate-400">ใบ</span></p>
                                         </div>
-                                        <div className="rounded-2xl bg-slate-50 px-3 py-2">
-                                            <p className="text-[11px] text-slate-500">คืนแล้วรวม</p>
-                                            <p className="font-bold tabular-nums">{fmt(b.returned)}</p>
+                                        <div className="rounded-2xl bg-slate-50 px-3 py-2.5">
+                                            <p className="text-sm text-slate-500">นีโอสยามคืนแล้วรวม</p>
+                                            <p className="text-lg font-bold tabular-nums">{fmt(b.returned)} <span className="text-sm font-medium text-slate-400">ใบ</span></p>
                                         </div>
                                     </div>
-                                    <div className="mt-3" title={`คืนแล้ว ${Math.round((b.received > 0 ? b.returned / b.received : 0) * 100)}% ของที่ส่งให้`}>
-                                        <div className="h-1.5 rounded-full bg-slate-100 overflow-hidden">
+                                    <div className="mt-3">
+                                        <div className="h-2 rounded-full bg-slate-100 overflow-hidden" aria-hidden>
                                             <div className="h-full rounded-full bg-emerald-600" style={{ width: `${ratio * 100}%` }} />
                                         </div>
-                                        <p className="mt-1 text-[11px] text-slate-500">
-                                            คืนแล้ว {b.received > 0 ? Math.round((b.returned / b.received) * 100) : 0}% ของที่ส่งให้ (รวมยอดยกมา / ปรับยอด ในยอดคงค้าง)
+                                        {/* คืนเกิน 100% ได้ เพราะยอดคงค้างรวมยอดยกมา / ปรับยอดตั้งแต่ก่อนเริ่มบันทึกในระบบ — อธิบายเป็นคำแทนเปอร์เซ็นต์ */}
+                                        <p className="mt-1.5 text-sm text-slate-500">
+                                            {b.returned > b.received
+                                                ? `คืนมากกว่าที่ส่งให้ ${fmt(b.returned - b.received)} ใบ — เพราะยอดคงค้างรวมยอดยกมาและการปรับยอดด้วย`
+                                                : b.received <= 0
+                                                    ? 'ยังไม่มีรายการส่งให้นีโอสยาม'
+                                                    : `คืนแล้ว ${Math.round((b.returned / b.received) * 100)}% ของที่ส่งให้`}
                                         </p>
                                     </div>
                                 </div>
@@ -397,24 +444,8 @@ const PartnerPortal: React.FC<PartnerPortalProps> = ({ currentUser, onLogout, on
                         </button>
                     </div>
                     <div className="grid grid-cols-2 gap-2">
-                        <label className="min-w-0 text-xs font-medium text-slate-500">
-                            ตั้งแต่วันที่
-                            <input
-                                type="date"
-                                value={filter.from}
-                                onChange={e => updateFilter({ from: e.target.value })}
-                                className="mt-1 w-full min-w-0 px-2 py-2.5 rounded-xl bg-slate-50 ring-1 ring-slate-200 text-sm text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                            />
-                        </label>
-                        <label className="min-w-0 text-xs font-medium text-slate-500">
-                            ถึงวันที่
-                            <input
-                                type="date"
-                                value={filter.to}
-                                onChange={e => updateFilter({ to: e.target.value })}
-                                className="mt-1 w-full min-w-0 px-2 py-2.5 rounded-xl bg-slate-50 ring-1 ring-slate-200 text-sm text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                            />
-                        </label>
+                        <ThaiDateField label="ตั้งแต่วันที่" value={filter.from || ''} onChange={v => updateFilter({ from: v })} />
+                        <ThaiDateField label="ถึงวันที่" value={filter.to || ''} onChange={v => updateFilter({ to: v })} />
                     </div>
                     <button
                         type="button"

@@ -302,3 +302,15 @@ export const quickRange = (key: QuickRangeKey, now: Date = new Date()): { from: 
     const from = toBangkokDate(new Date(now.getTime() - 29 * 86400000).toISOString());
     return { from, to: today };
 };
+
+/** วันที่แบบไทยสั้น จาก YYYY-MM-DD เช่น 2026-11-01 → "1 พ.ย. 2569" (ว่าง/ผิดรูป → '') */
+export const formatThaiShortDate = (ymd: string | undefined): string => {
+    const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(ymd || '');
+    if (!m) return '';
+    const names = ['ม.ค.', 'ก.พ.', 'มี.ค.', 'เม.ย.', 'พ.ค.', 'มิ.ย.', 'ก.ค.', 'ส.ค.', 'ก.ย.', 'ต.ค.', 'พ.ย.', 'ธ.ค.'];
+    const year = Number(m[1]), month = Number(m[2]), day = Number(m[3]);
+    // วันที่ต้องมีจริง (เช่น 31 ก.พ. ไม่มี) — สร้างวันแล้วเทียบกลับ
+    const d = new Date(Date.UTC(year, month - 1, day));
+    if (d.getUTCFullYear() !== year || d.getUTCMonth() !== month - 1 || d.getUTCDate() !== day) return '';
+    return `${day} ${names[month - 1]} ${year + 543}`;
+};
