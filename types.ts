@@ -93,6 +93,16 @@ export interface Partner {
    * เปิดเป็น true หลังทีมกระทบยอดกับคู่ค้ารายนั้นแล้วเท่านั้น
    */
   portalShowTotals?: boolean;
+  /**
+   * หน้าคู่ค้า: แสดงเฉพาะ "ยอดที่ต้องคืน" (ไม่แสดงรวมส่งให้ / คืนแล้ว / อายุค้าง)
+   * ใช้เมื่อยอดในระบบถูกทีมปรับให้ตรงของจริงเป็นระยะ ตัวเลขส่วนประกอบจึงบวกลบไม่ตรงยอด
+   */
+  portalBalanceOnly?: boolean;
+  /**
+   * ความหมายของยอดระบบที่ทีมใช้จริงบนแดชบอร์ด: true = ยอดเป็นบวก คือ "นีโอสยามต้องคืน"
+   * (ค่าเริ่มต้นตามคอมเมนต์สูตรเดิม: ยอดเป็นลบ = ยืมอยู่)
+   */
+  portalOwedWhenPositive?: boolean;
   branchRestriction?: {
     in: 'all' | 'none' | string[];  // Branches allowed for IN transactions
     out: 'all' | 'none' | string[]; // Branches allowed for OUT transactions

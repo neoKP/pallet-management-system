@@ -24,11 +24,10 @@ export const BRANCHES: Branch[] = [
 
 export const EXTERNAL_PARTNERS: Partner[] = [
   { id: 'neo_corp', name: 'บ. นีโอ คอร์ปอเรท', type: 'customer', allowedPallets: ['loscam_red'], rentalFee: 0, gracePeriod: 0, branchRestriction: { in: 'all', out: 'none' } },
-  // portalShowTotals: false — คุณเท็นสั่ง 17 พ.ย. 69 ซ่อนยอดคงค้าง/อายุค้างจากซีโน่อีกครั้ง
-  //   สูตรระบบ (นับคืนอัตโนมัติ -AUTO) ได้ "นีโอสยามคืนเกิน" แดง 500 / ฟ้า 427 แต่ของจริงเราค้างซีโน่
-  //   ถ้าไม่นับ -AUTO = เราค้าง แดง 3,600 / ฟ้า 1,173 (ณ 17 พ.ย. ยังไม่ได้เทียบใบแจ้งยอดซีโน่)
-  //   เปิดอีกครั้งได้เมื่อทีมยืนยันยอดกับซีโน่แล้ว และแก้สูตรให้ไม่นับ -AUTO
-  { id: 'sino', name: 'บ. ซีโน-แปซิฟิค', type: 'provider', allowedPallets: ['loscam_red', 'loscam_blue'], rentalFee: 1.0, gracePeriod: 10, branchRestriction: { in: 'all', out: 'all' }, portalShowTotals: false },
+  // หน้าซีโน่ (คุณเท็นยืนยัน 17 พ.ย. 69 ด้วยภาพแดชบอร์ด): ยอดระบบ แดง 500 / ฟ้า 427 = "ยอดที่นีโอสยามต้องคืนซีโน่"
+  //   portalShowTotals + portalBalanceOnly = แสดงเฉพาะยอดที่ต้องคืน (ไม่แสดงรวมส่ง/คืน/อายุค้าง ซึ่งบวกลบไม่ตรงเพราะปรับยอดรายเดือน)
+  //   portalOwedWhenPositive = ยอดเป็นบวกคือต้องคืน ตามที่ทีมอ่านบนแดชบอร์ด
+  { id: 'sino', name: 'บ. ซีโน-แปซิฟิค', type: 'provider', allowedPallets: ['loscam_red', 'loscam_blue'], rentalFee: 1.0, gracePeriod: 10, branchRestriction: { in: 'all', out: 'all' }, portalShowTotals: true, portalBalanceOnly: true, portalOwedWhenPositive: true },
   { id: 'lamsoon', name: 'บ. ล่ำสูง', type: 'provider', allowedPallets: ['loscam_red'], branchRestriction: { in: ['sai3', 'hub_nw'], out: ['sai3', 'hub_nw'] } },
   { id: 'ufc', name: 'บ. UFC', type: 'provider', allowedPallets: ['loscam_red', 'loscam_blue'], branchRestriction: { in: ['sai3'], out: ['sai3'] } },
   { id: 'loxley', name: 'บ. Loxley', type: 'provider', allowedPallets: ['loscam_red', 'loscam_blue', 'loscam_yellow'], branchRestriction: { in: ['sai3'], out: ['sai3'] } },

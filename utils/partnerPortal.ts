@@ -25,6 +25,11 @@ export interface PartnerBalanceRow {
      * รวมยอดตั้งต้น / ปรับยอดแล้ว
      */
     balance: number;
+    /**
+     * จำนวนที่นีโอสยามต้องคืนคู่ค้า (บวก = ต้องคืน · ลบ = คืนเกิน)
+     * แปลงจาก balance ตามความหมายที่ทีมใช้จริง (Partner.portalOwedWhenPositive)
+     */
+    owed: number;
 }
 
 /** RECEIVE = คู่ค้าส่งให้เรา · RETURN = เราคืน · AUTO = คืนอัตโนมัติโดยระบบ · ADJUST = ยอดตั้งต้น / ปรับยอด */
@@ -61,6 +66,8 @@ export interface PartnerPortalView {
      * ถ้า false — balances และ aging เป็นอาร์เรย์ว่าง ไม่ส่งตัวเลขไปหน้าจอเลย
      */
     showTotals: boolean;
+    /** แสดงเฉพาะยอดที่ต้องคืน (ไม่มีรวมส่งให้ / คืนแล้ว / อายุค้าง · ประวัติเฉพาะเอกสารจริง) */
+    balanceOnly: boolean;
     balances: PartnerBalanceRow[];
     history: PartnerHistoryRow[];
     aging: PartnerAgingRow[];
@@ -72,11 +79,21 @@ export interface PartnerPortalView {
  * รูปแบบที่ส่งให้หน้าเว็บของคู่ค้าจริง — ข้อมูลคู่ค้าเหลือแค่รหัสกับชื่อ
  * (ตัดอัตราค่าเช่า กติกาสาขา และสวิตช์ภายในออก)
  */
-export type PartnerPortalPublicView = Omit<PartnerPortalView, 'partner'> & { partner: Pick<Partner, 'id' | 'name'> };
+export type PartnerPublicBalance = Pick<PartnerBalanceRow, 'palletId' | 'palletName' | 'owed'> &
+    Partial<Pick<PartnerBalanceRow, 'received' | 'returned'>>;
 
+export type PartnerPortalPublicView = Omit<PartnerPortalView, 'partner' | 'balances'> & {
+    partner: Pick<Partner, 'id' | 'name'>;
+    balances: PartnerPublicBalance[];
+};
+
+/** ตัดข้อมูลที่หน้าคู่ค้าไม่ต้องใช้ — โหมดยอดอย่างเดียวส่งแค่ยอดที่ต้องคืน */
 export const toPublicView = (view: PartnerPortalView): PartnerPortalPublicView => ({
     ...view,
     partner: { id: view.partner.id, name: view.partner.name },
+    balances: view.balances.map(b => (view.balanceOnly
+        ? { palletId: b.palletId, palletName: b.palletName, owed: b.owed }
+        : { palletId: b.palletId, palletName: b.palletName, owed: b.owed, received: b.received, returned: b.returned })),
 });
 
 const palletName = (id: PalletId) => PALLET_TYPES.find(p => p.id === id)?.name || id;
@@ -112,6 +129,8 @@ export const buildPartnerPortalView = (
     const partner = partners.find(p => p.id === partnerId);
     if (!partner || !isPortalSupportedPartner(partner)) return null;
     const showTotals = partner.portalShowTotals === true;
+    const balanceOnly = showTotals && partner.portalBalanceOnly === true;
+    const owedSign = partner.portalOwedWhenPositive === true ? 1 : -1;
 
     const pallets = (partner.allowedPallets ?? []) as PalletId[];
 
@@ -149,7 +168,7 @@ export const buildPartnerPortalView = (
         // ยังไม่กระทบยอด: แสดงเฉพาะเอกสารรับ-คืนจริง
         // ตัดรายการปรับยอดภายใน และรายการคืนอัตโนมัติ (ไม่ใช่การคืนจริง) ออก
         const history = all.filter(h => h.kind === 'RECEIVE' || h.kind === 'RETURN');
-        return { partner, showTotals, balances: [], history, aging: [], graceDays: partner.gracePeriod ?? 0 };
+        return { partner, showTotals, balanceOnly: false, balances: [], history, aging: [], graceDays: partner.gracePeriod ?? 0 };
     }
 
     const balances: PartnerBalanceRow[] = pallets.map(palletId => {
@@ -160,8 +179,15 @@ export const buildPartnerPortalView = (
             if (h.kind === 'RETURN' || h.kind === 'AUTO') returned += h.qty;
             balance += h.effect;
         }
-        return { palletId, palletName: palletName(palletId), received, returned, balance };
+        return { palletId, palletName: palletName(palletId), received, returned, balance, owed: balance * owedSign || 0 };
     });
+
+    if (balanceOnly) {
+        // ยอดอย่างเดียว: ยอดตรงกับแดชบอร์ด แต่ส่วนประกอบ (รวมส่ง/คืน/อายุค้าง) บวกลบไม่ตรงเพราะมีการปรับยอด
+        // จึงไม่ส่งไป และประวัติแสดงเฉพาะเอกสารรับ-คืนจริง
+        const history = all.filter(h => h.kind === 'RECEIVE' || h.kind === 'RETURN');
+        return { partner, showTotals, balanceOnly, balances, history, aging: [], graceDays: partner.gracePeriod ?? 0 };
+    }
 
     // อายุค้าง ใช้ผลจากรายงาน Aging เดิมของระบบ (ตัดช่องเงินออก)
     // ส่งเฉพาะแถวของคู่ค้ารายนี้ ไม่ต้องคำนวณคู่ค้าทุกรายทุกครั้งที่ข้อมูลเปลี่ยน
@@ -181,6 +207,7 @@ export const buildPartnerPortalView = (
     return {
         partner,
         showTotals,
+        balanceOnly,
         balances,
         history: all,
         aging,

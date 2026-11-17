@@ -1,11 +1,11 @@
 import { describe, it, expect } from 'vitest';
 import { Transaction, Partner } from '../types';
-import { buildPartnerPortalView } from './partnerPortal';
+import { buildPartnerPortalView, toPublicView } from './partnerPortal';
 import { calculatePartnerBalance } from './businessLogic';
 import { EXTERNAL_PARTNERS } from '../constants';
 
 // ทะเบียนคู่ค้าจำลองที่เปิดแสดงยอดรวม (ใช้ทดสอบการคำนวณยอด / อายุค้าง)
-const PARTNERS_WITH_TOTALS: Partner[] = EXTERNAL_PARTNERS.map(p => (p.id === 'sino' ? { ...p, portalShowTotals: true } : p));
+const PARTNERS_WITH_TOTALS: Partner[] = EXTERNAL_PARTNERS.map(p => (p.id === 'sino' ? { ...p, portalShowTotals: true, portalBalanceOnly: false } : p));
 const viewWithTotals = (txs: Transaction[]) => buildPartnerPortalView(txs, 'sino', TODAY, PARTNERS_WITH_TOTALS)!;
 
 const TODAY = new Date('2026-11-13T00:00:00.000Z');
@@ -101,17 +101,38 @@ describe('buildPartnerPortalView', () => {
         expect(view.history.map(h => h.docNo)).toEqual(['NEW', 'OLD']);
     });
 
-    it('ซีโน่ตามทะเบียนจริง (portalShowTotals: false ตั้งแต่ 17 พ.ย. 69) — ไม่ส่งยอดรวม / อายุค้าง และไม่แสดงคืนอัตโนมัติ', () => {
+    it('ซีโน่ตามทะเบียนจริง (17 พ.ย. 69): ยอดอย่างเดียว · ยอดบวกในระบบ = นีโอสยามต้องคืน (ตรงกับแดชบอร์ด)', () => {
         const txs = [
             tx({ docNo: 'EXT-IN-1', source: 'sino', dest: 'hub_nw', qty: 12, date: '2026-10-01T00:00:00.000Z' }),
             tx({ docNo: 'EXT-IN-1-AUTO', type: 'OUT', source: 'hub_nw', dest: 'sino', qty: 12 }),
             tx({ docNo: 'EXT-OUT-2', type: 'OUT', source: 'hub_nw', dest: 'sino', qty: 5 }),
+            // ยอดยกมา/ปรับยอดที่ทีมทำให้ตรงของจริง (dest = sino → ยอดระบบ +)
+            tx({ docNo: 'ADJ-1', type: 'ADJUST', source: 'SYSTEM_ADJUSTMENT', dest: 'sino', qty: 300 }),
         ];
         const view = buildPartnerPortalView(txs, 'sino', TODAY)!;
-        expect(view.showTotals).toBe(false);
-        expect(view.balances).toEqual([]);
+        expect(view.showTotals).toBe(true);
+        expect(view.balanceOnly).toBe(true);
+        const red = view.balances.find(b => b.palletId === 'loscam_red')!;
+        // ยอดเท่าแดชบอร์ดเป๊ะ และความหมาย = ต้องคืน
+        expect(red.balance).toBe(calculatePartnerBalance(txs, 'sino', 'loscam_red'));
+        expect(red.owed).toBe(red.balance);
+        expect(red.owed).toBe(-12 + 12 + 5 + 300);
+        // ไม่ส่งอายุค้าง และประวัติเฉพาะเอกสารจริง
         expect(view.aging).toEqual([]);
-        expect(view.history.map(h => h.kind).sort()).toEqual(['RECEIVE', 'RETURN']);
+        expect(view.history.map(h => h.docNo).sort()).toEqual(['EXT-IN-1', 'EXT-OUT-2']);
+        // ที่ส่งถึงหน้าเว็บ: มีแค่ยอดที่ต้องคืน ไม่มีรวมส่ง/คืน/ยอดดิบ
+        const pub = toPublicView(view);
+        expect(Object.keys(pub.balances[0]).sort()).toEqual(['owed', 'palletId', 'palletName']);
+    });
+
+    it('ค่าเริ่มต้น (ไม่ตั้ง portalOwedWhenPositive): ยอดลบ = ต้องคืน ตามสูตรเดิม', () => {
+        const partners = EXTERNAL_PARTNERS.map(p => (p.id === 'sino' ? { ...p, portalShowTotals: true, portalBalanceOnly: false, portalOwedWhenPositive: undefined } : p));
+        const view = buildPartnerPortalView([tx({ source: 'sino', dest: 'kpp', qty: 40 })], 'sino', TODAY, partners)!;
+        const red = view.balances.find(b => b.palletId === 'loscam_red')!;
+        expect(red.balance).toBe(-40);
+        expect(red.owed).toBe(40);
+        expect(view.balanceOnly).toBe(false);
+        expect(Object.keys(toPublicView(view).balances[0]).sort()).toEqual(['owed', 'palletId', 'palletName', 'received', 'returned']);
     });
 
     it('คู่ค้าที่ไม่ได้ตั้งค่า portalShowTotals = ซ่อนยอดรวมเป็นค่าเริ่มต้น', () => {

@@ -142,8 +142,11 @@ describe.skipIf(!enabled)('กฎฐานข้อมูล STEP3 + API (Fireba
         expect(text).not.toContain('70-9999');
         expect(text).not.toContain('หมายเหตุภายใน');
         expect(text).not.toContain('LAMSOON');
-        expect(body.view.showTotals).toBe(false);
-        expect(body.view.balances).toEqual([]);
+        // ยอดอย่างเดียว (17 พ.ย. 69): มีแค่ยอดที่ต้องคืน ไม่มีรวมส่ง/คืน
+        expect(body.view.showTotals).toBe(true);
+        expect(body.view.balanceOnly).toBe(true);
+        expect(Object.keys(body.view.balances[0]).sort()).toEqual(['owed', 'palletId', 'palletName']);
+        expect(body.view.aging).toEqual([]);
         // ไม่มีเงินค่าเช่าในยอด/อายุค้าง
         expect(text).not.toContain('accruedRent');
         expect(text).not.toContain('rentalRate');

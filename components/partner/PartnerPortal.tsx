@@ -301,14 +301,17 @@ const PartnerPortal: React.FC<PartnerPortalProps> = ({ currentUser, onLogout, on
                 {view.showTotals ? (
                     <section aria-label="ยอดพาเลทคงค้าง" className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                         {view.balances.map(b => {
-                            const owed = b.balance < 0 ? -b.balance : 0;
-                            const over = b.balance > 0 ? b.balance : 0;
+                            const owed = b.owed > 0 ? b.owed : 0;
+                            const over = b.owed < 0 ? -b.owed : 0;
                             const status = owed
-                                ? { text: 'นีโอสยามยืมอยู่ (ยังไม่คืน)', cls: 'bg-amber-50 text-amber-700 ring-amber-200' }
+                                ? { text: 'นีโอสยามต้องคืน', cls: 'bg-amber-50 text-amber-700 ring-amber-200' }
                                 : over
                                     ? { text: 'นีโอสยามคืนเกินยอดที่ยืม', cls: 'bg-blue-50 text-blue-700 ring-blue-200' }
                                     : { text: 'ไม่มียอดค้าง', cls: 'bg-emerald-50 text-emerald-700 ring-emerald-200' };
-                            const ratio = b.received > 0 ? Math.min(1, b.returned / b.received) : 0;
+                            const hasDetail = !view.balanceOnly && typeof b.received === 'number' && typeof b.returned === 'number';
+                            const received = b.received ?? 0;
+                            const returned = b.returned ?? 0;
+                            const ratio = received > 0 ? Math.min(1, returned / received) : 0;
                             return (
                                 <div key={b.palletId} className="relative overflow-hidden bg-white rounded-3xl shadow-xl shadow-slate-900/5 ring-1 ring-slate-200 p-5">
                                     <div className={`absolute inset-x-0 top-0 h-1.5 ${palletDot(b.palletId)}`} />
@@ -316,35 +319,41 @@ const PartnerPortal: React.FC<PartnerPortalProps> = ({ currentUser, onLogout, on
                                         <p className="inline-flex items-center gap-2 text-base font-semibold text-slate-700">
                                             <span className={`w-3 h-3 rounded-full ${palletDot(b.palletId)}`} /> {b.palletName}
                                         </p>
-                                        <span className="text-xs font-medium text-slate-500">ยอดคงค้าง</span>
+                                        <span className="text-xs font-medium text-slate-500">{owed ? 'ยอดที่ต้องคืน' : 'ยอดคงค้าง'}</span>
                                     </div>
                                     <p className="mt-3 text-5xl font-bold tracking-tight tabular-nums">
                                         {fmt(owed || over)} <span className="text-lg font-semibold text-slate-400">ใบ</span>
                                     </p>
                                     <span className={`mt-2 inline-flex px-3 py-1 rounded-full ring-1 text-sm font-semibold ${status.cls}`}>{status.text}</span>
-                                    <div className="mt-4 grid grid-cols-2 gap-3">
-                                        <div className="rounded-2xl bg-slate-50 px-3 py-2.5">
-                                            <p className="text-sm text-slate-500">ส่งให้นีโอสยามรวม</p>
-                                            <p className="text-lg font-bold tabular-nums">{fmt(b.received)} <span className="text-sm font-medium text-slate-400">ใบ</span></p>
-                                        </div>
-                                        <div className="rounded-2xl bg-slate-50 px-3 py-2.5">
-                                            <p className="text-sm text-slate-500">นีโอสยามคืนแล้วรวม</p>
-                                            <p className="text-lg font-bold tabular-nums">{fmt(b.returned)} <span className="text-sm font-medium text-slate-400">ใบ</span></p>
-                                        </div>
-                                    </div>
-                                    <div className="mt-3">
-                                        <div className="h-2 rounded-full bg-slate-100 overflow-hidden" aria-hidden>
-                                            <div className="h-full rounded-full bg-emerald-600" style={{ width: `${ratio * 100}%` }} />
-                                        </div>
-                                        {/* คืนเกิน 100% ได้ เพราะยอดคงค้างรวมยอดยกมา / ปรับยอดตั้งแต่ก่อนเริ่มบันทึกในระบบ — อธิบายเป็นคำแทนเปอร์เซ็นต์ */}
-                                        <p className="mt-1.5 text-sm text-slate-500">
-                                            {b.returned > b.received
-                                                ? `คืนมากกว่าที่ส่งให้ ${fmt(b.returned - b.received)} ใบ — เพราะยอดคงค้างรวมยอดยกมาและการปรับยอดด้วย`
-                                                : b.received <= 0
-                                                    ? 'ยังไม่มีรายการส่งให้นีโอสยาม'
-                                                    : `คืนแล้ว ${Math.round((b.returned / b.received) * 100)}% ของที่ส่งให้`}
-                                        </p>
-                                    </div>
+                                    {hasDetail && (
+                                        <>
+                                            <div className="mt-4 grid grid-cols-2 gap-3">
+                                                <div className="rounded-2xl bg-slate-50 px-3 py-2.5">
+                                                    <p className="text-sm text-slate-500">ส่งให้นีโอสยามรวม</p>
+                                                    <p className="text-lg font-bold tabular-nums">{fmt(received)} <span className="text-sm font-medium text-slate-400">ใบ</span></p>
+                                                </div>
+                                                <div className="rounded-2xl bg-slate-50 px-3 py-2.5">
+                                                    <p className="text-sm text-slate-500">นีโอสยามคืนแล้วรวม</p>
+                                                    <p className="text-lg font-bold tabular-nums">{fmt(returned)} <span className="text-sm font-medium text-slate-400">ใบ</span></p>
+                                                </div>
+                                            </div>
+                                            <div className="mt-3">
+                                                <div className="h-2 rounded-full bg-slate-100 overflow-hidden" aria-hidden>
+                                                    <div className="h-full rounded-full bg-emerald-600" style={{ width: `${ratio * 100}%` }} />
+                                                </div>
+                                                <p className="mt-1.5 text-sm text-slate-500">
+                                                    {returned > received
+                                                        ? `คืนมากกว่าที่ส่งให้ ${fmt(returned - received)} ใบ — เพราะยอดคงค้างรวมยอดยกมาและการปรับยอดด้วย`
+                                                        : received <= 0
+                                                            ? 'ยังไม่มีรายการส่งให้นีโอสยาม'
+                                                            : `คืนแล้ว ${Math.round((returned / received) * 100)}% ของที่ส่งให้`}
+                                                </p>
+                                            </div>
+                                        </>
+                                    )}
+                                    {view.balanceOnly && (
+                                        <p className="mt-3 text-sm text-slate-500">ยอดตามบัญชีของนีโอสยาม ณ เวลาที่แสดง</p>
+                                    )}
                                 </div>
                             );
                         })}
@@ -359,8 +368,8 @@ const PartnerPortal: React.FC<PartnerPortalProps> = ({ currentUser, onLogout, on
                     </section>
                 )}
 
-                {/* อายุพาเลทที่ยังไม่คืน */}
-                {view.showTotals && (
+                {/* อายุพาเลทที่ยังไม่คืน (ไม่แสดงในโหมดยอดอย่างเดียว) */}
+                {view.showTotals && !view.balanceOnly && (
                     <section className="bg-white rounded-3xl ring-1 ring-slate-200 p-5">
                         <div className="flex flex-wrap items-baseline justify-between gap-2">
                             <h2 className="text-base font-bold">อายุพาเลทที่ยังไม่คืน</h2>
