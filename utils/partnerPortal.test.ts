@@ -101,19 +101,17 @@ describe('buildPartnerPortalView', () => {
         expect(view.history.map(h => h.docNo)).toEqual(['NEW', 'OLD']);
     });
 
-    it('ซีโน่ตามทะเบียนจริง (portalShowTotals: true ตั้งแต่ 14 พ.ย. 69) — ส่งยอดรวมตามสูตรระบบ รวมรายการคืนอัตโนมัติ', () => {
+    it('ซีโน่ตามทะเบียนจริง (portalShowTotals: false ตั้งแต่ 17 พ.ย. 69) — ไม่ส่งยอดรวม / อายุค้าง และไม่แสดงคืนอัตโนมัติ', () => {
         const txs = [
             tx({ docNo: 'EXT-IN-1', source: 'sino', dest: 'hub_nw', qty: 12, date: '2026-10-01T00:00:00.000Z' }),
             tx({ docNo: 'EXT-IN-1-AUTO', type: 'OUT', source: 'hub_nw', dest: 'sino', qty: 12 }),
             tx({ docNo: 'EXT-OUT-2', type: 'OUT', source: 'hub_nw', dest: 'sino', qty: 5 }),
         ];
         const view = buildPartnerPortalView(txs, 'sino', TODAY)!;
-        expect(view.showTotals).toBe(true);
-        const red = view.balances.find(b => b.palletId === 'loscam_red')!;
-        // สูตรเดียวกับแดชบอร์ด: ยอด = ผลรวมทุกแถวที่แสดง (รวม AUTO) จึงตรวจย้อนจากประวัติได้
-        expect(red.balance).toBe(calculatePartnerBalance(txs, 'sino', 'loscam_red'));
-        expect(red.balance).toBe(view.history.filter(h => h.palletId === 'loscam_red').reduce((s, h) => s + h.effect, 0));
-        expect(view.history.map(h => h.kind).sort()).toEqual(['AUTO', 'RECEIVE', 'RETURN']);
+        expect(view.showTotals).toBe(false);
+        expect(view.balances).toEqual([]);
+        expect(view.aging).toEqual([]);
+        expect(view.history.map(h => h.kind).sort()).toEqual(['RECEIVE', 'RETURN']);
     });
 
     it('คู่ค้าที่ไม่ได้ตั้งค่า portalShowTotals = ซ่อนยอดรวมเป็นค่าเริ่มต้น', () => {

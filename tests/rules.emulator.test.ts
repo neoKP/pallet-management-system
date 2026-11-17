@@ -126,13 +126,13 @@ describe.skipIf(!enabled)('กฎฐานข้อมูล STEP3 + API (Fireba
         await set(ref(db, 'stock/cm/loscam_red'), 100);
     });
 
-    it('API หน้าคู่ค้า: ได้เฉพาะเอกสารของซีโน่ ไม่มีข้อมูลภายใน · เปิดยอดรวม (14 พ.ย. 69) จึงมีรายการคืนอัตโนมัติด้วย', async () => {
+    it('API หน้าคู่ค้า: ได้เฉพาะเอกสารซีโน่จริง ไม่มีข้อมูลภายใน ไม่มียอดรวม ไม่มีรายการ -AUTO (ซ่อนยอด 17 พ.ย. 69)', async () => {
         const { token } = await clientFor('user_sino');
         const res = await partnerView(new Request('http://x/api/partner/view', { headers: { Authorization: `Bearer ${token}` } }));
         expect(res.status).toBe(200);
         const body = await res.json();
         const docs = body.view.history.map((h: any) => h.docNo).sort();
-        expect(docs).toEqual(['EXT-IN-SINO-1', 'EXT-IN-SINO-1-AUTO', 'EXT-OUT-SINO-2', 'LEGACY-NOID-A', 'LEGACY-NOID-B']);
+        expect(docs).toEqual(['EXT-IN-SINO-1', 'EXT-OUT-SINO-2', 'LEGACY-NOID-A', 'LEGACY-NOID-B']);
         // ข้อมูลคู่ค้าส่งแค่รหัส + ชื่อ (ไม่มีอัตราค่าเช่า / กติกาภายใน)
         expect(Object.keys(body.view.partner).sort()).toEqual(['id', 'name']);
         const text = JSON.stringify(body);
@@ -142,8 +142,8 @@ describe.skipIf(!enabled)('กฎฐานข้อมูล STEP3 + API (Fireba
         expect(text).not.toContain('70-9999');
         expect(text).not.toContain('หมายเหตุภายใน');
         expect(text).not.toContain('LAMSOON');
-        expect(body.view.showTotals).toBe(true);
-        expect(body.view.balances.length).toBeGreaterThan(0);
+        expect(body.view.showTotals).toBe(false);
+        expect(body.view.balances).toEqual([]);
         // ไม่มีเงินค่าเช่าในยอด/อายุค้าง
         expect(text).not.toContain('accruedRent');
         expect(text).not.toContain('rentalRate');
